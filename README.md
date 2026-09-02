@@ -133,30 +133,6 @@ npm run dev
 
 ---
 
-## Development Workflow
-
-| Milestone | Description |
-|-----------|-------------|
-| M0 (this) | Skeleton scaffold — all stubs, stack wired end-to-end |
-| M1        | Auth (JWT) + User management |
-| M2        | Document ingestion + ChromaDB embeddings |
-| M3        | LLM question generation (RAG pipeline) |
-| M4        | Answer evaluation + scoring |
-| M5        | Adaptive mastery tracking + Knowledge Profile |
-| M6        | Polish, production hardening, CI/CD |
-
----
-
-## Team
-
-| Name | Role |
-|------|------|
-| _TBD_ | Project Lead |
-| _TBD_ | Backend Engineer |
-| _TBD_ | Frontend Engineer |
-| _TBD_ | ML / AI Engineer |
-
----
 
 ## License
 
