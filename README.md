@@ -1,4 +1,4 @@
-# QueryMind 🧠
+# QueryMind 
 
 > **AI-based adaptive question generation and answer evaluation platform.**
 
@@ -24,7 +24,7 @@ QueryMind is a full-stack web application that:
 - **Evaluates free-text answers** and returns structured feedback.
 - Maintains a **Knowledge Profile** per user, tracking mastery over time.
 
-> ⚠️ This commit is the **skeleton / scaffold only**. All API routes return stub/placeholder data. Real AI logic (RAG, LLM calls, adaptive scoring) will be layered in subsequent milestones.
+>  This commit is the **skeleton / scaffold only**. All API routes return stub/placeholder data. Real AI logic (RAG, LLM calls, adaptive scoring) will be layered in subsequent milestones.
 
 ---
 
