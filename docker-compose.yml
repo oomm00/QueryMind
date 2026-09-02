@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL Database ──────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: querymind_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-querymind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-querymind_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-querymind_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-querymind}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── ChromaDB (Vector Store) ──────────────────────────────
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: querymind_chroma
+    restart: unless-stopped
+    ports:
+      - "${CHROMA_PORT:-8001}:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+
+  # ── FastAPI Backend ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: querymind_backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      # Override host to use docker service name
+      POSTGRES_HOST: db
+      CHROMA_HOST: chroma
+      DATABASE_URL: postgresql://${POSTGRES_USER:-querymind}:${POSTGRES_PASSWORD:-querymind_dev_password}@db:5432/${POSTGRES_DB:-querymind_db}
+    depends_on:
+      db:
+        condition: service_healthy
+      chroma:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  postgres_data:
+  chroma_data:
