@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     debug: bool = True
 
     # Database
-    database_url: str = "postgresql://querymind:querymind_dev_password@localhost:5432/querymind_db"
+    database_url: str = "sqlite:///./querymind.db"
 
     # CORS
     allowed_origins: Union[List[str], str] = [

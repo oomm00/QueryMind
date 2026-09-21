@@ -20,7 +20,11 @@ from app.models import base  # noqa: F401  — triggers model registration
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle hook."""
-    # On startup: nothing yet (Alembic handles migrations)
+    # On startup: ensure DB tables are created
+    try:
+        base.Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"DB table creation warning: {e}")
     yield
     # On shutdown: close connections, flush queues, etc.
 

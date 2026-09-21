@@ -83,3 +83,8 @@ docker-compose.override.yml
 *.log
 *.tmp
 *.bak
+
+# ─── SQLite (local dev database) ──────────────────────────
+*.db
+*.sqlite
+*.sqlite3

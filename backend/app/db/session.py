@@ -7,10 +7,15 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
+connect_args = {}
+if settings.database_url.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+
 engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,   # detect stale connections
-    echo=settings.debug,  # log SQL in development
+    connect_args=connect_args,
+    pool_pre_ping=not settings.database_url.startswith("sqlite"),
+    echo=settings.debug,
 )
 
 SessionLocal = sessionmaker(

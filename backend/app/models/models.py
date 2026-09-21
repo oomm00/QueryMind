@@ -14,12 +14,13 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
+    Uuid as UUID,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -62,6 +63,10 @@ class Document(Base):
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     storage_path: Mapped[str | None] = mapped_column(String(1024))
     chroma_collection: Mapped[str | None] = mapped_column(String(255))
+    course: Mapped[str | None] = mapped_column(String(255))
+    subject: Mapped[str | None] = mapped_column(String(255))
+    topic: Mapped[str | None] = mapped_column(String(255))
+    source_type: Mapped[str] = mapped_column(String(50), default="college")  # college | public
     status: Mapped[str] = mapped_column(
         String(50), default="pending"
     )  # pending | processing | ready | failed
@@ -72,6 +77,9 @@ class Document(Base):
 
 class Question(Base):
     __tablename__ = "questions"
+    __table_args__ = (
+        Index("ix_questions_topic_bloom_difficulty", "topic", "bloom_level", "difficulty"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -89,6 +97,7 @@ class Question(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     attempts: Mapped[list["Attempt"]] = relationship("Attempt", back_populates="question")
+
 
 
 # ── Attempt ───────────────────────────────────────────────────────────────────
