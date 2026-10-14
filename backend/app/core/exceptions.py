@@ -76,3 +76,14 @@ class ConflictError(QueryMindError):
 
     def __init__(self, detail: str = "Resource already exists") -> None:
         super().__init__(detail)
+
+
+class RateLimitExceededError(QueryMindError):
+    """Raised when request rate limit is exceeded."""
+
+    status_code = 429
+    code = "RATE_LIMIT_EXCEEDED"
+
+    def __init__(self, detail: str = "Too many requests. Please try again later.") -> None:
+        super().__init__(detail)
+
