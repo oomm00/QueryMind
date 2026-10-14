@@ -27,13 +27,28 @@ SIMILARITY_THRESHOLD = 0.75
 
 
 def get_chroma_client() -> ClientAPI:
-    """Instantiate ChromaDB client connected to host:port from settings."""
+    """Instantiate ChromaDB client connected to host:port from settings, with fallback to local persistent client."""
     chroma_settings = chromadb.config.Settings(anonymized_telemetry=False)
-    return chromadb.HttpClient(
-        host=settings.chroma_host,
-        port=settings.chroma_port,
-        settings=chroma_settings,
-    )
+    try:
+        client = chromadb.HttpClient(
+            host=settings.chroma_host,
+            port=settings.chroma_port,
+            settings=chroma_settings,
+        )
+        client.heartbeat()
+        return client
+    except Exception as exc:
+        logger.info(
+            "ChromaDB HTTP service not reachable (%s); using local persistent client at ./chroma_data",
+            exc,
+        )
+        import os
+        from pathlib import Path
+        # Look for chroma_data in current dir or repo root
+        root_chroma = Path(__file__).resolve().parent.parent.parent.parent / "chroma_data"
+        local_chroma = Path("chroma_data")
+        chroma_path = str(root_chroma if root_chroma.exists() else local_chroma)
+        return chromadb.PersistentClient(path=chroma_path)
 
 
 def _query_collection(

@@ -43,13 +43,15 @@ class RefreshTokenRequest(BaseModel):
 # ══════════════════════════════════════════════════════════════
 
 class GenerateQuestionRequest(BaseModel):
-    topic: str = Field(..., examples=["Python decorators"])
+    topic: str = Field(..., examples=["Transactions"])
+    subject: str = Field(..., examples=["DBMS"])
     bloom_level: str = Field(
         ...,
-        examples=["understand"],
+        examples=["analyze"],
         description="One of: remember | understand | apply | analyze | evaluate | create",
     )
     difficulty: str = Field(..., examples=["medium"], description="easy | medium | hard")
+    question_type: str = Field(default="open", description="mcq | open")
     document_id: Optional[uuid.UUID] = None
     num_questions: int = Field(default=1, ge=1, le=10)
 
@@ -66,6 +68,18 @@ class QuestionOut(BaseModel):
 class GenerateQuestionResponse(BaseModel):
     questions: list[QuestionOut]
     stub: bool = True  # Remove when real generation is implemented
+
+
+class GeneratedQuestion(BaseModel):
+    """Structured output from the LLM question generator."""
+    question: str
+    options: Optional[list[str]] = None        # 4 items for MCQ, None for open-ended
+    correct_answer: str
+    explanation: str
+    bloom_level: str
+    difficulty: str
+    source_chunks: list[str]                   # source_doc values used
+
 
 
 # ══════════════════════════════════════════════════════════════

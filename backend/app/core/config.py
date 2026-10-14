@@ -42,8 +42,11 @@ class Settings(BaseSettings):
     chroma_host: str = "localhost"
     chroma_port: int = 8001
 
-    # LLM (placeholder)
+    # LLM
     openai_api_key: str = "sk-placeholder"
+    gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
+    llm_model: str = "gemini-2.0-flash"
+    llm_temperature: float = 0.3       # Low temp for deterministic structured output
 
 
 settings = Settings()
