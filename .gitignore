@@ -84,7 +84,9 @@ docker-compose.override.yml
 *.tmp
 *.bak
 
-# ─── SQLite (local dev database) ──────────────────────────
+# ─── SQLite & ChromaDB (local dev storage) ─────────────────
 *.db
 *.sqlite
 *.sqlite3
+chroma_data/
+

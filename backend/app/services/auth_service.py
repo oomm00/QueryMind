@@ -12,11 +12,12 @@ from typing import Optional
 import uuid
 
 import bcrypt
-# Passlib 1.7.4 compatibility fix with bcrypt >= 4.0.0
+# Passlib 1.7.4 compatibility fix: bcrypt 4.x removed __about__, which passlib's version check depends on
 if not hasattr(bcrypt, "__about__"):
     class _About:
         __version__ = bcrypt.__version__
     bcrypt.__about__ = _About()
+
 
 # Patch hashpw to truncate to 72 bytes so passlib's wrap-bug detector doesn't raise ValueError
 _orig_hashpw = bcrypt.hashpw
