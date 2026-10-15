@@ -11,6 +11,7 @@ Covers:
 4. retrieve_context is called with the correct arguments.
 5. MCQ validation: exactly 4 options required.
 6. Invalid bloom_level / difficulty raises ValidationError before LLM call.
+7. Empty retrieval (no study material) raises NO_CONTEXT (404) before any LLM call.
 """
 
 from __future__ import annotations
@@ -126,6 +127,24 @@ def test_valid_mcq_response_parses_correctly(mock_retrieve):
     assert result.options is not None
     assert len(result.options) == 4
     assert result.options[1].startswith("B)")
+
+
+@patch("app.services.generation_service.retrieve_context")
+def test_no_context_raises_no_context_error(mock_retrieve):
+    """When no study material exists for the subject/topic, fail fast with NO_CONTEXT (404)."""
+    mock_retrieve.return_value = []
+    mock_client = _make_llm_client(VALID_OPEN_RESPONSE)
+
+    with pytest.raises(QueryMindError) as exc_info:
+        generate_question(
+            topic="Deadlocks", subject="OS", bloom_level="analyze",
+            difficulty="medium", question_type="open", llm_client=mock_client,
+        )
+
+    assert exc_info.value.code == "NO_CONTEXT"
+    assert exc_info.value.status_code == 404
+    assert "no study material" in str(exc_info.value.detail).lower()
+    mock_client.generate_content.assert_not_called()
 
 
 @patch("app.services.generation_service.retrieve_context")

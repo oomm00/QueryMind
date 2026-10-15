@@ -2,10 +2,15 @@
 Unit Tests — Two-Tier Retrieval Service
 =======================================
 Covers:
-1. College material with score >= 0.75 -> no fallback occurs.
-2. College material with score < 0.75 -> falls back to public knowledge base.
+1. College material with score >= SIMILARITY_THRESHOLD -> no fallback occurs.
+2. College material with score < SIMILARITY_THRESHOLD -> falls back to public knowledge base.
 3. Chunks are correctly ranked in descending order of similarity score.
 4. Empty college material -> falls back to public knowledge base.
+5. Neither tier clears the threshold -> best-available college chunks are returned
+   (college preferred over public).
+6. College empty and public below threshold -> best-available public chunks returned.
+7. Both tiers empty -> [] is returned.
+8. The default query text is "<subject> <topic>".
 """
 
 from unittest.mock import MagicMock
@@ -15,10 +20,10 @@ from app.services.retrieval import retrieve_context, SIMILARITY_THRESHOLD
 
 
 def test_college_material_above_threshold_no_fallback():
-    """When college material scores >= 0.75, it should be returned directly without fallback."""
+    """When college material scores >= SIMILARITY_THRESHOLD, it should be returned directly without fallback."""
     mock_collection = MagicMock()
 
-    # Distance 0.12 -> similarity 1 - 0.12 = 0.88 (>= 0.75)
+    # Distance 0.12 -> similarity 1 - 0.12 = 0.88 (>= 0.45)
     mock_collection.query.return_value = {
         "documents": [["College note: ACID transactions in depth", "College lab: 2PL concurrency"]],
         "metadatas": [[
@@ -56,16 +61,16 @@ def test_college_material_above_threshold_no_fallback():
 
 
 def test_college_material_below_threshold_falls_back_to_public():
-    """When college material scores < 0.75, retrieval must fall back to public knowledge base."""
+    """When the top college score is < SIMILARITY_THRESHOLD, retrieval must fall back to public."""
     mock_collection = MagicMock()
 
-    # First call (college): low similarity (dist 0.35 -> score 0.65 < 0.75)
+    # First call (college): weak similarity (dist 0.60 -> score 0.40 < 0.45)
     college_response = {
         "documents": [["Vague college syllabus mention of transactions"]],
         "metadatas": [[
             {"source_type": "college", "subject": "DBMS", "topic": "Transactions", "source_doc": "syllabus.pdf"},
         ]],
-        "distances": [[0.35]],
+        "distances": [[0.60]],
     }
 
     # Second call (public): strong similarity (dist 0.10 -> score 0.90)
@@ -155,3 +160,79 @@ def test_empty_college_results_falls_back_to_public():
     assert len(results) == 1
     assert results[0]["source_type"] == "public"
     assert results[0]["score"] == 0.85
+
+
+def test_best_available_college_when_neither_tier_clears_threshold():
+    """If neither tier clears the threshold, best-available COLLEGE chunks are returned."""
+    mock_collection = MagicMock()
+
+    # College 0.40 (< 0.45) but present; public 0.30 (< 0.45). College must win.
+    college_response = {
+        "documents": [["Weakly related college note"]],
+        "metadatas": [[
+            {"source_type": "college", "subject": "OS", "topic": "Deadlocks", "source_doc": "lec.pdf"},
+        ]],
+        "distances": [[0.60]],   # score 0.40
+    }
+    public_response = {
+        "documents": [["Weakly related public note"]],
+        "metadatas": [[
+            {"source_type": "public", "subject": "OS", "topic": "Deadlocks", "source_doc": "wiki.txt"},
+        ]],
+        "distances": [[0.70]],   # score 0.30
+    }
+    mock_collection.query.side_effect = [college_response, public_response]
+
+    results = retrieve_context(topic="Deadlocks", subject="OS", collection=mock_collection)
+
+    assert mock_collection.query.call_count == 2
+    assert len(results) == 1
+    assert results[0]["source_type"] == "college"
+    assert results[0]["source_doc"] == "lec.pdf"
+    assert results[0]["score"] == 0.40
+
+
+def test_best_available_public_when_college_empty_and_public_below_threshold():
+    """With no college chunks and public below threshold, best-available public chunks are returned."""
+    mock_collection = MagicMock()
+
+    empty_college = {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+    weak_public = {
+        "documents": [["Some weakly related public excerpt"]],
+        "metadatas": [[{"source_type": "public", "subject": "OS", "topic": "Deadlocks", "source_doc": "wiki.txt"}]],
+        "distances": [[0.70]],   # score 0.30 (< 0.45)
+    }
+    mock_collection.query.side_effect = [empty_college, weak_public]
+
+    results = retrieve_context(topic="Deadlocks", subject="OS", collection=mock_collection)
+
+    assert mock_collection.query.call_count == 2
+    assert len(results) == 1
+    assert results[0]["source_type"] == "public"
+    assert results[0]["score"] == 0.30
+
+
+def test_returns_empty_when_both_tiers_empty():
+    """When neither tier has any chunk at all, retrieval returns [] (caller raises NO_CONTEXT)."""
+    mock_collection = MagicMock()
+    empty = {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+    mock_collection.query.side_effect = [empty, empty]
+
+    results = retrieve_context(topic="Deadlocks", subject="OS", collection=mock_collection)
+
+    assert mock_collection.query.call_count == 2
+    assert results == []
+
+
+def test_default_query_text_is_subject_and_topic():
+    """With no explicit query_text, the default must be '<subject> <topic>'."""
+    mock_collection = MagicMock()
+    mock_collection.query.return_value = {
+        "documents": [["On-topic college chunk"]],
+        "metadatas": [[{"source_type": "college", "subject": "OS", "topic": "Deadlocks", "source_doc": "lec.pdf"}]],
+        "distances": [[0.12]],
+    }
+
+    retrieve_context(topic="Deadlocks", subject="OS", collection=mock_collection)
+
+    assert mock_collection.query.call_args.kwargs["query_texts"] == ["OS Deadlocks"]

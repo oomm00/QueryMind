@@ -24,7 +24,7 @@ import time
 from typing import Any, Optional
 
 from app.core.config import settings
-from app.core.exceptions import QueryMindError, ValidationError
+from app.core.exceptions import NoContextError, QueryMindError, ValidationError
 from app.schemas.schemas import GeneratedQuestion
 from app.services import llm_utils
 # Re-exported for backwards compatibility (tests / callers import it from here).
@@ -254,6 +254,7 @@ def generate_question(
 
     Raises:
         ValidationError: If the LLM returns malformed/invalid JSON after 1 retry.
+        NoContextError: If no study material exists for the subject/topic (404).
         QueryMindError: If the LLM service is unavailable or both attempts fail.
     """
     # ── Input validation ──────────────────────────────────────────────────────
@@ -277,6 +278,17 @@ def generate_question(
             difficulty=difficulty,
             collection=chroma_collection,
         )
+
+    # ── No source material -> nothing to ground a question on ─────────────────
+    # If neither the college nor the public tier has any material for this
+    # subject + topic, fail fast with a clear 404 rather than asking the LLM to
+    # invent a question from thin air.
+    if not context_chunks:
+        raise NoContextError(
+            f"No study material exists for {subject} / {topic} yet. "
+            "Upload a college or public document for this subject and topic first."
+        )
+
     logger.info(
         "Retrieved %d context chunks for %s / %s (bloom=%s, diff=%s)",
         len(context_chunks), subject, topic, bloom_level, difficulty,
