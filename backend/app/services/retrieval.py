@@ -3,9 +3,12 @@ Retrieval Service — Two-Tier College & Public Knowledge Base Search
 ===================================================================
 1. Queries ChromaDB for documents with source_type="college", subject, and topic.
 2. Measures cosine similarity against the query vector.
-3. If no college chunks match or the top similarity score is < 0.75,
+3. If no college chunks match or the top college similarity is < SIMILARITY_THRESHOLD,
    falls back to source_type="public" material.
-4. Returns top-k ranked chunks formatted as:
+4. If NEITHER tier clears the threshold, returns the best-available college chunks
+   (preferred) or the best-available public chunks, rather than silently returning
+   nothing. Only when both tiers are empty does it return [].
+5. Returns top-k ranked chunks formatted as:
    {"text": ..., "source_type": ..., "score": ..., "source_doc": ...}
 """
 
@@ -23,7 +26,17 @@ from app.core.config import settings
 logger = logging.getLogger("querymind.retrieval")
 
 COLLECTION_NAME = "querymind_documents"
-SIMILARITY_THRESHOLD = 0.75
+
+# Minimum top-1 college similarity required to serve Tier 1 directly.
+#
+# Calibrated empirically against the default all-MiniLM-L6-v2 embedding model:
+# for short topic queries ("<subject> <topic>") against real college chunks,
+# cosine similarities for on-topic material measured ~0.47-0.64. The previous
+# 0.75 was therefore unreachable and college material was NEVER selected — every
+# topic silently fell through to the public tier (or to nothing when no public
+# material existed). 0.45 sits just below the observed on-topic band while still
+# rejecting clearly off-topic matches.
+SIMILARITY_THRESHOLD = 0.45
 
 
 def get_chroma_client() -> ClientAPI:
@@ -118,7 +131,10 @@ def retrieve_context(
     """Retrieve grounded context chunks with Two-Tier college priority and public fallback.
 
     Tier 1: Filter source_type="college", subject=subject, topic=topic.
-    Tier 2: Fall back to source_type="public" if college results are empty or top score < 0.75.
+    Tier 2: Fall back to source_type="public" if college results are empty or the
+            top college score is below ``SIMILARITY_THRESHOLD``.
+    If neither tier clears the threshold, the best-available chunks are returned
+    (college preferred); [] is returned only when both tiers are empty.
     """
     if collection is None:
         chroma_client = client or get_chroma_client()
@@ -127,7 +143,10 @@ def retrieve_context(
             metadata={"hnsw:space": "cosine"},
         )
 
-    search_query = query_text or f"{subject} {topic} {bloom_level} {difficulty} concept and explanation"
+    # Short "<subject> <topic>" queries score higher (and more consistently) than
+    # the earlier long generic phrase, so build the default query from just those
+    # two fields when the caller does not supply one.
+    search_query = query_text or f"{subject} {topic}"
 
     # Tier 1: College material
     college_chunks = _query_collection(
@@ -171,4 +190,34 @@ def retrieve_context(
         n_results=top_k,
     )
 
-    return public_chunks
+    if public_chunks and public_chunks[0]["score"] >= SIMILARITY_THRESHOLD:
+        return public_chunks
+
+    # Neither tier cleared the threshold. Rather than silently returning nothing,
+    # hand back the best material we do have — college preferred, then public — so
+    # downstream generation still has something to ground on. The answerability
+    # check in the generation pipeline is the safety net against weak matches.
+    if college_chunks:
+        logger.warning(
+            "No chunk cleared the %.2f threshold; returning best-available college "
+            "chunk(s) (top score %.4f) for %s / %s",
+            SIMILARITY_THRESHOLD,
+            college_chunks[0]["score"],
+            subject,
+            topic,
+        )
+        return college_chunks
+
+    if public_chunks:
+        logger.warning(
+            "No college material and no public chunk cleared the %.2f threshold; "
+            "returning best-available public chunk(s) (top score %.4f) for %s / %s",
+            SIMILARITY_THRESHOLD,
+            public_chunks[0]["score"],
+            subject,
+            topic,
+        )
+        return public_chunks
+
+    logger.warning("No study material found in either tier for %s / %s", subject, topic)
+    return []

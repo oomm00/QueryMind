@@ -87,3 +87,19 @@ class RateLimitExceededError(QueryMindError):
     def __init__(self, detail: str = "Too many requests. Please try again later.") -> None:
         super().__init__(detail)
 
+
+class NoContextError(QueryMindError):
+    """Raised when generation has no retrievable study material to ground on.
+
+    The two-tier retrieval returned nothing for the requested subject + topic, so
+    there is no source material to build a grounded question from.
+    """
+
+    status_code = 404
+    code = "NO_CONTEXT"
+
+    def __init__(
+        self,
+        detail: str = "No study material exists for this subject/topic yet",
+    ) -> None:
+        super().__init__(detail)
