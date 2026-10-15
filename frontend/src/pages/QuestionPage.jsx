@@ -1,161 +1,153 @@
 /**
  * QuestionPage — /question
- * Fetches a stub question from the backend and renders it.
- * On submit, navigates to /feedback with the answer + response.
+ * Renders the active question in the study session.
+ * Fixes timer bug by resetting startTime per question index.
+ * Session state is read from SessionContext (backed by sessionStorage).
  */
 
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { questionsApi } from '../api/client.js'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useSession } from '../context/SessionContext.jsx'
+import { getBloomColor } from '../constants/bloomTaxonomy.js'
 
 export default function QuestionPage() {
-  const navigate  = useNavigate()
-  const location  = useLocation()
-  const setup     = location.state?.setup ?? {
-    topic: 'General Knowledge', bloom: 'understand', difficulty: 'medium', numQ: 1,
-  }
+  const navigate = useNavigate()
+  const {
+    hasActiveSession,
+    questions,
+    currentIdx,
+    currentQuestion,
+    setup,
+    setUserAnswer: saveSessionAnswer,
+  } = useSession()
 
-  const [questions, setQuestions]   = useState([])
-  const [currentIdx, setCurrentIdx] = useState(0)
-  const [answer, setAnswer]         = useState('')
-  const [loading, setLoading]       = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError]           = useState(null)
-  const [startTime]                 = useState(Date.now())
+  const [answer, setAnswer] = useState('')
+  const [startTime, setStartTime] = useState(Date.now())
 
+  // If page is refreshed or visited with no session, redirect to setup
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    questionsApi
-      .generate({
-        topic:         setup.topic,
-        bloom_level:   setup.bloom,
-        difficulty:    setup.difficulty,
-        num_questions: Number(setup.numQ),
-      })
-      .then((data) => {
-        if (!cancelled) setQuestions(data.questions ?? [])
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    if (!hasActiveSession || !currentQuestion) {
+      navigate('/setup', { replace: true })
+    }
+  }, [hasActiveSession, currentQuestion, navigate])
 
-    return () => { cancelled = true }
-  }, [])
+  // Timer fix: Reset startTime whenever currentIdx changes
+  useEffect(() => {
+    setStartTime(Date.now())
+    setAnswer('')
+  }, [currentIdx])
 
-  const currentQuestion = questions[currentIdx]
-  const progress = questions.length ? ((currentIdx) / questions.length) * 100 : 0
+  if (!currentQuestion) return null
 
-  const handleSubmit = async (e) => {
+  const progress = questions.length ? ((currentIdx + 1) / questions.length) * 100 : 0
+  const bloomColor = getBloomColor(currentQuestion.bloom_level)
+
+  const handleSubmit = (e) => {
     e.preventDefault()
-    if (!answer.trim() || !currentQuestion) return
+    if (!answer.trim()) return
 
-    const timeTaken = Math.round((Date.now() - startTime) / 1000)
-    setSubmitting(true)
+    const timeTaken = Math.max(1, Math.round((Date.now() - startTime) / 1000))
+    saveSessionAnswer(answer)
 
     navigate('/feedback', {
       state: {
-        questionId:   currentQuestion.id,
-        questionText: currentQuestion.question_text,
-        userAnswer:   answer,
         timeTaken,
-        setup,
-        questions,
-        currentIdx,
       },
     })
   }
 
-  if (loading) return <LoadingState />
-  if (error)   return <ErrorState message={error} onBack={() => navigate('/setup')} />
-  if (!currentQuestion) return <ErrorState message="No questions returned." onBack={() => navigate('/setup')} />
-
   return (
-    <div className="page-wrapper items-start py-12">
-      <div className="w-full max-w-2xl mx-auto animate-fade-in">
-        {/* Progress Bar */}
-        <div className="mb-6">
-          <div className="flex justify-between text-xs text-[var(--color-muted)] mb-2">
-            <span>Question {currentIdx + 1} of {questions.length}</span>
-            <div className="flex gap-2">
-              <span className="badge">{setup.bloom}</span>
-              <span className="badge">{setup.difficulty}</span>
+    <div className="page-wrapper items-start py-8">
+      <div className="w-full max-w-3xl mx-auto animate-fade-in space-y-6">
+        {/* Progress & Header */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-zinc-400">
+            <span className="font-mono">
+              Question {currentIdx + 1} of {questions.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider text-black"
+                style={{ backgroundColor: bloomColor }}
+              >
+                {currentQuestion.bloom_level}
+              </span>
+              <span className="badge uppercase text-[10px]">
+                {currentQuestion.difficulty}
+              </span>
             </div>
           </div>
-          <div className="h-1.5 bg-surface-border rounded-full overflow-hidden">
+
+          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-brand rounded-full transition-all duration-500"
+              className="h-full bg-brand-500 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
 
         {/* Question Card */}
-        <div className="card mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[var(--color-muted)] text-xs uppercase tracking-widest font-semibold">
-              Topic: {setup.topic}
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wider font-semibold text-zinc-400">
+              Topic: {currentQuestion.topic || setup?.topic}
             </span>
+            {currentQuestion.question_id && (
+              <span className="text-[10px] text-zinc-500 font-mono">
+                ID: {currentQuestion.question_id.slice(0, 8)}…
+              </span>
+            )}
           </div>
-          <p className="text-white text-lg leading-relaxed">{currentQuestion.question_text}</p>
+
+          <p className="text-white text-base sm:text-lg leading-relaxed font-normal">
+            {currentQuestion.question_text}
+          </p>
+
+          {Array.isArray(currentQuestion.hints) && currentQuestion.hints.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-surface-border text-xs text-zinc-400">
+              <span className="text-zinc-500 font-medium mr-1">💡 Hint:</span>
+              {currentQuestion.hints[0]}
+            </div>
+          )}
         </div>
 
-        {/* Answer Form */}
-        <form onSubmit={handleSubmit} className="card">
-          <label htmlFor="answer" className="label">Your Answer</label>
-          <textarea
-            id="answer"
-            rows={6}
-            placeholder="Type your answer here…"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            className="input resize-none mb-4"
-            required
-          />
-          <div className="flex gap-3">
+        {/* Answer Input Form */}
+        <form onSubmit={handleSubmit} className="card space-y-4">
+          <div>
+            <label htmlFor="answer" className="label">
+              Your Answer / Reasoning
+            </label>
+            <textarea
+              id="answer"
+              rows={7}
+              placeholder="Formulate your detailed answer here. Focus on precision, core mechanisms, and practical trade-offs…"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              className="input resize-none leading-relaxed font-sans"
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 pt-2">
             <button
-              id="btn-skip-question"
+              id="btn-back-setup"
               type="button"
               onClick={() => navigate('/setup')}
               className="btn-ghost"
             >
-              ← Back
+              ← Back to Setup
             </button>
+
             <button
               id="btn-submit-answer"
               type="submit"
-              disabled={submitting || !answer.trim()}
-              className="btn-primary flex-1"
+              disabled={!answer.trim()}
+              className="btn-primary"
             >
-              {submitting ? 'Evaluating…' : 'Submit Answer →'}
+              Submit Answer →
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  )
-}
-
-function LoadingState() {
-  return (
-    <div className="page-wrapper">
-      <div className="text-center animate-pulse-soft">
-        <div className="text-4xl mb-4">🧠</div>
-        <p className="text-[var(--color-muted)]">Generating your question…</p>
-      </div>
-    </div>
-  )
-}
-
-function ErrorState({ message, onBack }) {
-  return (
-    <div className="page-wrapper">
-      <div className="card max-w-md text-center">
-        <p className="text-red-400 mb-4">⚠️ {message}</p>
-        <button onClick={onBack} className="btn-ghost">← Back to Setup</button>
       </div>
     </div>
   )

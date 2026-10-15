@@ -1,19 +1,24 @@
 /**
  * LoginPage — /login
- * Stub: submits credentials to the backend /auth/login endpoint
- * and stores the returned token in localStorage.
+ * Authenticates user credentials or registers a new account using AuthContext.
+ * Bounded to real backend auth by default, or mock auth if VITE_MOCK_AUTH=true.
  */
 
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { authApi } from '../api/client.js'
+import React, { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState('login')          // 'login' | 'register'
+  const location = useLocation()
+  const { login, register } = useAuth()
+
+  const [tab, setTab] = useState('login') // 'login' | 'register'
   const [form, setForm] = useState({ email: '', password: '', full_name: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const from = location.state?.from?.pathname || '/setup'
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -25,52 +30,59 @@ export default function LoginPage() {
 
     try {
       if (tab === 'register') {
-        await authApi.register({ email: form.email, password: form.password, full_name: form.full_name })
-        setTab('login')
-        return
+        await register({
+          email: form.email,
+          password: form.password,
+          full_name: form.full_name,
+        })
+      } else {
+        await login({
+          email: form.email,
+          password: form.password,
+        })
       }
-
-      const data = await authApi.login({ email: form.email, password: form.password })
-      localStorage.setItem('qm_token', data.access_token)
-      localStorage.setItem('qm_user_id', data.user_id)
-      navigate('/setup')
+      navigate(from, { replace: true })
     } catch (err) {
-      setError(err.message ?? 'Something went wrong')
+      setError(err.message ?? 'Authentication failed. Please check your credentials.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper min-h-screen items-center justify-center py-12">
       <div className="w-full max-w-md animate-slide-up">
-        {/* Logo / Brand */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-brand mb-4">
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-brand shadow-lg shadow-indigo-500/20 mb-3">
             <span className="text-2xl">🧠</span>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white">QueryMind</h1>
-          <p className="text-[var(--color-muted)] mt-1 text-sm">
-            AI-powered adaptive learning
+          <h1 className="text-3xl font-display font-bold text-white tracking-tight">QueryMind</h1>
+          <p className="text-zinc-400 mt-1 text-sm">
+            AI-powered adaptive learning & cognitive evaluation
           </p>
         </div>
 
-        {/* Card */}
+        {/* Auth Card */}
         <div className="card">
-          {/* Tabs */}
-          <div className="flex rounded-xl overflow-hidden border border-surface-border mb-6">
+          {/* Tab Switcher */}
+          <div className="flex rounded-lg overflow-hidden border border-surface-border bg-zinc-950 p-1 mb-6">
             {['login', 'register'].map((t) => (
               <button
                 key={t}
                 id={`tab-${t}`}
-                onClick={() => setTab(t)}
-                className={`flex-1 py-2.5 text-sm font-semibold capitalize transition-colors duration-200 ${
+                type="button"
+                onClick={() => {
+                  setTab(t)
+                  setError(null)
+                }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-md capitalize transition-all duration-150 ${
                   tab === t
-                    ? 'bg-brand-500 text-white'
-                    : 'text-[var(--color-muted)] hover:text-white'
+                    ? 'bg-zinc-800 text-white shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                {t}
+                {t === 'login' ? 'Sign In' : 'Create Account'}
               </button>
             ))}
           </div>
@@ -92,7 +104,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="label">Email</label>
+              <label htmlFor="email" className="label">Email Address</label>
               <input
                 id="email"
                 name="email"
@@ -121,31 +133,20 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p className="text-red-400 text-sm bg-red-950/40 border border-red-800/50 rounded-lg px-4 py-3">
+              <div className="text-rose-400 text-xs bg-rose-950/40 border border-rose-900/60 rounded-lg p-3">
                 {error}
-              </p>
+              </div>
             )}
 
             <button
               id="btn-submit-auth"
               type="submit"
               disabled={loading}
-              className="btn-primary w-full mt-2"
+              className="btn-primary w-full py-2.5 mt-2"
             >
               {loading ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
-
-          <p className="text-center text-xs text-[var(--color-muted)] mt-6">
-            This is a development stub.{' '}
-            <button
-              id="btn-skip-login"
-              onClick={() => navigate('/setup')}
-              className="text-brand-400 hover:underline"
-            >
-              Skip to Setup →
-            </button>
-          </p>
         </div>
       </div>
     </div>

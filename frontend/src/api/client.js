@@ -1,59 +1,41 @@
 /**
- * API Client — QueryMind Frontend
- * ================================
- * A thin fetch wrapper that:
- *  - Prefixes every request with the backend base URL from env
- *  - Attaches JSON Content-Type and Authorization headers
- *  - Throws a structured error on non-2xx responses
- *
- * Replace BASE_URL env var in .env.local:
- *   VITE_API_BASE_URL=http://localhost:8000
+ * Core API Client — QueryMind Frontend
+ * =====================================
+ * Thin fetch wrapper supporting:
+ *  - Configurable BASE_URL
+ *  - Automatic JWT Authorization header injection from localStorage ('qm_token')
+ *  - Structured ApiError exceptions
+ *  - 401 Unauthorized observer hook for AuthContext integration
  */
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
-/** Retrieve the stored auth token (stub: returns null until auth is real). */
-function getToken() {
+// Registry of 401 callbacks (typically registered by AuthContext)
+let unauthorizedCallbacks = []
+
+export function onUnauthorized(callback) {
+  unauthorizedCallbacks.push(callback)
+  return () => {
+    unauthorizedCallbacks = unauthorizedCallbacks.filter((cb) => cb !== callback)
+  }
+}
+
+function notifyUnauthorized() {
+  unauthorizedCallbacks.forEach((cb) => {
+    try {
+      cb()
+    } catch (err) {
+      console.error('Error in onUnauthorized callback', err)
+    }
+  })
+}
+
+/** Retrieve current token from storage */
+export function getStoredToken() {
   return localStorage.getItem('qm_token')
 }
 
-/**
- * Core fetch wrapper.
- * @param {string} path - API path, e.g. '/auth/login'
- * @param {RequestInit} options - Fetch options
- * @returns {Promise<any>} - Parsed JSON response
- */
-async function apiFetch(path, options = {}) {
-  const token = getToken()
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  }
-
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    let errorData
-    try {
-      errorData = await response.json()
-    } catch {
-      errorData = { detail: response.statusText }
-    }
-    throw new ApiError(response.status, errorData?.detail ?? 'Unknown error', errorData)
-  }
-
-  // 204 No Content
-  if (response.status === 204) return null
-
-  return response.json()
-}
-
-/** Structured API error */
+/** Structured API Error */
 export class ApiError extends Error {
   constructor(status, message, data) {
     super(message)
@@ -63,32 +45,56 @@ export class ApiError extends Error {
   }
 }
 
-// ── Auth ────────────────────────────────────────────────────
+/**
+ * Core fetch wrapper
+ * @param {string} path - API endpoint path, e.g. '/auth/login'
+ * @param {RequestInit} options - fetch options
+ * @returns {Promise<any>}
+ */
+export async function apiFetch(path, options = {}) {
+  const token = getStoredToken()
 
-export const authApi = {
-  register: (payload) =>
-    apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  }
 
-  login: (payload) =>
-    apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
-}
+  // Handle FormData where Content-Type must be determined by browser boundary
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type']
+  }
 
-// ── Questions ────────────────────────────────────────────────
+  const url = `${BASE_URL}${path}`
+  let response
 
-export const questionsApi = {
-  generate: (payload) =>
-    apiFetch('/questions/generate', { method: 'POST', body: JSON.stringify(payload) }),
-}
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    })
+  } catch (err) {
+    throw new ApiError(0, err.message || 'Network request failed', null)
+  }
 
-// ── Attempts ─────────────────────────────────────────────────
+  if (response.status === 401) {
+    notifyUnauthorized()
+  }
 
-export const attemptsApi = {
-  submit: (payload) =>
-    apiFetch('/attempts/submit', { method: 'POST', body: JSON.stringify(payload) }),
-}
+  if (!response.ok) {
+    let errorData
+    try {
+      errorData = await response.json()
+    } catch {
+      errorData = { detail: response.statusText }
+    }
+    const message = errorData?.detail ?? errorData?.message ?? 'Request failed'
+    throw new ApiError(response.status, message, errorData)
+  }
 
-// ── Profile ──────────────────────────────────────────────────
+  if (response.status === 204) {
+    return null
+  }
 
-export const profileApi = {
-  get: (userId) => apiFetch(`/profile/${userId}`),
+  return response.json()
 }
