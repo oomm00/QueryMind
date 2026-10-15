@@ -86,6 +86,7 @@ class Question(Base):
     )
     document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id"))
     topic: Mapped[str] = mapped_column(String(512), nullable=False)
+    subject: Mapped[str | None] = mapped_column(String(255))  # e.g. "DBMS"
     bloom_level: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # remember | understand | apply | analyze | evaluate | create

@@ -310,6 +310,8 @@ def generate_question(
     question_type: str = "open",
     llm_client: Optional[Any] = None,
     chroma_collection: Optional[Collection] = None,
+    context_chunks: Optional[list[dict]] = None,
+    extra_instruction: str = "",
 ) -> GeneratedQuestion:
     """Generate a Bloom-taxonomy-aligned question grounded in retrieved context.
 
@@ -322,6 +324,13 @@ def generate_question(
         llm_client: Inject any object with ``generate_content(prompt) -> response``
                     for testing.  Leave ``None`` to use the real Gemini API.
         chroma_collection: Inject a mock ChromaDB collection for testing.
+        context_chunks: Pre-retrieved chunks to use instead of calling
+                    ``retrieve_context`` again.  Lets the caller (e.g. the
+                    validation stage) reuse the exact same context that the
+                    question was grounded in.  ``None`` triggers retrieval.
+        extra_instruction: Optional corrective note appended to the prompt, used
+                    when regenerating after a failed pre-delivery validation
+                    (e.g. "avoid this duplicate", "ground the answer in sources").
 
     Returns:
         GeneratedQuestion (validated Pydantic model)
@@ -341,13 +350,16 @@ def generate_question(
         )
 
     # ── Step 1: Retrieve context ──────────────────────────────────────────────
-    context_chunks = retrieve_context(
-        topic=topic,
-        subject=subject,
-        bloom_level=bloom_level,
-        difficulty=difficulty,
-        collection=chroma_collection,
-    )
+    # Callers may pass in already-retrieved chunks so the prompt and the
+    # downstream answerability check share the exact same source material.
+    if context_chunks is None:
+        context_chunks = retrieve_context(
+            topic=topic,
+            subject=subject,
+            bloom_level=bloom_level,
+            difficulty=difficulty,
+            collection=chroma_collection,
+        )
     logger.info(
         "Retrieved %d context chunks for %s / %s (bloom=%s, diff=%s)",
         len(context_chunks), subject, topic, bloom_level, difficulty,
@@ -362,6 +374,8 @@ def generate_question(
         question_type=question_type,
         context_chunks=context_chunks,
     )
+    if extra_instruction:
+        prompt = f"{prompt}\n\nADDITIONAL INSTRUCTION:\n{extra_instruction}"
 
     # ── Step 3: Resolve client ────────────────────────────────────────────────
     # If no client is injected, create the real GeminiAdapter.
