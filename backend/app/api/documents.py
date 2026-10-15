@@ -67,7 +67,6 @@ def upload_document(
         subject=subject,
         topic=topic,
         source_type=source_type,
-        course=course,
         db=db,
         user_id=current_user.id,
     )
