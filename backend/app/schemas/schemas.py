@@ -37,6 +37,21 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
+# ══════════════════════════════════════════════════════════════
+# Documents
+# ══════════════════════════════════════════════════════════════
+
+class DocumentUploadResponse(BaseModel):
+    document_id: uuid.UUID
+    filename: str
+    subject: str
+    topic: Optional[str] = None
+    course: Optional[str] = None
+    source_type: str = "college"
+    chunks_count: int
+    status: str = "ready"
+
+
 
 # ══════════════════════════════════════════════════════════════
 # Questions
