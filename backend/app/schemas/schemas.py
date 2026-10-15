@@ -102,6 +102,42 @@ class AttemptFeedback(BaseModel):
 
 
 # ══════════════════════════════════════════════════════════════
+# Answer Evaluation (POST /questions/{id}/submit-answer)
+# ══════════════════════════════════════════════════════════════
+
+MAX_ANSWER_LENGTH = 5000  # characters — generous for a paragraph-style answer
+
+
+class SubmitAnswerRequest(BaseModel):
+    # Length bounds only; blank/whitespace answers are rejected by the service
+    # (raising a QueryMindError -> 422) so this model stays serializable when the
+    # framework renders validation errors.
+    answer: str = Field(
+        ..., min_length=1, max_length=MAX_ANSWER_LENGTH,
+        examples=["2PL holds exclusive locks until commit, preventing dirty reads."],
+    )
+
+
+class ScoreBreakdown(BaseModel):
+    """Per-criterion rubric sub-scores, each 0-10."""
+    correctness: int = Field(ge=0, le=10)
+    completeness: int = Field(ge=0, le=10)
+    depth_of_reasoning: int = Field(ge=0, le=10)
+    clarity: int = Field(ge=0, le=10)
+
+
+class AnswerEvaluationResponse(BaseModel):
+    attempt_id: uuid.UUID
+    question_id: uuid.UUID
+    scores: ScoreBreakdown
+    overall_score: float = Field(ge=0.0, le=100.0, description="Weighted 0-100 (computed in code)")
+    feedback: str
+    missing_points: list[str] = []
+    strengths: list[str] = []
+    reference_answer: Optional[str] = None
+
+
+# ══════════════════════════════════════════════════════════════
 # Knowledge Profile
 # ══════════════════════════════════════════════════════════════
 

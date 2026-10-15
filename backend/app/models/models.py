@@ -114,6 +114,7 @@ class Attempt(Base):
     user_answer: Mapped[str] = mapped_column(Text, nullable=False)
     score: Mapped[float | None] = mapped_column(Float)          # 0.0 – 1.0
     feedback: Mapped[str | None] = mapped_column(Text)
+    evaluation_data: Mapped[str | None] = mapped_column(Text)    # full rubric JSON (scores, missing_points, strengths)
     time_taken_seconds: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

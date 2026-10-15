@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
     llm_model: str = "gemini-3.8-flash"
     llm_temperature: float = 0.3       # Low temp for deterministic structured output
+    llm_eval_temperature: float = 0.0  # Minimal temp for consistent rubric scoring
 
 
 settings = Settings()

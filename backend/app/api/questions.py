@@ -8,14 +8,23 @@ routes.
 
 from __future__ import annotations
 
+import json
+import uuid
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.exceptions import ValidationError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.db.session import get_db
-from app.models.models import Question, User
-from app.schemas.schemas import GenerateQuestionRequest, GeneratedQuestion
+from app.models.models import Attempt, Question, User
+from app.schemas.schemas import (
+    AnswerEvaluationResponse,
+    GenerateQuestionRequest,
+    GeneratedQuestion,
+    SubmitAnswerRequest,
+)
+from app.services.evaluation_service import evaluate_answer
 from app.services.generation_service import generate_question
 from app.services.retrieval import retrieve_context
 from app.services.validation_service import validate_question
@@ -139,3 +148,53 @@ def generate_questions(
         topic=payload.topic,
     )
     return generated
+
+
+@router.post(
+    "/{question_id}/submit-answer",
+    response_model=AnswerEvaluationResponse,
+    summary="Submit a student answer for rubric-based evaluation",
+)
+def submit_answer(
+    question_id: uuid.UUID,
+    payload: SubmitAnswerRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AnswerEvaluationResponse:
+    """Grade a student's answer to an existing question and persist the attempt.
+
+    - Looks up the question (404 if unknown).
+    - Runs the rubric-based LLM judge (correctness / completeness /
+      depth_of_reasoning / clarity) and computes the weighted overall score (0-100).
+    - Persists an :class:`Attempt` (score stored as 0-1, full rubric JSON in
+      ``evaluation_data``).
+    - Requires a valid JWT Bearer token.
+    """
+    question = db.query(Question).filter(Question.id == question_id).first()
+    if question is None:
+        raise NotFoundError(f"Question {question_id} not found")
+
+    evaluation = evaluate_answer(question=question, student_answer=payload.answer)
+
+    attempt = Attempt(
+        user_id=current_user.id,
+        question_id=question.id,
+        user_answer=payload.answer,
+        score=round(evaluation["overall_score"] / 100.0, 4),  # store 0-1 per model convention
+        feedback=evaluation["feedback"],
+        evaluation_data=json.dumps(evaluation),
+    )
+    db.add(attempt)
+    db.commit()
+    db.refresh(attempt)
+
+    return AnswerEvaluationResponse(
+        attempt_id=attempt.id,
+        question_id=question.id,
+        scores=evaluation["scores"],
+        overall_score=evaluation["overall_score"],
+        feedback=evaluation["feedback"],
+        missing_points=evaluation["missing_points"],
+        strengths=evaluation["strengths"],
+        reference_answer=question.reference_answer,
+    )

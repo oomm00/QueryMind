@@ -19,15 +19,16 @@ Test mocks can simply be a ``MagicMock`` with ``generate_content`` configured.
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 import time
 from typing import Any, Optional
 
 from app.core.config import settings
 from app.core.exceptions import QueryMindError, ValidationError
 from app.schemas.schemas import GeneratedQuestion
+from app.services import llm_utils
+# Re-exported for backwards compatibility (tests / callers import it from here).
+from app.services.llm_utils import LLM_MAX_RETRIES, normalize_str  # noqa: F401
 from app.services.retrieval import retrieve_context
 from chromadb.api.models.Collection import Collection
 
@@ -46,12 +47,8 @@ BLOOM_VERBS: dict[str, list[str]] = {
 VALID_BLOOM_LEVELS = set(BLOOM_VERBS.keys())
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
-# ── Transient-Error Retry Configuration ───────────────────────────────────────
-# Retries are for *transport/availability* failures (503, 429, timeouts) and are
-# completely separate from the JSON-validation retry performed in generate_question().
-LLM_MAX_RETRIES = 3               # retries after the initial attempt
-LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s, 2s, 4s
-TRANSIENT_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
+# Transient-error retry / backoff configuration now lives in app.services.llm_utils
+# (shared with the answer-evaluation service). LLM_MAX_RETRIES is re-exported above.
 
 # ── Expected JSON Output Schema Description ───────────────────────────────────
 JSON_SCHEMA_DESCRIPTION = """\
@@ -174,89 +171,9 @@ Source doc names available: {source_docs}
     return prompt
 
 
-# ── Transient-Error Detection & Retrying ──────────────────────────────────────
-
-def _is_transient_error(exc: Exception) -> bool:
-    """Return True if *exc* looks like a retryable, transient LLM/network error.
-
-    Covers HTTP 5xx / 429 responses (e.g. ``google.genai.errors.ServerError``),
-    timeouts, connection failures, and messages that mention temporary
-    unavailability. Application-level :class:`QueryMindError` exceptions are never
-    treated as transient.
-    """
-    # QueryMindError subclasses carry an app-level status_code (422/429/...) and
-    # must not be confused with transport errors.
-    if isinstance(exc, QueryMindError):
-        return False
-
-    for attr in ("status_code", "code", "http_status"):
-        value = getattr(exc, attr, None)
-        if isinstance(value, int) and value in TRANSIENT_STATUS_CODES:
-            return True
-
-    if isinstance(exc, (TimeoutError, ConnectionError)):
-        return True
-
-    try:  # httpx timeouts / transport errors
-        import httpx
-
-        if isinstance(exc, (httpx.TimeoutException, httpx.TransportError)):
-            return True
-    except Exception:  # pragma: no cover - httpx is always installed in prod
-        pass
-
-    message = str(exc).lower()
-    needles = (
-        "timeout", "timed out", "unavailable", "high demand", "overloaded",
-        "rate limit", "temporarily", "connection reset", "connection aborted",
-        "503", "429",
-    )
-    return any(needle in message for needle in needles)
-
-
-def _generate_with_retry(client: Any, prompt: str) -> Any:
-    """Call ``client.generate_content(prompt)`` with exponential-backoff retries.
-
-    Only *transient* failures (503/429/timeout/connection) are retried; permanent
-    errors are raised immediately. After the retries are exhausted a
-    :class:`QueryMindError` (503 / ``LLM_CALL_FAILED``) is raised.
-    """
-    attempts = LLM_MAX_RETRIES + 1
-    last_exc: Optional[Exception] = None
-
-    for attempt in range(attempts):
-        try:
-            return client.generate_content(prompt)
-        except Exception as exc:  # noqa: BLE001 — re-raised below if not transient
-            if not _is_transient_error(exc):
-                raise
-            last_exc = exc
-            if attempt == attempts - 1:
-                break
-            delay = LLM_BACKOFF_BASE_SECONDS * (2 ** attempt)
-            logger.warning(
-                "Transient LLM error on attempt %d/%d: %s — retrying in %.1fs",
-                attempt + 1, attempts, exc, delay,
-            )
-            time.sleep(delay)
-
-    raise QueryMindError(
-        f"LLM call failed after {attempts} attempts due to transient errors: {last_exc}",
-        status_code=503,
-        code="LLM_CALL_FAILED",
-    ) from last_exc
-
-
-# ── JSON Extraction & Validation ──────────────────────────────────────────────
-
-def _extract_json(text: str) -> dict:
-    """Extract JSON object from LLM response, stripping markdown fences if present."""
-    text = text.strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s*```$", "", text)
-    text = text.strip()
-    return json.loads(text)
-
+# ── JSON Validation ───────────────────────────────────────────────────────────
+# (Transient-error backoff, JSON extraction, and the malformed-JSON retry live in
+#  app.services.llm_utils so generation and evaluation share one implementation.)
 
 def _validate_and_parse(raw_json: dict, question_type: str) -> GeneratedQuestion:
     """Validate LLM output dict against GeneratedQuestion schema.
@@ -275,8 +192,8 @@ def _validate_and_parse(raw_json: dict, question_type: str) -> GeneratedQuestion
         if not options or len(options) != 4:
             raise ValidationError("MCQ questions must have exactly 4 options.")
 
-    bloom_level = str(raw_json["bloom_level"]).strip().lower()
-    difficulty = str(raw_json["difficulty"]).strip().lower()
+    bloom_level = normalize_str(raw_json["bloom_level"])
+    difficulty = normalize_str(raw_json["difficulty"])
 
     if bloom_level not in VALID_BLOOM_LEVELS:
         raise ValidationError(
@@ -378,48 +295,22 @@ def generate_question(
         prompt = f"{prompt}\n\nADDITIONAL INSTRUCTION:\n{extra_instruction}"
 
     # ── Step 3: Resolve client ────────────────────────────────────────────────
-    # If no client is injected, create the real GeminiAdapter.
-    # Test mocks pass their own object here — _call_llm always uses the same
-    # ``.generate_content(prompt)`` interface regardless.
+    # If no client is injected, create the real GeminiAdapter. Test mocks pass
+    # their own object exposing ``generate_content(prompt)``.
     client = llm_client if llm_client is not None else _configure_genai()
 
-    # ── Inner helper: one LLM round-trip ─────────────────────────────────────
-    def _call_llm(extra_instruction: str = "") -> GeneratedQuestion:
-        full_prompt = prompt if not extra_instruction else prompt + f"\n\n{extra_instruction}"
-        try:
-            response = _generate_with_retry(client, full_prompt)
-            raw_text = response.text
-        except QueryMindError:
-            raise
-        except Exception as exc:
-            raise QueryMindError(
-                f"LLM call failed: {exc}",
-                status_code=503,
-                code="LLM_CALL_FAILED",
-            ) from exc
+    # ── Step 4: LLM round-trip ────────────────────────────────────────────────
+    # llm_utils handles the transient-error backoff and the single malformed-JSON
+    # retry (shared with the evaluation service). `time.sleep` is threaded through
+    # so tests can patch it at the module level.
+    def _request(prompt_text: str) -> str:
+        return llm_utils.request_text(client, prompt_text, sleep=time.sleep)
 
-        try:
-            raw_json = _extract_json(raw_text)
-            return _validate_and_parse(raw_json, question_type)
-        except (json.JSONDecodeError, ValidationError, Exception) as exc:
-            raise ValidationError(
-                f"LLM returned invalid JSON: {exc}\nRaw: {raw_text[:300]}"
-            ) from exc
-
-    # ── First attempt ─────────────────────────────────────────────────────────
     try:
-        return _call_llm()
-    except ValidationError as first_err:
-        logger.warning(
-            "First LLM attempt returned invalid JSON: %s — retrying with strict instruction",
-            first_err,
-        )
-
-    # ── Retry with stricter instruction ───────────────────────────────────────
-    try:
-        return _call_llm(
-            "IMPORTANT: You MUST return ONLY a raw valid JSON object. "
-            "No markdown fences. No extra text. Start your response with '{' and end with '}'."
+        return llm_utils.call_json_with_retry(
+            request_fn=_request,
+            prompt=prompt,
+            parse_fn=lambda raw: _validate_and_parse(raw, question_type),
         )
     except ValidationError as second_err:
         logger.error("Second LLM attempt also failed: %s", second_err)
