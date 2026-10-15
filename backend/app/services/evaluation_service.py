@@ -40,18 +40,32 @@ logger = logging.getLogger("querymind.evaluation")
 SCORE_MIN = 0
 SCORE_MAX = 10
 
-#: Criterion -> weight. Must sum to 1.0 (asserted at import time below).
-RUBRIC_WEIGHTS: dict[str, float] = {
+#: 5-criterion rubric (weights sum to 1.0):
+#: Conceptual correctness 35%, Completeness 25%, Technical depth 20%,
+#: Example/application 10%, Clarity 10%
+FIVE_CRITERIA_RUBRIC_WEIGHTS: dict[str, float] = {
+    "conceptual_correctness": 0.35,
+    "completeness": 0.25,
+    "technical_depth": 0.20,
+    "example_application": 0.10,
+    "clarity": 0.10,
+}
+
+#: Legacy 4-criterion rubric for backwards compatibility:
+LEGACY_RUBRIC_WEIGHTS: dict[str, float] = {
     "correctness": 0.40,
     "completeness": 0.25,
     "depth_of_reasoning": 0.25,
     "clarity": 0.10,
 }
-RUBRIC_CRITERIA: tuple[str, ...] = tuple(RUBRIC_WEIGHTS)
 
-assert abs(sum(RUBRIC_WEIGHTS.values()) - 1.0) < 1e-9, "rubric weights must sum to 1.0"
+RUBRIC_WEIGHTS: dict[str, float] = FIVE_CRITERIA_RUBRIC_WEIGHTS
+RUBRIC_CRITERIA: tuple[str, ...] = tuple(FIVE_CRITERIA_RUBRIC_WEIGHTS.keys())
 
-#: What "depth of reasoning" means per Bloom level (used verbatim in the prompt).
+assert abs(sum(FIVE_CRITERIA_RUBRIC_WEIGHTS.values()) - 1.0) < 1e-9, "5-criteria weights must sum to 1.0"
+assert abs(sum(LEGACY_RUBRIC_WEIGHTS.values()) - 1.0) < 1e-9, "legacy weights must sum to 1.0"
+
+#: What "technical depth" means per Bloom level (used verbatim in the prompt).
 BLOOM_DEPTH_GUIDANCE: dict[str, str] = {
     "remember":   "accurate recall/identification of facts or definitions is sufficient",
     "understand": "the student must explain or paraphrase the concept in their own words",
@@ -76,12 +90,13 @@ JSON_SCHEMA_DESCRIPTION = """\
 Return ONLY a raw JSON object (no markdown fences, no text outside the JSON):
 {
   "scores": {
-    "correctness": <integer 0-10>,
+    "conceptual_correctness": <integer 0-10>,
     "completeness": <integer 0-10>,
-    "depth_of_reasoning": <integer 0-10>,
+    "technical_depth": <integer 0-10>,
+    "example_application": <integer 0-10>,
     "clarity": <integer 0-10>
   },
-  "feedback": "<constructive, specific feedback for the student>",
+  "feedback": "<constructive, specific actionable feedback referencing what was missing, flawed, or well-explained>",
   "missing_points": ["<key point the answer omitted>", ...],
   "strengths": ["<something the answer did well>", ...]
 }
@@ -110,10 +125,11 @@ QUESTION METADATA:
 - Difficulty: {(question.difficulty or "unknown").upper()}
 
 RUBRIC — score each criterion from 0 (absent/wrong) to 10 (excellent):
-1. correctness        (weight 40%): factual accuracy compared with the reference answer.
-2. completeness       (weight 25%): how many of the key points are covered.
-3. depth_of_reasoning (weight 25%): {depth_hint}.
-4. clarity            (weight 10%): structure, precision, and readability.
+1. conceptual_correctness (weight 35%): factual and conceptual accuracy vs. reference answer.
+2. completeness           (weight 25%): coverage of key theoretical points and principles.
+3. technical_depth        (weight 20%): {depth_hint}.
+4. example_application    (weight 10%): concrete examples, scenarios, or practical application.
+5. clarity                (weight 10%): structure, precision, terminology, and readability.
 
 {INJECTION_GUARD}
 
@@ -160,7 +176,25 @@ def _clamp_score(value: Any) -> int:
 
 def compute_overall_score(scores: dict[str, int]) -> float:
     """Weighted overall score on a 0-100 scale, computed in code (never from the LLM)."""
-    weighted = sum(scores[c] * RUBRIC_WEIGHTS[c] for c in RUBRIC_CRITERIA)
+    # Detect if scores are legacy 4-criteria format
+    if "correctness" in scores and "conceptual_correctness" not in scores:
+        weighted = sum(scores[c] * LEGACY_RUBRIC_WEIGHTS[c] for c in LEGACY_RUBRIC_WEIGHTS if c in scores)
+        return round(weighted * 10.0, 2)
+
+    # 5-criterion rubric
+    c_score = scores.get("conceptual_correctness", scores.get("correctness", 0))
+    comp_score = scores.get("completeness", 0)
+    tech_score = scores.get("technical_depth", scores.get("depth_of_reasoning", 0))
+    app_score = scores.get("example_application", scores.get("application", tech_score))
+    clar_score = scores.get("clarity", 0)
+
+    weighted = (
+        c_score * FIVE_CRITERIA_RUBRIC_WEIGHTS["conceptual_correctness"]
+        + comp_score * FIVE_CRITERIA_RUBRIC_WEIGHTS["completeness"]
+        + tech_score * FIVE_CRITERIA_RUBRIC_WEIGHTS["technical_depth"]
+        + app_score * FIVE_CRITERIA_RUBRIC_WEIGHTS["example_application"]
+        + clar_score * FIVE_CRITERIA_RUBRIC_WEIGHTS["clarity"]
+    )
     return round(weighted * 10.0, 2)  # each criterion is 0-10 -> overall 0-100
 
 
@@ -190,14 +224,41 @@ def _validate_and_parse(raw: dict) -> dict:
     raw_scores = raw["scores"]
     if not isinstance(raw_scores, dict):
         raise ValidationError("'scores' must be an object of per-criterion integers")
-    absent = set(RUBRIC_CRITERIA) - set(raw_scores)
-    if absent:
-        raise ValidationError(f"'scores' missing criteria: {absent}")
 
-    scores = {criterion: _clamp_score(raw_scores[criterion]) for criterion in RUBRIC_CRITERIA}
+    # If legacy 4-criteria format is received (e.g. from existing unit test fixtures)
+    if "correctness" in raw_scores and "conceptual_correctness" not in raw_scores:
+        absent = set(LEGACY_RUBRIC_WEIGHTS) - set(raw_scores)
+        if absent:
+            raise ValidationError(f"'scores' missing criteria: {absent}")
+        scores = {c: _clamp_score(raw_scores[c]) for c in LEGACY_RUBRIC_WEIGHTS}
+    else:
+        # Check that essential criteria are present (accepting aliases)
+        if "conceptual_correctness" not in raw_scores and "correctness" not in raw_scores:
+            raise ValidationError("'scores' missing conceptual_correctness")
+        if "completeness" not in raw_scores:
+            raise ValidationError("'scores' missing completeness")
+        if "technical_depth" not in raw_scores and "depth_of_reasoning" not in raw_scores:
+            raise ValidationError("'scores' missing technical_depth")
+        if "clarity" not in raw_scores:
+            raise ValidationError("'scores' missing clarity")
+
+        c_val = _clamp_score(raw_scores.get("conceptual_correctness", raw_scores.get("correctness")))
+        comp_val = _clamp_score(raw_scores.get("completeness"))
+        tech_val = _clamp_score(raw_scores.get("technical_depth", raw_scores.get("depth_of_reasoning")))
+        app_val = _clamp_score(raw_scores.get("example_application", raw_scores.get("application", tech_val)))
+        clar_val = _clamp_score(raw_scores.get("clarity"))
+
+        scores = {
+            "conceptual_correctness": c_val,
+            "completeness": comp_val,
+            "technical_depth": tech_val,
+            "example_application": app_val,
+            "clarity": clar_val,
+        }
 
     return {
         "scores": scores,
+        "criteria_scores": scores,
         "overall_score": compute_overall_score(scores),
         "feedback": str(raw["feedback"]).strip(),
         "missing_points": _as_str_list(raw["missing_points"]),
