@@ -134,6 +134,20 @@ def generate_questions(
         bloom_level=bloom_level,
         difficulty=difficulty,
     )
+    # The frontend derives `subject` from the free-text topic (subject == topic),
+    # so an exact (subject, topic) filter can miss material filed under a
+    # different subject. Fall back to a topic-only search before giving up.
+    if not context_chunks:
+        logger.info(
+            "No exact (subject, topic) material for %s / %s; retrying topic-only",
+            payload.subject, payload.topic,
+        )
+        context_chunks = retrieve_context(
+            topic=payload.topic,
+            subject=None,
+            bloom_level=bloom_level,
+            difficulty=difficulty,
+        )
     chunk_texts = [chunk["text"] for chunk in context_chunks]
 
     generated = generate_question(
@@ -177,13 +191,17 @@ def generate_questions(
                 f"regeneration: {validation['reason']}"
             )
 
-    _persist_question(
+    persisted = _persist_question(
         db=db,
         generated=generated,
         subject=payload.subject,
         topic=payload.topic,
         question_type=payload.question_type,
     )
+
+    # Give the client a stable id to submit the answer against. `_persist_question`
+    # refreshes the row, so `persisted.id` is populated by the database.
+    generated.question_id = persisted.id
 
     # Surface which level the profile chose (and why) on the response.
     if payload.adaptive:

@@ -425,3 +425,34 @@ def test_endpoint_200_success_persists(db_session, mem_collection, monkeypatch):
     assert document.filename == "os_deadlocks.md"
     assert document.chunk_count == body["chunks_ingested"]
     assert document.user_id == user.id
+
+
+def test_endpoint_200_file_only_defaults_subject_topic(db_session, mem_collection, monkeypatch):
+    """Frontend `documentsApi.upload(file)` sends ONLY the `file` field.
+
+    subject/topic must therefore be optional and default to \"General\" rather
+    than rejecting the request with 422.
+    """
+    client, _ = _authed_client(db_session, mem_collection, monkeypatch)
+    content = (
+        b"Normalization organizes relational schemas to reduce redundancy. "
+        b"First normal form removes repeating groups; second normal form removes "
+        b"partial dependencies on a composite key."
+    )
+
+    resp = client.post(
+        "/documents/upload",
+        files={"file": ("db_normalization.txt", content, "text/plain")},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["document"] == "db_normalization.txt"
+    assert body["subject"] == "General"
+    assert body["topic"] == "General"
+    assert body["source_type"] == "college"
+    assert body["document_id"]
+    assert body["chunks_ingested"] >= 1
+
+    document = db_session.query(Document).one()
+    assert document.subject == "General"
+    assert document.topic == "General"

@@ -27,7 +27,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.main import create_app
 from app.models.base import Base
-from app.models.models import Attempt, KnowledgeProfile, Question, User
+from app.models.models import Attempt, KnowledgeProfile, MasteryRecord, Question, User
 from app.api import attempts as attempts_module  # noqa: F401
 from app.services import evaluation_service
 from app.services.evaluation_service import compute_overall_score, evaluate_answer
@@ -182,7 +182,7 @@ def test_submit_attempt_success_persists_jsonb_and_updates_mastery(
     # 9*.35 + 8*.25 + 9*.20 + 8*.10 + 10*.10 = 3.15 + 2.0 + 1.8 + 0.8 + 1.0 = 8.75 -> 87.5
     assert data["overall_score"] == 87.5
     assert data["score"] == 0.875
-    assert data["criteria_scores"]["conceptual_correctness"] == 9
+    assert data["criteria_scores"]["conceptual_correctness"] == 0.9
     assert data["feedback"] == judge_output["feedback"]
     assert "cascading abort prevention" in data["strengths"][0]
 
@@ -211,3 +211,216 @@ def test_submit_attempt_success_persists_jsonb_and_updates_mastery(
     assert profile is not None
     assert profile.attempt_count == 1
     assert profile.mastery_score == 0.875
+
+
+def _mock_judge(monkeypatch, scores, *, feedback="ok", missing=None, strengths=None):
+    """Point the judge client at a canned JSON response."""
+    judge_output = {
+        "scores": scores,
+        "feedback": feedback,
+        "missing_points": missing or [],
+        "strengths": strengths or [],
+    }
+    mock_llm = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = json.dumps(judge_output)
+    mock_llm.generate_content.return_value = mock_resp
+    monkeypatch.setattr(
+        evaluation_service, "_configure_judge_client", lambda: mock_llm
+    )
+
+
+def test_submit_attempt_updates_both_mastery_stores(
+    test_db, mock_user, sample_question, monkeypatch
+):
+    """The frontend's only submit path must feed BOTH mastery stores.
+
+    - ``knowledge_profiles`` (adaptive_service / running average)
+    - ``mastery_records``   (mastery_service / EMA — what ``recommend_next`` and
+      ``adaptive=true`` generation read)
+    """
+    test_db.add(mock_user)
+    test_db.commit()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: test_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    _mock_judge(
+        monkeypatch,
+        {
+            "conceptual_correctness": 9,
+            "completeness": 8,
+            "technical_depth": 9,
+            "example_application": 8,
+            "clarity": 10,
+        },
+        feedback="Superb.",
+        strengths=["Clear explanation of cascading abort prevention"],
+    )
+
+    client = TestClient(app)
+    response = client.post(
+        "/attempts/submit",
+        json={
+            "question_id": str(sample_question.id),
+            "answer_text": "Strict 2PL holds write locks until commit.",
+        },
+    )
+    assert response.status_code == 200
+
+    # ── EMA store (mastery_records) ──
+    record = (
+        test_db.query(MasteryRecord)
+        .filter(
+            MasteryRecord.user_id == mock_user.id,
+            MasteryRecord.subject == sample_question.subject,
+            MasteryRecord.topic == sample_question.topic,
+        )
+        .first()
+    )
+    assert record is not None
+    assert record.attempts_count == 1
+    # First attempt seeds: clamp(0.875 * hard weight 1.2) = clamp(1.05) = 1.0
+    assert record.mastery_score == 1.0
+    assert json.loads(record.bloom_breakdown)[sample_question.bloom_level] == 1.0
+
+    # ── running-average store (knowledge_profiles) — still updated ──
+    profile = (
+        test_db.query(KnowledgeProfile)
+        .filter(
+            KnowledgeProfile.user_id == mock_user.id,
+            KnowledgeProfile.topic == sample_question.topic,
+        )
+        .first()
+    )
+    assert profile is not None
+    assert profile.attempt_count == 1
+
+
+def test_submit_attempt_survives_mastery_record_failure(
+    test_db, mock_user, sample_question, monkeypatch
+):
+    """A failure writing mastery_records must not lose the student's attempt."""
+    test_db.add(mock_user)
+    test_db.commit()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: test_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    _mock_judge(
+        monkeypatch,
+        {
+            "conceptual_correctness": 5,
+            "completeness": 5,
+            "technical_depth": 5,
+            "example_application": 5,
+            "clarity": 5,
+        },
+    )
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("mastery_records store is down")
+
+    monkeypatch.setattr(attempts_module, "update_mastery", _boom, raising=True)
+
+    client = TestClient(app)
+    response = client.post(
+        "/attempts/submit",
+        json={
+            "question_id": str(sample_question.id),
+            "answer_text": "A reasonable attempt that must still be saved.",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # The attempt is persisted even though the mastery write blew up.
+    saved = (
+        test_db.query(Attempt)
+        .filter(Attempt.id == uuid.UUID(data["attempt_id"]))
+        .first()
+    )
+    assert saved is not None
+
+    # No mastery_record leaked from the failed write.
+    assert (
+        test_db.query(MasteryRecord)
+        .filter(MasteryRecord.user_id == mock_user.id)
+        .count()
+        == 0
+    )
+
+
+# ── GET /attempts/history/{user_id} ──────────────────────────────────────────
+
+def test_attempt_history_unauthenticated(test_db, sample_question):
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: test_db
+    client = TestClient(app)
+
+    response = client.get(f"/attempts/history/{uuid.uuid4()}")
+    assert response.status_code == 401
+
+
+def test_attempt_history_forbidden_for_other_user(test_db, mock_user, sample_question):
+    test_db.add(mock_user)
+    test_db.commit()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: test_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    client = TestClient(app)
+
+    response = client.get(f"/attempts/history/{uuid.uuid4()}")
+    assert response.status_code == 403
+
+
+def test_attempt_history_returns_caller_rows(test_db, mock_user, sample_question):
+    test_db.add(mock_user)
+    test_db.commit()
+    attempt = Attempt(
+        user_id=mock_user.id,
+        question_id=sample_question.id,
+        user_answer="Strict 2PL prevents cascading aborts.",
+        score=0.9,
+        feedback="Good.",
+        criteria_scores={"conceptual_correctness": 9},
+    )
+    test_db.add(attempt)
+    test_db.commit()
+    test_db.refresh(attempt)
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: test_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    client = TestClient(app)
+
+    response = client.get(f"/attempts/history/{mock_user.id}")
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    row = body[0]
+    assert row["attempt_id"] == str(attempt.id)
+    assert row["question_id"] == str(sample_question.id)
+    assert row["topic"] == "Transactions"
+    assert row["bloom_level"] == "analyze"
+    assert row["difficulty"] == "hard"
+    assert row["score"] == 0.9
+
+
+def test_attempt_history_empty_for_user_without_attempts(test_db, mock_user):
+    test_db.add(mock_user)
+    test_db.commit()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: test_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    client = TestClient(app)
+
+    response = client.get(f"/attempts/history/{mock_user.id}")
+    assert response.status_code == 200
+    assert response.json() == []

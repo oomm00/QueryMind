@@ -17,16 +17,26 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
 from app.db.session import get_db
 from app.models.models import Attempt, Question, User
-from app.schemas.schemas import AttemptFeedback, SubmitAttemptRequest
+from app.schemas.schemas import (
+    AttemptFeedback,
+    AttemptHistoryItem,
+    SubmitAttemptRequest,
+)
 from app.services.adaptive_service import update_mastery_profile
 from app.services.evaluation_service import evaluate_answer
+from app.services.mastery_service import update_mastery
 
 logger = logging.getLogger("querymind.attempts")
 
 router = APIRouter()
+
+
+def _normalize_criteria_scores(scores: dict[str, int]) -> dict[str, float]:
+    """Rubric sub-scores are stored 0-10 but exposed 0-1 to match the client contract."""
+    return {name: round(value / 10.0, 4) for name, value in scores.items()}
 
 
 @router.post(
@@ -81,7 +91,7 @@ def submit_attempt(
     db.commit()
     db.refresh(attempt)
 
-    # Call adaptive engine's mastery update function
+    # Call adaptive engine's mastery update function (knowledge_profiles store).
     try:
         update_mastery_profile(
             user_id=user_id,
@@ -93,15 +103,79 @@ def submit_attempt(
     except Exception as exc:
         logger.warning("Adaptive engine mastery update error: %s", exc)
 
+    # Fold this attempt into the EMA mastery store (mastery_records). The
+    # adaptive engine's recommend_next() — used by adaptive=true generation —
+    # reads this store, so without this write adaptive mode never adapts for
+    # frontend clients (which only call /attempts/submit). Mirrors the defensive
+    # pattern in questions.py submit-answer: the attempt is already committed, so
+    # a mastery failure must never surface to the caller.
+    try:
+        with db.begin_nested():
+            update_mastery(
+                user_id=user_id,
+                subject=question.subject,
+                topic=question.topic,
+                score=attempt.score,
+                bloom_level=question.bloom_level,
+                difficulty=question.difficulty,
+                db=db,
+            )
+        db.commit()
+    except Exception:  # defensive: the answer must survive a mastery failure
+        logger.exception(
+            "Mastery update failed for user=%s subject=%s topic=%s; "
+            "attempt=%s was still saved",
+            user_id, question.subject, question.topic, attempt.id,
+        )
+
     return AttemptFeedback(
         attempt_id=attempt.id,
         question_id=question.id,
         score=attempt.score,
         overall_score=evaluation["overall_score"],
-        criteria_scores=evaluation["scores"],
+        criteria_scores=_normalize_criteria_scores(evaluation["scores"]),
         feedback=evaluation["feedback"],
         missing_points=evaluation.get("missing_points", []),
         strengths=evaluation.get("strengths", []),
         correct_answer=question.reference_answer,
         stub=False,
     )
+
+
+@router.get(
+    "/history/{user_id}",
+    response_model=list[AttemptHistoryItem],
+    summary="List a user's past attempts with question metadata",
+)
+def get_attempt_history(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[AttemptHistoryItem]:
+    """Return the caller's attempts, newest first.
+
+    The path ``user_id`` must match the authenticated user — a learner may only
+    read their own history.
+    """
+    if user_id != current_user.id:
+        raise ForbiddenError("You can only view your own attempt history")
+
+    rows = (
+        db.query(Attempt, Question)
+        .join(Question, Attempt.question_id == Question.id)
+        .filter(Attempt.user_id == user_id)
+        .order_by(Attempt.created_at.desc())
+        .all()
+    )
+    return [
+        AttemptHistoryItem(
+            attempt_id=attempt.id,
+            question_id=attempt.question_id,
+            topic=question.topic,
+            bloom_level=question.bloom_level,
+            difficulty=question.difficulty,
+            score=attempt.score,
+            submitted_at=attempt.created_at,
+        )
+        for attempt, question in rows
+    ]

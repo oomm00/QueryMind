@@ -34,8 +34,12 @@ router = APIRouter()
 )
 def upload_document(
     file: UploadFile = File(..., description="PDF, DOCX, TXT or MD file"),
-    subject: str = Form(..., description="e.g. OS"),
-    topic: str = Form(..., description="e.g. Deadlocks"),
+    subject: Optional[str] = Form(
+        None, description="e.g. OS (defaults to 'General' when omitted)"
+    ),
+    topic: Optional[str] = Form(
+        None, description="e.g. Deadlocks (defaults to 'General' when omitted)"
+    ),
     source_type: str = Form("college", description="college | public"),
     course: Optional[str] = Form(None, description="e.g. CSE302"),
     current_user: User = Depends(get_current_user),
@@ -50,6 +54,10 @@ def upload_document(
     - Sanitises the filename (only the basename is stored as ``source_doc``).
     - Persists a :class:`Document` record.
     - Requires a valid JWT Bearer token.
+
+    ``subject`` and ``topic`` are optional: minimal clients (e.g. the frontend's
+    ``documentsApi.upload(file)``) send only the file, in which case both default
+    to ``"General"``.
     """
     max_bytes = ingestion_service.MAX_FILE_SIZE_BYTES
     contents = file.file.read(max_bytes + 1)
@@ -60,6 +68,9 @@ def upload_document(
         )
     if not contents:
         raise ValidationError("Uploaded file is empty")
+
+    subject = (subject or "").strip() or "General"
+    topic = (topic or "").strip() or "General"
 
     result = ingest_document(
         file_bytes=contents,

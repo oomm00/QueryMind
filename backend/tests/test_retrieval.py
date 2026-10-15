@@ -236,3 +236,27 @@ def test_default_query_text_is_subject_and_topic():
     retrieve_context(topic="Deadlocks", subject="OS", collection=mock_collection)
 
     assert mock_collection.query.call_args.kwargs["query_texts"] == ["OS Deadlocks"]
+
+
+def test_subject_none_searches_topic_only_across_subjects():
+    """``subject=None`` must drop the subject filter and query on the topic alone.
+
+    The frontend derives ``subject`` from the free-text topic, so the generate
+    route retries with ``subject=None`` when the exact (subject, topic) filter
+    finds nothing.
+    """
+    mock_collection = MagicMock()
+    mock_collection.query.return_value = {
+        "documents": [["Concurrency college chunk"]],
+        "metadatas": [[{"source_type": "college", "subject": "OS", "topic": "Concurrency", "source_doc": "os.pdf"}]],
+        "distances": [[0.12]],
+    }
+
+    results = retrieve_context(topic="Concurrency", subject=None, collection=mock_collection)
+
+    where = mock_collection.query.call_args.kwargs["where"]
+    assert where == {"$and": [{"source_type": "college"}, {"topic": "Concurrency"}]}
+    # The default query text must be the topic alone when there is no subject.
+    assert mock_collection.query.call_args.kwargs["query_texts"] == ["Concurrency"]
+    assert len(results) == 1
+    assert results[0]["source_doc"] == "os.pdf"
