@@ -16,11 +16,13 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
     Uuid as UUID,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -49,6 +51,9 @@ class User(Base):
     knowledge_profile: Mapped["KnowledgeProfile | None"] = relationship(
         "KnowledgeProfile", back_populates="user", uselist=False
     )
+    knowledge_profiles: Mapped[list["KnowledgeProfile"]] = relationship(
+        "KnowledgeProfile", back_populates="user", overlaps="knowledge_profile"
+    )
 
 
 # ── Document ──────────────────────────────────────────────────────────────────
@@ -65,7 +70,7 @@ class Document(Base):
     chroma_collection: Mapped[str | None] = mapped_column(String(255))
     course: Mapped[str | None] = mapped_column(String(255))
     subject: Mapped[str | None] = mapped_column(String(255))
-    topic: Mapped[str | None] = mapped_column(String(255))
+    topic: Mapped[str | None] = mapped_column(String(512))
     source_type: Mapped[str] = mapped_column(String(50), default="college")  # college | public
     status: Mapped[str] = mapped_column(
         String(50), default="pending"
@@ -93,12 +98,24 @@ class Question(Base):
     difficulty: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # easy | medium | hard
+    question_type: Mapped[str] = mapped_column(
+        String(50), default="descriptive"
+    )  # mcq | short_answer | descriptive | coding
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    options: Mapped[list[str] | None] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )
+    starter_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    test_cases: Mapped[list[dict] | None] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )
     reference_answer: Mapped[str | None] = mapped_column(Text)
+    source_chunk_ids: Mapped[list[str] | None] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     attempts: Mapped[list["Attempt"]] = relationship("Attempt", back_populates="question")
-
 
 
 # ── Attempt ───────────────────────────────────────────────────────────────────
@@ -114,6 +131,9 @@ class Attempt(Base):
     user_answer: Mapped[str] = mapped_column(Text, nullable=False)
     score: Mapped[float | None] = mapped_column(Float)          # 0.0 – 1.0
     feedback: Mapped[str | None] = mapped_column(Text)
+    criteria_scores: Mapped[dict | None] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )  # flexible per-criterion scores as JSONB
     evaluation_data: Mapped[str | None] = mapped_column(Text)    # full rubric JSON (scores, missing_points, strengths)
     time_taken_seconds: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -126,15 +146,20 @@ class Attempt(Base):
 
 class KnowledgeProfile(Base):
     __tablename__ = "knowledge_profiles"
+    __table_args__ = (
+        Index("ix_knowledge_profile_user_topic_bloom", "user_id", "topic", "bloom_level"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id"), unique=True, nullable=False
+        ForeignKey("users.id"), nullable=False
     )
-    # JSON-serialised mastery map stored as text for now
-    # e.g. {"python:remember": 0.8, "python:apply": 0.4}
+    topic: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    bloom_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    mastery_score: Mapped[float | None] = mapped_column(Float, default=0.0)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
     mastery_data: Mapped[str | None] = mapped_column(Text)
     total_attempts: Mapped[int] = mapped_column(Integer, default=0)
     average_score: Mapped[float] = mapped_column(Float, default=0.0)
@@ -142,4 +167,4 @@ class KnowledgeProfile(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    user: Mapped["User"] = relationship("User", back_populates="knowledge_profile")
+    user: Mapped["User"] = relationship("User", back_populates="knowledge_profiles")
