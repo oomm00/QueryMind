@@ -189,11 +189,25 @@ def submit_answer(
         user_answer=payload.answer,
         score=round(evaluation["overall_score"] / 100.0, 4),  # store 0-1 per model convention
         feedback=evaluation["feedback"],
+        criteria_scores=evaluation["scores"],
         evaluation_data=json.dumps(evaluation),
     )
     db.add(attempt)
     db.commit()
     db.refresh(attempt)
+
+    try:
+        from app.services.adaptive_service import update_mastery_profile
+
+        update_mastery_profile(
+            user_id=current_user.id,
+            topic=question.topic,
+            bloom_level=question.bloom_level,
+            score=attempt.score,
+            db=db,
+        )
+    except Exception:
+        pass
 
     return AnswerEvaluationResponse(
         attempt_id=attempt.id,

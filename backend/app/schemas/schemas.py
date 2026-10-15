@@ -118,17 +118,23 @@ class GeneratedQuestion(BaseModel):
 
 class SubmitAttemptRequest(BaseModel):
     question_id: uuid.UUID
-    user_id: uuid.UUID
-    user_answer: str
+    user_id: Optional[uuid.UUID] = None
+    user_answer: Optional[str] = None
+    answer_text: Optional[str] = None
     time_taken_seconds: Optional[int] = None
 
 
 class AttemptFeedback(BaseModel):
     attempt_id: uuid.UUID
+    question_id: uuid.UUID
     score: float = Field(ge=0.0, le=1.0)
+    overall_score: float = Field(ge=0.0, le=100.0)
+    criteria_scores: dict[str, int]
     feedback: str
-    correct_answer: str
-    stub: bool = True  # Remove when real evaluation is implemented
+    missing_points: list[str] = []
+    strengths: list[str] = []
+    correct_answer: Optional[str] = None
+    stub: bool = False
 
 
 # ══════════════════════════════════════════════════════════════
@@ -150,10 +156,25 @@ class SubmitAnswerRequest(BaseModel):
 
 class ScoreBreakdown(BaseModel):
     """Per-criterion rubric sub-scores, each 0-10."""
-    correctness: int = Field(ge=0, le=10)
+    conceptual_correctness: Optional[int] = Field(default=None, ge=0, le=10)
+    correctness: Optional[int] = Field(default=None, ge=0, le=10)
     completeness: int = Field(ge=0, le=10)
-    depth_of_reasoning: int = Field(ge=0, le=10)
+    technical_depth: Optional[int] = Field(default=None, ge=0, le=10)
+    depth_of_reasoning: Optional[int] = Field(default=None, ge=0, le=10)
+    example_application: Optional[int] = Field(default=None, ge=0, le=10)
     clarity: int = Field(ge=0, le=10)
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.correctness is None and self.conceptual_correctness is not None:
+            self.correctness = self.conceptual_correctness
+        elif self.conceptual_correctness is None and self.correctness is not None:
+            self.conceptual_correctness = self.correctness
+        if self.depth_of_reasoning is None and self.technical_depth is not None:
+            self.depth_of_reasoning = self.technical_depth
+        elif self.technical_depth is None and self.depth_of_reasoning is not None:
+            self.technical_depth = self.depth_of_reasoning
+        if self.example_application is None:
+            self.example_application = self.technical_depth or self.clarity
 
 
 class AnswerEvaluationResponse(BaseModel):
