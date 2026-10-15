@@ -138,6 +138,19 @@ class AnswerEvaluationResponse(BaseModel):
 
 
 # ══════════════════════════════════════════════════════════════
+# Documents (POST /documents/upload)
+# ══════════════════════════════════════════════════════════════
+
+class DocumentUploadResponse(BaseModel):
+    document: str
+    chunks_ingested: int = Field(ge=0)
+    subject: str
+    topic: str
+    source_type: str
+    document_id: Optional[uuid.UUID] = None
+
+
+# ══════════════════════════════════════════════════════════════
 # Knowledge Profile
 # ══════════════════════════════════════════════════════════════
 

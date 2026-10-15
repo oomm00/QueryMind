@@ -70,6 +70,7 @@ class Document(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="pending"
     )  # pending | processing | ready | failed
+    chunk_count: Mapped[int | None] = mapped_column(Integer)  # chunks embedded into ChromaDB
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

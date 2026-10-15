@@ -88,6 +88,16 @@ class RateLimitExceededError(QueryMindError):
         super().__init__(detail)
 
 
+class PayloadTooLargeError(QueryMindError):
+    """Raised when an uploaded payload exceeds the configured size limit."""
+
+    status_code = 413
+    code = "FILE_TOO_LARGE"
+
+    def __init__(self, detail: str = "Uploaded file is too large") -> None:
+        super().__init__(detail)
+
+
 class NoContextError(QueryMindError):
     """Raised when generation has no retrievable study material to ground on.
 
