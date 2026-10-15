@@ -52,6 +52,7 @@ def _persist_question(
     generated: GeneratedQuestion,
     subject: str,
     topic: str,
+    question_type: str = "descriptive",
 ) -> Question:
     """Store a validated question so future generations can be de-duplicated."""
     question = Question(
@@ -59,8 +60,13 @@ def _persist_question(
         topic=topic,
         bloom_level=generated.bloom_level,
         difficulty=generated.difficulty,
+        question_type=question_type,
         question_text=generated.question,
+        options=generated.options,
+        starter_code=generated.starter_code,
+        test_cases=generated.test_cases,
         reference_answer=generated.correct_answer,
+        source_chunk_ids=generated.source_chunk_ids or generated.source_chunks,
     )
     db.add(question)
     db.commit()
@@ -146,6 +152,7 @@ def generate_questions(
         generated=generated,
         subject=payload.subject,
         topic=payload.topic,
+        question_type=payload.question_type,
     )
     return generated
 

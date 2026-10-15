@@ -36,12 +36,15 @@ logger = logging.getLogger("querymind.generation")
 
 # ── Bloom's Taxonomy Verb Table ───────────────────────────────────────────────
 BLOOM_VERBS: dict[str, list[str]] = {
-    "remember":   ["define", "list", "name", "recall", "identify", "state", "label", "outline"],
-    "understand": ["explain", "describe", "summarize", "paraphrase", "classify", "illustrate"],
-    "apply":      ["demonstrate", "use", "compute", "solve", "implement", "execute", "calculate"],
-    "analyze":    ["compare", "differentiate", "deconstruct", "examine", "break down", "distinguish"],
-    "evaluate":   ["critique", "justify", "assess", "argue", "judge", "defend", "evaluate"],
-    "create":     ["design", "construct", "formulate", "compose", "produce", "synthesize", "develop"],
+    # Remember / Understand
+    "remember":   ["define", "list", "outline", "recall", "name", "identify", "state", "label"],
+    "understand": ["explain", "describe", "outline", "summarize", "paraphrase", "classify", "illustrate"],
+    # Apply / Analyze
+    "apply":      ["demonstrate", "compute", "solve", "use", "implement", "execute", "calculate"],
+    "analyze":    ["differentiate", "compare", "analyze", "deconstruct", "examine", "break down", "distinguish"],
+    # Evaluate / Create
+    "evaluate":   ["critique", "justify", "evaluate", "assess", "argue", "judge", "defend"],
+    "create":     ["formulate", "design", "construct", "compose", "produce", "synthesize", "develop"],
 }
 
 VALID_BLOOM_LEVELS = set(BLOOM_VERBS.keys())
@@ -52,15 +55,20 @@ VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
 # ── Expected JSON Output Schema Description ───────────────────────────────────
 JSON_SCHEMA_DESCRIPTION = """\
-Return ONLY a raw JSON object (no markdown fences, no explanation outside the JSON) with these exact fields:
+Return ONLY a raw JSON object (no markdown fences, no explanation outside the JSON) with these fields:
 {
   "question": "<the question text>",
-  "options": ["A) ...", "B) ...", "C) ...", "D) ..."],   // include ONLY for MCQ, omit key entirely for open-ended
+  "question_text": "<same as question>",
+  "options": ["A) ...", "B) ...", "C) ...", "D) ..."],   // include ONLY for MCQ, omit key for other types
+  "starter_code": "<code template for coding questions, omit for non-coding>",
+  "test_cases": [{"input": "...", "output": "...", "explanation": "..."}], // include for coding questions
   "correct_answer": "<exact correct answer text>",
   "explanation": "<explanation referencing the source material>",
   "bloom_level": "<same level as requested>",
   "difficulty": "<same difficulty as requested>",
-  "source_chunks": ["<source_doc name>", ...]
+  "topic": "<topic name>",
+  "source_chunks": ["<source_doc name>", ...],
+  "source_chunk_ids": ["<source_doc name>", ...]
 }"""
 
 
@@ -134,12 +142,29 @@ def _build_prompt(
 
     source_docs = [c["source_doc"] for c in context_chunks]
 
-    q_type_instruction = (
-        "Generate a Multiple Choice Question (MCQ) with exactly 4 options (A, B, C, D). "
-        "Mark the correct option clearly in correct_answer."
-        if question_type == "mcq"
-        else "Generate an open-ended descriptive question (no options field)."
-    )
+    q_type_normalized = question_type.lower().strip()
+    if q_type_normalized == "mcq":
+        q_type_instruction = (
+            "Generate a Multiple Choice Question (MCQ) with exactly 4 options (A, B, C, D). "
+            "Mark the correct option clearly in correct_answer."
+        )
+    elif q_type_normalized in {"short_answer", "short"}:
+        q_type_instruction = (
+            "Generate a short-answer question requiring a concise, direct answer "
+            "(1-2 sentences). Do not include options."
+        )
+    elif q_type_normalized == "coding":
+        q_type_instruction = (
+            "Generate a practical coding problem. Provide a starter code template "
+            "in starter_code (e.g. Python function skeleton with type hints) and at least "
+            "2 example test cases in test_cases with 'input', 'output', and 'explanation'. "
+            "Do not include an options field."
+        )
+    else:  # descriptive / open
+        q_type_instruction = (
+            "Generate an in-depth descriptive question requiring clear conceptual reasoning, "
+            "explanation, or analysis. Do not include an options field."
+        )
 
     difficulty_hint = (
         "use simple recall" if difficulty == "easy"
@@ -162,7 +187,7 @@ INSTRUCTIONS:
 2. Use the Bloom's verb "{verbs[0]}" or similar in the question phrasing.
 3. The difficulty level is {difficulty}: {difficulty_hint}.
 4. The explanation must cite the source material reasoning.
-5. source_chunks must list the [Source N: filename] doc names you used.
+5. source_chunks / source_chunk_ids must list the [Source N: filename] doc names you used.
 
 {JSON_SCHEMA_DESCRIPTION}
 
@@ -175,19 +200,33 @@ Source doc names available: {source_docs}
 # (Transient-error backoff, JSON extraction, and the malformed-JSON retry live in
 #  app.services.llm_utils so generation and evaluation share one implementation.)
 
-def _validate_and_parse(raw_json: dict, question_type: str) -> GeneratedQuestion:
+def _validate_and_parse(
+    raw_json: dict,
+    question_type: str,
+    topic: Optional[str] = None,
+) -> GeneratedQuestion:
     """Validate LLM output dict against GeneratedQuestion schema.
 
     ``bloom_level`` and ``difficulty`` are normalized (``strip()`` + ``lower()``)
     *before* enum validation, so values like ``"ANALYZE"`` / ``"Medium"`` returned
     by the LLM still match ``"analyze"`` / ``"medium"``.
     """
-    required = {"question", "correct_answer", "explanation", "bloom_level", "difficulty", "source_chunks"}
+    # Accept either 'question' or 'question_text'
+    q_text = raw_json.get("question") or raw_json.get("question_text")
+    if not q_text:
+        raise ValidationError("LLM response missing required question text ('question').")
+
+    chunks_used = raw_json.get("source_chunks") or raw_json.get("source_chunk_ids") or []
+    if not isinstance(chunks_used, list):
+        chunks_used = [str(chunks_used)]
+
+    required = {"correct_answer", "explanation", "bloom_level", "difficulty"}
     missing = required - set(raw_json.keys())
     if missing:
         raise ValidationError(f"LLM response missing required fields: {missing}")
 
-    if question_type == "mcq":
+    q_type_normalized = question_type.lower().strip()
+    if q_type_normalized == "mcq":
         options = raw_json.get("options")
         if not options or len(options) != 4:
             raise ValidationError("MCQ questions must have exactly 4 options.")
@@ -206,14 +245,21 @@ def _validate_and_parse(raw_json: dict, question_type: str) -> GeneratedQuestion
             "Must be one of: easy, medium, hard"
         )
 
+    topic_val = raw_json.get("topic") or topic
+
     return GeneratedQuestion(
-        question=raw_json["question"],
+        question=q_text,
+        question_text=q_text,
         options=raw_json.get("options"),
+        starter_code=raw_json.get("starter_code"),
+        test_cases=raw_json.get("test_cases"),
         correct_answer=raw_json["correct_answer"],
         explanation=raw_json["explanation"],
         bloom_level=bloom_level,
         difficulty=difficulty,
-        source_chunks=raw_json.get("source_chunks", []),
+        topic=topic_val,
+        source_chunks=chunks_used,
+        source_chunk_ids=chunks_used,
     )
 
 
@@ -310,7 +356,7 @@ def generate_question(
         return llm_utils.call_json_with_retry(
             request_fn=_request,
             prompt=prompt,
-            parse_fn=lambda raw: _validate_and_parse(raw, question_type),
+            parse_fn=lambda raw: _validate_and_parse(raw, question_type, topic=topic),
         )
     except ValidationError as second_err:
         logger.error("Second LLM attempt also failed: %s", second_err)
