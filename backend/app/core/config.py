@@ -2,14 +2,20 @@
 Application configuration — loaded from environment / .env file.
 """
 
+from pathlib import Path
 from typing import Any, List, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Resolve the backend `.env` deterministically (backend/app/core/config.py ->
+# parents[2] == backend/) so settings load identically regardless of the current
+# working directory. The repo-root `.env` is used only by docker-compose.
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -45,7 +51,7 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: str = "sk-placeholder"
     gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
-    llm_model: str = "gemini-2.0-flash"
+    llm_model: str = "gemini-3.8-flash"
     llm_temperature: float = 0.3       # Low temp for deterministic structured output
 
 

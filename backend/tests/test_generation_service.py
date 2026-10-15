@@ -21,7 +21,7 @@ import pytest
 
 from app.core.exceptions import QueryMindError, ValidationError
 from app.schemas.schemas import GeneratedQuestion
-from app.services.generation_service import generate_question, BLOOM_VERBS
+from app.services.generation_service import generate_question, BLOOM_VERBS, LLM_MAX_RETRIES
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -264,4 +264,108 @@ def test_mcq_missing_options_raises_validation_error(mock_retrieve):
             llm_client=mock_client,
         )
 
+    assert exc_info.value.code == "GENERATION_FAILED"
+
+
+# ── Transient-error retry & casing normalization ──────────────────────────────
+
+class FakeTransientError(Exception):
+    """Stand-in for a real ``google.genai.errors.ServerError`` (e.g. 503)."""
+
+    def __init__(self, status_code: int = 503, message: str = "503 UNAVAILABLE: high demand"):
+        self.status_code = status_code
+        super().__init__(message)
+
+
+@patch("app.services.generation_service.retrieve_context")
+@patch("app.services.generation_service.time.sleep")
+def test_transient_error_is_retried_then_succeeds(mock_sleep, mock_retrieve):
+    """A transient 503 must be retried with backoff, then succeed."""
+    mock_retrieve.return_value = FAKE_CONTEXT_CHUNKS
+    mock_client = MagicMock()
+    mock_client.generate_content.side_effect = [
+        FakeTransientError(),                       # first attempt: 503
+        _make_llm_response(VALID_OPEN_RESPONSE),    # second attempt: OK
+    ]
+
+    result = generate_question(
+        topic="Transactions", subject="DBMS", bloom_level="analyze",
+        difficulty="hard", question_type="open", llm_client=mock_client,
+    )
+
+    assert isinstance(result, GeneratedQuestion)
+    assert mock_client.generate_content.call_count == 2
+    mock_sleep.assert_called_once_with(1.0)   # first backoff = 1s
+
+
+@patch("app.services.generation_service.retrieve_context")
+@patch("app.services.generation_service.time.sleep")
+def test_persistent_transient_error_exhausts_retries(mock_sleep, mock_retrieve):
+    """When every attempt is transient, retries exhaust and LLM_CALL_FAILED is raised."""
+    mock_retrieve.return_value = FAKE_CONTEXT_CHUNKS
+    mock_client = MagicMock()
+    mock_client.generate_content.side_effect = FakeTransientError()
+
+    with pytest.raises(QueryMindError) as exc_info:
+        generate_question(
+            topic="Transactions", subject="DBMS", bloom_level="analyze",
+            difficulty="hard", question_type="open", llm_client=mock_client,
+        )
+
+    assert mock_client.generate_content.call_count == LLM_MAX_RETRIES + 1
+    assert mock_sleep.call_count == LLM_MAX_RETRIES
+    assert exc_info.value.code == "LLM_CALL_FAILED"
+
+
+@patch("app.services.generation_service.retrieve_context")
+@patch("app.services.generation_service.time.sleep")
+def test_non_transient_error_is_not_retried(mock_sleep, mock_retrieve):
+    """A permanent error (e.g. 400 bad request) must fail immediately, without retries."""
+    mock_retrieve.return_value = FAKE_CONTEXT_CHUNKS
+    mock_client = MagicMock()
+    mock_client.generate_content.side_effect = ValueError("400 INVALID_ARGUMENT: bad request")
+
+    with pytest.raises(QueryMindError) as exc_info:
+        generate_question(
+            topic="Transactions", subject="DBMS", bloom_level="analyze",
+            difficulty="hard", question_type="open", llm_client=mock_client,
+        )
+
+    assert mock_client.generate_content.call_count == 1
+    mock_sleep.assert_not_called()
+    assert exc_info.value.code == "LLM_CALL_FAILED"
+
+
+@patch("app.services.generation_service.retrieve_context")
+def test_llm_output_casing_is_normalized(mock_retrieve):
+    """Mixed-case bloom_level/difficulty from the LLM must be lowercased."""
+    mock_retrieve.return_value = FAKE_CONTEXT_CHUNKS
+    upper = {**VALID_OPEN_RESPONSE, "bloom_level": "ANALYZE", "difficulty": "  Hard  "}
+    mock_client = _make_llm_client(upper)
+
+    result = generate_question(
+        topic="Transactions", subject="DBMS", bloom_level="analyze",
+        difficulty="hard", question_type="open", llm_client=mock_client,
+    )
+
+    assert result.bloom_level == "analyze"
+    assert result.difficulty == "hard"
+    assert mock_client.generate_content.call_count == 1
+
+
+@patch("app.services.generation_service.retrieve_context")
+def test_llm_output_invalid_bloom_level_triggers_retry(mock_retrieve):
+    """An out-of-enum bloom_level from the LLM must be rejected (triggers JSON retry)."""
+    mock_retrieve.return_value = FAKE_CONTEXT_CHUNKS
+    mock_client = MagicMock()
+    bad = {**VALID_OPEN_RESPONSE, "bloom_level": "memorize"}
+    mock_client.generate_content.return_value = _make_llm_response(bad)
+
+    with pytest.raises(QueryMindError) as exc_info:
+        generate_question(
+            topic="Transactions", subject="DBMS", bloom_level="analyze",
+            difficulty="hard", question_type="open", llm_client=mock_client,
+        )
+
+    assert mock_client.generate_content.call_count == 2  # original + 1 stricter retry
     assert exc_info.value.code == "GENERATION_FAILED"

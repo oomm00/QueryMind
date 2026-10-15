@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any, Optional
 
 from app.core.config import settings
@@ -44,6 +45,13 @@ BLOOM_VERBS: dict[str, list[str]] = {
 
 VALID_BLOOM_LEVELS = set(BLOOM_VERBS.keys())
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+
+# ── Transient-Error Retry Configuration ───────────────────────────────────────
+# Retries are for *transport/availability* failures (503, 429, timeouts) and are
+# completely separate from the JSON-validation retry performed in generate_question().
+LLM_MAX_RETRIES = 3               # retries after the initial attempt
+LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s, 2s, 4s
+TRANSIENT_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
 
 # ── Expected JSON Output Schema Description ───────────────────────────────────
 JSON_SCHEMA_DESCRIPTION = """\
@@ -166,6 +174,79 @@ Source doc names available: {source_docs}
     return prompt
 
 
+# ── Transient-Error Detection & Retrying ──────────────────────────────────────
+
+def _is_transient_error(exc: Exception) -> bool:
+    """Return True if *exc* looks like a retryable, transient LLM/network error.
+
+    Covers HTTP 5xx / 429 responses (e.g. ``google.genai.errors.ServerError``),
+    timeouts, connection failures, and messages that mention temporary
+    unavailability. Application-level :class:`QueryMindError` exceptions are never
+    treated as transient.
+    """
+    # QueryMindError subclasses carry an app-level status_code (422/429/...) and
+    # must not be confused with transport errors.
+    if isinstance(exc, QueryMindError):
+        return False
+
+    for attr in ("status_code", "code", "http_status"):
+        value = getattr(exc, attr, None)
+        if isinstance(value, int) and value in TRANSIENT_STATUS_CODES:
+            return True
+
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+
+    try:  # httpx timeouts / transport errors
+        import httpx
+
+        if isinstance(exc, (httpx.TimeoutException, httpx.TransportError)):
+            return True
+    except Exception:  # pragma: no cover - httpx is always installed in prod
+        pass
+
+    message = str(exc).lower()
+    needles = (
+        "timeout", "timed out", "unavailable", "high demand", "overloaded",
+        "rate limit", "temporarily", "connection reset", "connection aborted",
+        "503", "429",
+    )
+    return any(needle in message for needle in needles)
+
+
+def _generate_with_retry(client: Any, prompt: str) -> Any:
+    """Call ``client.generate_content(prompt)`` with exponential-backoff retries.
+
+    Only *transient* failures (503/429/timeout/connection) are retried; permanent
+    errors are raised immediately. After the retries are exhausted a
+    :class:`QueryMindError` (503 / ``LLM_CALL_FAILED``) is raised.
+    """
+    attempts = LLM_MAX_RETRIES + 1
+    last_exc: Optional[Exception] = None
+
+    for attempt in range(attempts):
+        try:
+            return client.generate_content(prompt)
+        except Exception as exc:  # noqa: BLE001 — re-raised below if not transient
+            if not _is_transient_error(exc):
+                raise
+            last_exc = exc
+            if attempt == attempts - 1:
+                break
+            delay = LLM_BACKOFF_BASE_SECONDS * (2 ** attempt)
+            logger.warning(
+                "Transient LLM error on attempt %d/%d: %s — retrying in %.1fs",
+                attempt + 1, attempts, exc, delay,
+            )
+            time.sleep(delay)
+
+    raise QueryMindError(
+        f"LLM call failed after {attempts} attempts due to transient errors: {last_exc}",
+        status_code=503,
+        code="LLM_CALL_FAILED",
+    ) from last_exc
+
+
 # ── JSON Extraction & Validation ──────────────────────────────────────────────
 
 def _extract_json(text: str) -> dict:
@@ -178,7 +259,12 @@ def _extract_json(text: str) -> dict:
 
 
 def _validate_and_parse(raw_json: dict, question_type: str) -> GeneratedQuestion:
-    """Validate LLM output dict against GeneratedQuestion schema."""
+    """Validate LLM output dict against GeneratedQuestion schema.
+
+    ``bloom_level`` and ``difficulty`` are normalized (``strip()`` + ``lower()``)
+    *before* enum validation, so values like ``"ANALYZE"`` / ``"Medium"`` returned
+    by the LLM still match ``"analyze"`` / ``"medium"``.
+    """
     required = {"question", "correct_answer", "explanation", "bloom_level", "difficulty", "source_chunks"}
     missing = required - set(raw_json.keys())
     if missing:
@@ -189,13 +275,27 @@ def _validate_and_parse(raw_json: dict, question_type: str) -> GeneratedQuestion
         if not options or len(options) != 4:
             raise ValidationError("MCQ questions must have exactly 4 options.")
 
+    bloom_level = str(raw_json["bloom_level"]).strip().lower()
+    difficulty = str(raw_json["difficulty"]).strip().lower()
+
+    if bloom_level not in VALID_BLOOM_LEVELS:
+        raise ValidationError(
+            f"LLM returned invalid bloom_level '{raw_json['bloom_level']}'. "
+            f"Must be one of: {sorted(VALID_BLOOM_LEVELS)}"
+        )
+    if difficulty not in VALID_DIFFICULTIES:
+        raise ValidationError(
+            f"LLM returned invalid difficulty '{raw_json['difficulty']}'. "
+            "Must be one of: easy, medium, hard"
+        )
+
     return GeneratedQuestion(
         question=raw_json["question"],
         options=raw_json.get("options"),
         correct_answer=raw_json["correct_answer"],
         explanation=raw_json["explanation"],
-        bloom_level=raw_json["bloom_level"],
-        difficulty=raw_json["difficulty"],
+        bloom_level=bloom_level,
+        difficulty=difficulty,
         source_chunks=raw_json.get("source_chunks", []),
     )
 
@@ -273,8 +373,10 @@ def generate_question(
     def _call_llm(extra_instruction: str = "") -> GeneratedQuestion:
         full_prompt = prompt if not extra_instruction else prompt + f"\n\n{extra_instruction}"
         try:
-            response = client.generate_content(full_prompt)
+            response = _generate_with_retry(client, full_prompt)
             raw_text = response.text
+        except QueryMindError:
+            raise
         except Exception as exc:
             raise QueryMindError(
                 f"LLM call failed: {exc}",
