@@ -8,12 +8,6 @@
  *  - 401 Unauthorized observer hook for AuthContext integration
  */
 
-import { authEndpoints } from './endpoints/auth.js'
-import { questionsEndpoints } from './endpoints/questions.js'
-import { attemptsEndpoints } from './endpoints/attempts.js'
-import { profileEndpoints } from './endpoints/profile.js'
-import { documentsEndpoints } from './endpoints/documents.js'
-
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 // Registry of 401 callbacks (typically registered by AuthContext)
@@ -104,10 +98,3 @@ export async function apiFetch(path, options = {}) {
 
   return response.json()
 }
-
-// ── Exported API namespaces ──────────────────────────────────────────
-export const authApi = authEndpoints
-export const questionsApi = questionsEndpoints
-export const attemptsApi = attemptsEndpoints
-export const profileApi = profileEndpoints
-export const documentsApi = documentsEndpoints

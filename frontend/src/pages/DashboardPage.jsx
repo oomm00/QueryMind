@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { profileApi } from '../api/client.js'
+import { profileApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   selectPerTopicAverages,

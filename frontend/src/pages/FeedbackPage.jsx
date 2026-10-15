@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { attemptsApi } from '../api/client.js'
+import { attemptsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 

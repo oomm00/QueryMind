@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { attemptsApi } from '../api/client.js'
+import { attemptsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function HistoryPage() {
