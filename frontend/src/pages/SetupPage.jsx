@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { questionsApi } from '../api/client.js'
+import { questionsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { BLOOM_LEVELS, DIFFICULTIES } from '../constants/bloomTaxonomy.js'

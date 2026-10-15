@@ -30,3 +30,5 @@ export const documentsEndpoints = {
     })
   },
 }
+
+export const documentsApi = documentsEndpoints

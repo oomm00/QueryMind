@@ -56,3 +56,5 @@ export const authEndpoints = {
     })
   },
 }
+
+export const authApi = authEndpoints

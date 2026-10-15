@@ -32,3 +32,5 @@ export const questionsEndpoints = {
     return adaptGenerateQuestionsResponse(backendResponse)
   },
 }
+
+export const questionsApi = questionsEndpoints

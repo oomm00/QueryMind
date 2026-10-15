@@ -69,3 +69,5 @@ export const profileEndpoints = {
     })
   },
 }
+
+export const profileApi = profileEndpoints

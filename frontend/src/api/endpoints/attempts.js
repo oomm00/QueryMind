@@ -47,3 +47,5 @@ export const attemptsEndpoints = {
     })
   },
 }
+
+export const attemptsApi = attemptsEndpoints
