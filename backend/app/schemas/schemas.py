@@ -88,12 +88,27 @@ class GenerateQuestionResponse(BaseModel):
 class GeneratedQuestion(BaseModel):
     """Structured output from the LLM question generator."""
     question: str
+    question_text: Optional[str] = None
     options: Optional[list[str]] = None        # 4 items for MCQ, None for open-ended
+    starter_code: Optional[str] = None        # Starter code template for coding questions
+    test_cases: Optional[list[dict]] = None    # Example test cases for coding questions
     correct_answer: str
     explanation: str
     bloom_level: str
     difficulty: str
-    source_chunks: list[str]                   # source_doc values used
+    topic: Optional[str] = None
+    source_chunks: list[str] = []              # source_doc values used
+    source_chunk_ids: list[str] = []
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.question_text and self.question:
+            self.question_text = self.question
+        elif not self.question and self.question_text:
+            self.question = self.question_text
+        if not self.source_chunk_ids and self.source_chunks:
+            self.source_chunk_ids = list(self.source_chunks)
+        elif not self.source_chunks and self.source_chunk_ids:
+            self.source_chunks = list(self.source_chunk_ids)
 
 
 
