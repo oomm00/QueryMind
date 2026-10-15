@@ -58,6 +58,16 @@ class AuthenticationError(QueryMindError):
         super().__init__(detail)
 
 
+class ForbiddenError(QueryMindError):
+    """Raised when an authenticated user requests a resource they do not own."""
+
+    status_code = 403
+    code = "FORBIDDEN"
+
+    def __init__(self, detail: str = "You do not have permission to perform this action") -> None:
+        super().__init__(detail)
+
+
 class ValidationError(QueryMindError):
     """Raised when business-rule validation fails (beyond Pydantic schema checks)."""
 

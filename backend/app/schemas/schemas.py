@@ -132,6 +132,10 @@ class GeneratedQuestion(BaseModel):
     """Structured output from the LLM question generator."""
     question: str
     question_text: Optional[str] = None
+    # Persisted question id. The generator does not produce this; the route fills
+    # it in after storing the validated question so the client has a stable id to
+    # submit the answer against (frontend contract field: `question_id`).
+    question_id: Optional[uuid.UUID] = None
     options: Optional[list[str]] = None        # 4 items for MCQ, None for open-ended
     starter_code: Optional[str] = None        # Starter code template for coding questions
     test_cases: Optional[list[dict]] = None    # Example test cases for coding questions
@@ -176,12 +180,26 @@ class AttemptFeedback(BaseModel):
     question_id: uuid.UUID
     score: float = Field(ge=0.0, le=1.0)
     overall_score: float = Field(ge=0.0, le=100.0)
-    criteria_scores: dict[str, int]
+    # Per-criterion sub-scores normalized to 0-1 (the frontend contract renders
+    # them as percentages via ``value * 100``). The judge scores each criterion
+    # 0-10; the route divides by 10 for the response.
+    criteria_scores: dict[str, float]
     feedback: str
     missing_points: list[str] = []
     strengths: list[str] = []
     correct_answer: Optional[str] = None
     stub: bool = False
+
+
+class AttemptHistoryItem(BaseModel):
+    """One row of a learner's attempt history (GET /attempts/history/{user_id})."""
+    attempt_id: uuid.UUID
+    question_id: uuid.UUID
+    topic: str
+    bloom_level: Optional[str] = None
+    difficulty: Optional[str] = None
+    score: Optional[float] = None
+    submitted_at: Optional[datetime] = None
 
 
 # ══════════════════════════════════════════════════════════════
@@ -235,17 +253,8 @@ class AnswerEvaluationResponse(BaseModel):
     reference_answer: Optional[str] = None
 
 
-# ══════════════════════════════════════════════════════════════
-# Documents (POST /documents/upload)
-# ══════════════════════════════════════════════════════════════
-
-class DocumentUploadResponse(BaseModel):
-    document: str
-    chunks_ingested: int = Field(ge=0)
-    subject: str
-    topic: str
-    source_type: str
-    document_id: Optional[uuid.UUID] = None
+# NOTE: `DocumentUploadResponse` is defined once, above (section "Documents").
+# A duplicate definition used to shadow it here; the two were merged on rebase.
 
 
 # ══════════════════════════════════════════════════════════════

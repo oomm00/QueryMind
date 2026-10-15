@@ -68,18 +68,31 @@ def _query_collection(
     collection: Collection,
     query_text: str,
     source_type: str,
-    subject: str,
+    subject: Optional[str],
     topic: str,
     n_results: int = 5,
 ) -> list[dict]:
-    """Execute metadata-filtered similarity query on a Chroma collection."""
-    where_filter: dict[str, Any] = {
-        "$and": [
-            {"source_type": source_type},
-            {"subject": subject},
-            {"topic": topic},
-        ]
-    }
+    """Execute metadata-filtered similarity query on a Chroma collection.
+
+    ``subject=None`` performs a topic-only search across every subject (used as a
+    fallback when the caller has no reliable subject — e.g. the frontend derives
+    ``subject`` from the free-text topic).
+    """
+    if subject is not None:
+        where_filter: dict[str, Any] = {
+            "$and": [
+                {"source_type": source_type},
+                {"subject": subject},
+                {"topic": topic},
+            ]
+        }
+    else:
+        where_filter = {
+            "$and": [
+                {"source_type": source_type},
+                {"topic": topic},
+            ]
+        }
 
     try:
         results = collection.query(
@@ -120,7 +133,7 @@ def _query_collection(
 
 def retrieve_context(
     topic: str,
-    subject: str,
+    subject: Optional[str] = None,
     bloom_level: str = "understand",
     difficulty: str = "medium",
     query_text: Optional[str] = None,
@@ -135,6 +148,9 @@ def retrieve_context(
             top college score is below ``SIMILARITY_THRESHOLD``.
     If neither tier clears the threshold, the best-available chunks are returned
     (college preferred); [] is returned only when both tiers are empty.
+
+    Pass ``subject=None`` to search by topic across every subject (used as a
+    fallback when the caller cannot supply a reliable subject).
     """
     if collection is None:
         chroma_client = client or get_chroma_client()
@@ -145,8 +161,9 @@ def retrieve_context(
 
     # Short "<subject> <topic>" queries score higher (and more consistently) than
     # the earlier long generic phrase, so build the default query from just those
-    # two fields when the caller does not supply one.
-    search_query = query_text or f"{subject} {topic}"
+    # two fields when the caller does not supply one. A topic-only search omits
+    # the (absent) subject.
+    search_query = query_text or (f"{subject} {topic}" if subject else topic)
 
     # Tier 1: College material
     college_chunks = _query_collection(
