@@ -19,6 +19,7 @@ from sqlalchemy import (
     JSON,
     String,
     Text,
+    UniqueConstraint,
     Uuid as UUID,
     func,
 )
@@ -169,3 +170,34 @@ class KnowledgeProfile(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="knowledge_profiles")
+
+
+# ── MasteryRecord ─────────────────────────────────────────────────────────────
+# One row per (user, subject, topic). Drives adaptive question selection
+# (pipeline Stage 10 & 11). Distinct from KnowledgeProfile above (which is a
+# per-user, single-row JSON blob).
+
+class MasteryRecord(Base):
+    __tablename__ = "mastery_records"
+    __table_args__ = (
+        # Composite key + index on (user_id, subject, topic): one record each.
+        UniqueConstraint(
+            "user_id", "subject", "topic", name="uq_mastery_user_subject_topic"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    topic: Mapped[str] = mapped_column(String(512), nullable=False)
+    mastery_score: Mapped[float] = mapped_column(Float, default=0.0)   # 0.0 – 1.0 (EMA)
+    attempts_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Per-Bloom-level mastery, JSON map e.g. {"remember": 0.8, "apply": 0.4}
+    bloom_breakdown: Mapped[str | None] = mapped_column(Text)
+    last_updated: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

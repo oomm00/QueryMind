@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import auth, questions, attempts, profile, documents
+from app.api import auth, questions, attempts, profile, documents, mastery
 from app.core.config import settings
 from app.core.exceptions import QueryMindError
 from app.core.logging import RequestLoggingMiddleware, setup_logging
@@ -115,7 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router, prefix="/documents", tags=["Documents"])
     app.include_router(attempts.router,  prefix="/attempts",  tags=["Attempts"])
     app.include_router(profile.router,   prefix="/profile",   tags=["Profile"])
-    app.include_router(documents.router, prefix="/documents", tags=["Documents"])
+    app.include_router(mastery.router,   prefix="/mastery",   tags=["Mastery"])
 
     @app.get("/", tags=["Health"])
     async def root():

@@ -5,6 +5,7 @@ from app.models.models import (  # noqa: F401
     Attempt,
     Document,
     KnowledgeProfile,
+    MasteryRecord,
     Question,
     User,
 )

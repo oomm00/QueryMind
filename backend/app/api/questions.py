@@ -9,6 +9,7 @@ routes.
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -26,8 +27,15 @@ from app.schemas.schemas import (
 )
 from app.services.evaluation_service import evaluate_answer
 from app.services.generation_service import generate_question
+from app.services.mastery_service import (
+    explain_recommendation,
+    recommend_next,
+    update_mastery,
+)
 from app.services.retrieval import retrieve_context
 from app.services.validation_service import validate_question
+
+logger = logging.getLogger("querymind.questions")
 
 router = APIRouter()
 
@@ -94,23 +102,45 @@ def generate_questions(
       still fails, the request is rejected with HTTP 422 rather than returning a
       bad question.
     - Persists the validated question so later generations can be de-duplicated.
+    - With ``adaptive=true``, the learner's mastery profile (Stage 11) chooses the
+      Bloom level and difficulty instead of the supplied values.
     - Requires a valid JWT Bearer token.
     """
+    # ── Adaptive selection (Stage 11) ─────────────────────────────────────────
+    # When adaptive, ignore the supplied bloom_level/difficulty and let the
+    # learner's mastery profile pick the target level.
+    bloom_level = payload.bloom_level
+    difficulty = payload.difficulty
+    adaptive_reason: str | None = None
+    if payload.adaptive:
+        recommendation = recommend_next(
+            current_user.id, payload.subject, payload.topic, db
+        )
+        bloom_level = recommendation["bloom_level"]
+        difficulty = recommendation["difficulty"]
+        adaptive_reason = explain_recommendation(
+            current_user.id, payload.subject, payload.topic, db
+        )
+        logger.info(
+            "Adaptive selection for user=%s %s/%s -> %s/%s",
+            current_user.id, payload.subject, payload.topic, bloom_level, difficulty,
+        )
+
     # Retrieve context once and reuse it for both generation and the
     # answerability check (so the check sees the exact material used).
     context_chunks = retrieve_context(
         topic=payload.topic,
         subject=payload.subject,
-        bloom_level=payload.bloom_level,
-        difficulty=payload.difficulty,
+        bloom_level=bloom_level,
+        difficulty=difficulty,
     )
     chunk_texts = [chunk["text"] for chunk in context_chunks]
 
     generated = generate_question(
         topic=payload.topic,
         subject=payload.subject,
-        bloom_level=payload.bloom_level,
-        difficulty=payload.difficulty,
+        bloom_level=bloom_level,
+        difficulty=difficulty,
         question_type=payload.question_type,
         context_chunks=context_chunks,
     )
@@ -128,8 +158,8 @@ def generate_questions(
         generated = generate_question(
             topic=payload.topic,
             subject=payload.subject,
-            bloom_level=payload.bloom_level,
-            difficulty=payload.difficulty,
+            bloom_level=bloom_level,
+            difficulty=difficulty,
             question_type=payload.question_type,
             context_chunks=context_chunks,
             extra_instruction=_correction_note(validation),
@@ -154,6 +184,12 @@ def generate_questions(
         topic=payload.topic,
         question_type=payload.question_type,
     )
+
+    # Surface which level the profile chose (and why) on the response.
+    if payload.adaptive:
+        generated.adaptive = True
+        generated.adaptive_reason = adaptive_reason
+
     return generated
 
 
@@ -193,6 +229,30 @@ def submit_answer(
         evaluation_data=json.dumps(evaluation),
     )
     db.add(attempt)
+    db.flush()  # assign attempt.id inside the open transaction
+
+    # ── Stage 10: fold this attempt into the learner's mastery profile ────────
+    # Runs in the SAME transaction as the attempt, but inside a SAVEPOINT so a
+    # failure in the mastery update rolls back only the mastery write — the
+    # student's answer is never lost.
+    try:
+        with db.begin_nested():
+            update_mastery(
+                user_id=current_user.id,
+                subject=question.subject,
+                topic=question.topic,
+                score=attempt.score,
+                bloom_level=question.bloom_level,
+                difficulty=question.difficulty,
+                db=db,
+            )
+    except Exception:  # defensive: the answer must survive a mastery failure
+        logger.exception(
+            "Mastery update failed for user=%s subject=%s topic=%s; "
+            "attempt=%s was still saved",
+            current_user.id, question.subject, question.topic, attempt.id,
+        )
+
     db.commit()
     db.refresh(attempt)
 
