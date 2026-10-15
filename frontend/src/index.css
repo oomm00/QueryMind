@@ -1,21 +1,24 @@
 /* ── Google Fonts ──────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── CSS Custom Properties ─────────────────────────────────── */
+/* ── CSS Custom Properties — Slate/Zinc Dark SaaS Theme ───── */
 :root {
-  --color-bg:        #0f0e17;
-  --color-surface:   #1a1927;
-  --color-border:    #2d2b45;
-  --color-brand:     #6366f1;
-  --color-accent:    #8b5cf6;
-  --color-text:      #e2e0f0;
-  --color-muted:     #8b89a8;
-  --radius-card:     1rem;
-  --shadow-card:     0 4px 32px rgba(99, 102, 241, 0.08);
+  --color-bg:        #09090b; /* zinc-950 */
+  --color-surface:   #141418; /* zinc-900 / dark slate */
+  --color-surface-subtle: #1c1c22;
+  --color-border:    #27272a; /* zinc-800 */
+  --color-border-subtle: #202024;
+  --color-brand:     #6366f1; /* indigo-500 */
+  --color-accent:    #8b5cf6; /* violet-500 */
+  --color-text:      #f4f4f5; /* zinc-100 */
+  --color-muted:     #a1a1aa; /* zinc-400 */
+  --color-faint:     #52525b; /* zinc-600 */
+  --radius-card:     0.75rem;
+  --shadow-card:     0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 /* ── Base Reset ────────────────────────────────────────────── */
@@ -25,73 +28,74 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-bg); }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-brand); }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
-/* ── Utility Layer ─────────────────────────────────────────── */
+/* ── Utility & Component Layer ─────────────────────────────── */
 @layer components {
   /* Cards */
   .card {
-    @apply bg-surface-card border border-surface-border rounded-2xl p-6;
+    @apply bg-surface-card border border-surface-border rounded-xl p-6 transition-colors duration-150;
     box-shadow: var(--shadow-card);
   }
 
-  /* Primary button */
+  /* Primary action button */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold
-           bg-brand-500 hover:bg-brand-600 text-white transition-all duration-200
-           active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2
-           focus:ring-offset-[#0f0e17] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm
+           bg-brand-500 hover:bg-brand-600 text-white transition-all duration-150
+           active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2
+           focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm;
   }
 
   /* Secondary / ghost button */
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold
-           border border-surface-border text-[var(--color-muted)] hover:text-white
-           hover:border-brand-500 transition-all duration-200 active:scale-95
-           focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2
-           focus:ring-offset-[#0f0e17];
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm
+           border border-surface-border bg-surface-card/60 text-zinc-300 hover:text-white
+           hover:border-zinc-700 hover:bg-surface-subtle transition-all duration-150 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2
+           focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  /* Input */
+  /* Input fields */
   .input {
-    @apply w-full px-4 py-3 rounded-xl bg-[#0f0e17] border border-surface-border
-           text-white placeholder-[var(--color-muted)]
-           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
-           transition-all duration-200;
+    @apply w-full px-3.5 py-2.5 rounded-lg bg-zinc-950/80 border border-surface-border
+           text-zinc-100 placeholder-zinc-500 text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-500/80 focus:border-brand-500
+           transition-colors duration-150;
   }
 
   /* Label */
   .label {
-    @apply block text-sm font-medium text-[var(--color-muted)] mb-1.5;
+    @apply block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider;
   }
 
-  /* Badge */
+  /* Neutral badge */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-           bg-brand-950 text-brand-300 border border-brand-800;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium
+           bg-zinc-800 text-zinc-300 border border-zinc-700;
   }
 
   /* Page layout */
   .page-wrapper {
-    @apply min-h-screen flex items-center justify-center p-4;
-    background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.08) 0%, transparent 60%),
-                radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 60%),
+    @apply min-h-[calc(100vh-4rem)] flex flex-col justify-start p-4 sm:p-8;
+    background: radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(39, 39, 42, 0.3) 0%, transparent 60%),
                 var(--color-bg);
   }
 }
