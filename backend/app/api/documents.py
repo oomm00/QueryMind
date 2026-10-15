@@ -1,8 +1,9 @@
 """
 Document Routes — /documents
-=============================
-Handles document upload, text extraction (PDF / TXT), chunking (~500 tokens),
-embedding, and storage in ChromaDB and PostgreSQL.
+============================
+Upload endpoint that ingests college/public material into the shared ChromaDB
+collection so it becomes retrievable by question generation. Requires
+authentication on all routes.
 """
 
 from __future__ import annotations
@@ -14,11 +15,12 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.exceptions import ValidationError
+from app.core.exceptions import PayloadTooLargeError, ValidationError
 from app.db.session import get_db
 from app.models.models import User
 from app.schemas.schemas import DocumentUploadResponse
-from app.services.ingestion import ingest_document
+from app.services import ingestion_service
+from app.services.ingestion_service import ingest_document
 
 logger = logging.getLogger("querymind.documents")
 
@@ -28,41 +30,45 @@ router = APIRouter()
 @router.post(
     "/upload",
     response_model=DocumentUploadResponse,
-    summary="Upload and ingest a document into the knowledge base",
+    summary="Upload a document to make it retrievable for question generation",
 )
-async def upload_document(
-    file: UploadFile = File(..., description="Document file to ingest (PDF, TXT, MD)"),
-    subject: str = Form(..., description="Subject name, e.g. 'DBMS'"),
-    topic: Optional[str] = Form(None, description="Topic name, e.g. 'Transactions'"),
-    course: Optional[str] = Form(None, description="Course code, e.g. 'CSE302'"),
-    source_type: str = Form("college", description="'college' (priority) or 'public' (fallback)"),
+def upload_document(
+    file: UploadFile = File(..., description="PDF, DOCX, TXT or MD file"),
+    subject: str = Form(..., description="e.g. OS"),
+    topic: str = Form(..., description="e.g. Deadlocks"),
+    source_type: str = Form("college", description="college | public"),
+    course: Optional[str] = Form(None, description="e.g. CSE302"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DocumentUploadResponse:
-    """Ingest a PDF or text document:
+    """Ingest an uploaded document into the knowledge base.
 
-    1. Reads uploaded file content.
-    2. Extracts clean text via pdfplumber/pypdf.
-    3. Splits text into ~500-token chunks with ~50-token overlap.
-    4. Generates embeddings using sentence-transformers (all-MiniLM-L6-v2) and stores in ChromaDB.
-    5. Records document in PostgreSQL `documents` table.
+    - Validates the extension (PDF/DOCX/TXT/MD), a non-empty body, and a 10 MB cap.
+    - Extracts text, chunks it, and upserts embeddings into the shared
+      ``querymind_documents`` collection with the metadata ``retrieve_context``
+      filters on.
+    - Sanitises the filename (only the basename is stored as ``source_doc``).
+    - Persists a :class:`Document` record.
+    - Requires a valid JWT Bearer token.
     """
-    if not file.filename:
-        raise ValidationError("File must have a valid filename.")
-
-    contents = await file.read()
+    max_bytes = ingestion_service.MAX_FILE_SIZE_BYTES
+    contents = file.file.read(max_bytes + 1)
+    if len(contents) > max_bytes:
+        raise PayloadTooLargeError(
+            f"File exceeds the maximum upload size of "
+            f"{max_bytes // (1024 * 1024)} MB"
+        )
     if not contents:
-        raise ValidationError("Uploaded file is empty.")
+        raise ValidationError("Uploaded file is empty")
 
     result = ingest_document(
         file_bytes=contents,
-        filename=file.filename,
+        filename=file.filename or "",
         subject=subject,
         topic=topic,
-        course=course,
         source_type=source_type,
-        user_id=current_user.id,
+        course=course,
         db=db,
+        user_id=current_user.id,
     )
-
     return DocumentUploadResponse(**result)

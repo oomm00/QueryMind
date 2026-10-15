@@ -112,6 +112,7 @@ def create_app() -> FastAPI:
     # ── Routers ───────────────────────────────────────────
     app.include_router(auth.router,      prefix="/auth",      tags=["Auth"])
     app.include_router(questions.router, prefix="/questions", tags=["Questions"])
+    app.include_router(documents.router, prefix="/documents", tags=["Documents"])
     app.include_router(attempts.router,  prefix="/attempts",  tags=["Attempts"])
     app.include_router(profile.router,   prefix="/profile",   tags=["Profile"])
     app.include_router(documents.router, prefix="/documents", tags=["Documents"])

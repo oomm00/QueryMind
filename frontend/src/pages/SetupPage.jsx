@@ -1,123 +1,174 @@
 /**
  * SetupPage — /setup
- * Preparation Setup form: goal, topic, Bloom level, difficulty.
- * Stub: on submit, navigates to /question with form data in state.
+ * Preparation Setup form: goal, topic, Bloom level, difficulty, and question count.
+ * Uses questionsApi.generate and initializes SessionContext before navigating to /question.
  */
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-const BLOOM_LEVELS = [
-  { value: 'remember',   label: 'Remember',   emoji: '📌', desc: 'Recall facts' },
-  { value: 'understand', label: 'Understand',  emoji: '💡', desc: 'Explain concepts' },
-  { value: 'apply',      label: 'Apply',       emoji: '🔧', desc: 'Use in new situations' },
-  { value: 'analyze',    label: 'Analyze',     emoji: '🔍', desc: 'Break down components' },
-  { value: 'evaluate',   label: 'Evaluate',    emoji: '⚖️', desc: 'Make judgements' },
-  { value: 'create',     label: 'Create',      emoji: '✨', desc: 'Produce new work' },
-]
-
-const DIFFICULTIES = ['easy', 'medium', 'hard']
+import { questionsApi } from '../api/index.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
+import { BLOOM_LEVELS, DIFFICULTIES } from '../constants/bloomTaxonomy.js'
 
 export default function SetupPage() {
   const navigate = useNavigate()
+  const { userId } = useAuth()
+  const { initSession } = useSession()
+
   const [form, setForm] = useState({
-    goal:       '',
-    topic:      '',
-    bloom:      'understand',
+    goal: '',
+    topic: '',
+    bloom: 'understand',
     difficulty: 'medium',
-    numQ:       3,
+    count: 3,
   })
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Pass setup config to question page via router state
-    navigate('/question', { state: { setup: form } })
+    if (!form.topic.trim()) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await questionsApi.generate(
+        {
+          topic: form.topic,
+          bloom_level: form.bloom,
+          difficulty: form.difficulty,
+          count: Number(form.count),
+        },
+        userId
+      )
+
+      const questionsList = response?.questions ?? []
+      if (questionsList.length === 0) {
+        throw new Error('No questions could be generated. Please try another topic.')
+      }
+
+      // Initialize persistent study session in SessionContext
+      initSession(form, questionsList)
+      navigate('/question')
+    } catch (err) {
+      setError(err.message ?? 'Failed to generate session questions')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="page-wrapper items-start py-12">
-      <div className="w-full max-w-2xl mx-auto animate-slide-up">
+    <div className="page-wrapper items-start py-8">
+      <div className="w-full max-w-2xl mx-auto animate-slide-up space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <button onClick={() => navigate('/login')} className="text-[var(--color-muted)] hover:text-white text-sm mb-4 flex items-center gap-1">
-            ← Back
-          </button>
-          <h1 className="text-3xl font-display font-bold text-white">Preparation Setup</h1>
-          <p className="text-[var(--color-muted)] mt-1">
-            Tell QueryMind what you want to study and how hard to push you.
+        <div>
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+            Preparation Setup
+          </h1>
+          <p className="text-zinc-400 mt-1 text-sm">
+            Configure your target domain, cognitive depth, and question count.
           </p>
         </div>
 
+        {error && (
+          <div className="text-rose-400 text-xs bg-rose-950/40 border border-rose-900/60 rounded-lg p-3">
+            ⚠️ {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Goal */}
-          <div className="card">
-            <h2 className="font-semibold text-white mb-4">🎯 Learning Goal</h2>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="goal" className="label">What do you want to achieve?</label>
-                <input
-                  id="goal"
-                  name="goal"
-                  type="text"
-                  placeholder="e.g. Pass the AWS Solutions Architect exam"
-                  value={form.goal}
-                  onChange={handleChange}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label htmlFor="topic" className="label">Topic / Subject area *</label>
-                <input
-                  id="topic"
-                  name="topic"
-                  type="text"
-                  placeholder="e.g. Python decorators, Neural networks, SQL joins"
-                  value={form.topic}
-                  onChange={handleChange}
-                  required
-                  className="input"
-                />
-              </div>
+          {/* Target & Topic */}
+          <div className="card space-y-4">
+            <h2 className="font-semibold text-white text-sm flex items-center gap-2">
+              <span>🎯</span>
+              <span>Learning Objective</span>
+            </h2>
+
+            <div>
+              <label htmlFor="goal" className="label">Target Exam or Objective</label>
+              <input
+                id="goal"
+                name="goal"
+                type="text"
+                placeholder="e.g. Pass AWS Solutions Architect, Technical Interview Prep"
+                value={form.goal}
+                onChange={handleChange}
+                className="input"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="topic" className="label">Topic / Subject Area *</label>
+              <input
+                id="topic"
+                name="topic"
+                type="text"
+                placeholder="e.g. Distributed Consensus, SQL Query Optimization, Concurrency"
+                value={form.topic}
+                onChange={handleChange}
+                required
+                className="input"
+              />
             </div>
           </div>
 
-          {/* Bloom Level */}
+          {/* Bloom's Taxonomy Level */}
           <div className="card">
-            <h2 className="font-semibold text-white mb-4">🧠 Bloom's Taxonomy Level</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {BLOOM_LEVELS.map((level) => (
-                <label
-                  key={level.value}
-                  htmlFor={`bloom-${level.value}`}
-                  className={`cursor-pointer flex flex-col gap-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                    form.bloom === level.value
-                      ? 'border-brand-500 bg-brand-950/50'
-                      : 'border-surface-border hover:border-brand-700'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    id={`bloom-${level.value}`}
-                    name="bloom"
-                    value={level.value}
-                    checked={form.bloom === level.value}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <span className="text-xl">{level.emoji}</span>
-                  <span className="font-semibold text-white text-sm">{level.label}</span>
-                  <span className="text-xs text-[var(--color-muted)]">{level.desc}</span>
-                </label>
-              ))}
+            <h2 className="font-semibold text-white text-sm mb-3 flex items-center gap-2">
+              <span>🧠</span>
+              <span>Bloom's Cognitive Level</span>
+            </h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {BLOOM_LEVELS.map((level) => {
+                const isSelected = form.bloom === level.value
+                return (
+                  <label
+                    key={level.value}
+                    htmlFor={`bloom-${level.value}`}
+                    className={`cursor-pointer flex flex-col p-3 rounded-lg border transition-all duration-150 ${
+                      isSelected
+                        ? 'border-brand-500 bg-brand-950/30 ring-1 ring-brand-500'
+                        : 'border-surface-border bg-zinc-950/40 hover:border-zinc-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      id={`bloom-${level.value}`}
+                      name="bloom"
+                      value={level.value}
+                      checked={isSelected}
+                      onChange={handleChange}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-base">{level.emoji}</span>
+                      <span className="font-medium text-white text-xs capitalize">
+                        {level.label}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-zinc-400 leading-tight">
+                      {level.desc}
+                    </span>
+                  </label>
+                )
+              })}
             </div>
           </div>
 
-          {/* Difficulty & Quantity */}
+          {/* Difficulty & Count */}
           <div className="card">
-            <h2 className="font-semibold text-white mb-4">⚙️ Difficulty & Quantity</h2>
+            <h2 className="font-semibold text-white text-sm mb-3 flex items-center gap-2">
+              <span>⚙️</span>
+              <span>Session Scope</span>
+            </h2>
+
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="difficulty" className="label">Difficulty</label>
@@ -126,22 +177,25 @@ export default function SetupPage() {
                   name="difficulty"
                   value={form.difficulty}
                   onChange={handleChange}
-                  className="input"
+                  className="input capitalize"
                 >
                   {DIFFICULTIES.map((d) => (
-                    <option key={d} value={d} className="bg-surface-card capitalize">{d}</option>
+                    <option key={d.value} value={d.value} className="bg-zinc-900">
+                      {d.label}
+                    </option>
                   ))}
                 </select>
               </div>
+
               <div>
-                <label htmlFor="numQ" className="label">Number of questions (1–10)</label>
+                <label htmlFor="count" className="label">Number of Questions (1–10)</label>
                 <input
-                  id="numQ"
-                  name="numQ"
+                  id="count"
+                  name="count"
                   type="number"
                   min={1}
                   max={10}
-                  value={form.numQ}
+                  value={form.count}
                   onChange={handleChange}
                   className="input"
                 />
@@ -149,8 +203,13 @@ export default function SetupPage() {
             </div>
           </div>
 
-          <button id="btn-start-session" type="submit" className="btn-primary w-full py-4 text-base">
-            Start Study Session →
+          <button
+            id="btn-start-session"
+            type="submit"
+            disabled={loading || !form.topic.trim()}
+            className="btn-primary w-full py-3 text-sm"
+          >
+            {loading ? 'Synthesizing Session Questions…' : 'Start Study Session →'}
           </button>
         </form>
       </div>

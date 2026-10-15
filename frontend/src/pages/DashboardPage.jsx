@@ -1,135 +1,225 @@
 /**
  * DashboardPage — /dashboard
- * Mastery Dashboard: fetches knowledge profile and renders a placeholder bar chart.
- * Styled example component confirming Tailwind is fully working.
+ * Mastery Dashboard displaying cognitive knowledge profiles.
+ * Uses selectors to aggregate mastery_breakdown rows into:
+ *  1. Per-topic averages
+ *  2. Per-Bloom-level averages
+ * Eliminates nil-UUID fallback and uses AuthContext.
  */
 
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { profileApi } from '../api/client.js'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { profileApi } from '../api/index.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import {
+  selectPerTopicAverages,
+  selectPerBloomAverages,
+} from '../api/adapter.js'
+import { getBloomColor } from '../constants/bloomTaxonomy.js'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const { userId, user } = useAuth()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
-
-  const userId = localStorage.getItem('qm_user_id') ?? '00000000-0000-0000-0000-000000000001'
+  const [error, setError] = useState(null)
 
   useEffect(() => {
+    let active = true
+    if (!userId) {
+      setLoading(false)
+      return
+    }
+
     profileApi
-      .get(userId)
-      .then(setProfile)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
-  }, [])
+      .getProfile(userId)
+      .then((data) => {
+        if (active) setProfile(data)
+      })
+      .catch((err) => {
+        if (active) setError(err.message ?? 'Failed to load profile')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
-  if (loading) return (
-    <div className="page-wrapper">
-      <div className="text-center animate-pulse-soft">
-        <div className="text-4xl mb-4">📊</div>
-        <p className="text-[var(--color-muted)]">Loading your profile…</p>
-      </div>
-    </div>
-  )
+    return () => {
+      active = false
+    }
+  }, [userId])
 
-  if (error) return (
-    <div className="page-wrapper">
-      <div className="card max-w-md text-center">
-        <p className="text-red-400 mb-4">⚠️ {error}</p>
-        <button onClick={() => navigate('/setup')} className="btn-ghost">← Back</button>
+  if (loading) {
+    return (
+      <div className="page-wrapper items-center justify-center">
+        <div className="text-center animate-pulse-soft">
+          <div className="text-4xl mb-3">📊</div>
+          <p className="text-xs text-zinc-400 font-mono">Aggregating mastery profiles…</p>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="page-wrapper items-center justify-center">
+        <div className="card max-w-md text-center p-6 space-y-4">
+          <p className="text-sm text-rose-400">⚠️ {error}</p>
+          <button onClick={() => navigate('/setup')} className="btn-ghost">
+            ← Return to Setup
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const breakdown = profile?.mastery_breakdown ?? []
+  const topicAverages = selectPerTopicAverages(breakdown)
+  const bloomAverages = selectPerBloomAverages(breakdown)
 
   return (
-    <div className="page-wrapper items-start py-12">
-      <div className="w-full max-w-3xl mx-auto animate-slide-up">
+    <div className="page-wrapper items-start py-8">
+      <div className="w-full max-w-4xl mx-auto animate-slide-up space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-white">Mastery Dashboard</h1>
-            <p className="text-[var(--color-muted)] mt-1 text-sm">
-              Your knowledge profile at a glance.
+            <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+              Mastery Dashboard
+            </h1>
+            <p className="text-xs text-zinc-400 mt-1">
+              Performance telemetry for {user?.email || 'authenticated user'}
             </p>
           </div>
-          <button
-            id="btn-new-session"
-            onClick={() => navigate('/setup')}
-            className="btn-primary"
-          >
-            + New Session
-          </button>
+
+          <Link to="/setup" className="btn-primary self-start sm:self-auto">
+            + New Study Session
+          </Link>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-          <StatCard label="Total Attempts" value={profile?.total_attempts ?? 0} icon="🎯" />
-          <StatCard label="Avg Score"      value={`${Math.round((profile?.average_score ?? 0) * 100)}%`} icon="📈" />
-          <StatCard label="Topics"         value={new Set(profile?.mastery_breakdown?.map(m => m.topic)).size} icon="📚" />
+        {/* Top-Level Metric Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <StatCard
+            label="Total Attempts"
+            value={profile?.total_attempts ?? 0}
+            icon="🎯"
+          />
+          <StatCard
+            label="Average Score"
+            value={`${Math.round((profile?.average_score ?? 0) * 100)}%`}
+            icon="📈"
+          />
+          <StatCard
+            label="Tracked Topics"
+            value={topicAverages.length}
+            icon="📚"
+          />
         </div>
 
-        {/* Mastery Breakdown — Placeholder Bar Chart */}
-        <div className="card mb-6">
-          <h2 className="font-semibold text-white mb-6">📊 Mastery by Topic & Bloom Level</h2>
-          <div className="space-y-4">
-            {(profile?.mastery_breakdown ?? []).map((item, i) => (
-              <MasteryBar key={i} item={item} />
+        {/* Mastery Breakdown: By Topic */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <span>📚</span>
+              <span>Topic Mastery (Aggregated)</span>
+            </h2>
+            <span className="text-xs text-zinc-500 font-mono">
+              {topicAverages.length} topics evaluated
+            </span>
+          </div>
+
+          <div className="space-y-3.5">
+            {topicAverages.map((item) => (
+              <MetricBar
+                key={item.topic}
+                title={item.topic}
+                subtitle={`${item.total_attempts} attempt${item.total_attempts !== 1 ? 's' : ''}`}
+                score={item.average_score}
+                color="#6366f1"
+              />
             ))}
+            {topicAverages.length === 0 && (
+              <p className="text-xs text-zinc-500 py-4 text-center">
+                No topic data recorded yet. Complete a study session to populate.
+              </p>
+            )}
           </div>
-          {profile?.stub && (
-            <p className="text-xs text-[var(--color-muted)] mt-6 border-t border-surface-border pt-4">
-              ⚠️ Stub data — real mastery tracking will be computed from your actual attempt history.
-            </p>
-          )}
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-center">
-          <button onClick={() => navigate('/login')} className="btn-ghost text-sm">
-            Sign Out
-          </button>
+        {/* Mastery Breakdown: By Bloom's Taxonomy Level */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <span>🧠</span>
+              <span>Cognitive Depth (Bloom Taxonomy)</span>
+            </h2>
+            <span className="text-xs text-zinc-500 font-mono">
+              6-level cognitive scale
+            </span>
+          </div>
+
+          <div className="space-y-3.5">
+            {bloomAverages.map((item) => {
+              const color = getBloomColor(item.bloom_level)
+              return (
+                <MetricBar
+                  key={item.bloom_level}
+                  title={item.bloom_level}
+                  subtitle={`${item.total_attempts} question${item.total_attempts !== 1 ? 's' : ''}`}
+                  score={item.average_score}
+                  color={color}
+                  titleClassName="capitalize"
+                />
+              )
+            })}
+            {bloomAverages.length === 0 && (
+              <p className="text-xs text-zinc-500 py-4 text-center">
+                No Bloom cognitive data available yet.
+              </p>
+            )}
+          </div>
         </div>
+
+        {profile?.stub && (
+          <p className="text-[11px] text-zinc-500 text-center font-mono">
+            ℹ️ Telemetry populated via mock evaluation profiles
+          </p>
+        )}
       </div>
     </div>
   )
 }
-
-/** ── Sub-components ───────────────────────────────────────── */
 
 function StatCard({ label, value, icon }) {
   return (
-    <div className="card text-center py-6">
-      <div className="text-2xl mb-2">{icon}</div>
-      <p className="text-2xl font-display font-bold text-white">{value}</p>
-      <p className="text-xs text-[var(--color-muted)] mt-1">{label}</p>
+    <div className="card text-center py-5">
+      <div className="text-xl mb-1.5">{icon}</div>
+      <p className="text-2xl font-display font-bold text-white tracking-tight">{value}</p>
+      <p className="text-[11px] text-zinc-400 mt-0.5 uppercase tracking-wider">{label}</p>
     </div>
   )
 }
 
-function MasteryBar({ item }) {
-  const pct = Math.round(item.mastery_score * 100)
-  const barColor =
-    pct >= 80 ? 'bg-emerald-500' :
-    pct >= 50 ? 'bg-yellow-400'  :
-    pct >= 30 ? 'bg-orange-400'  : 'bg-red-500'
+function MetricBar({ title, subtitle, score, color, titleClassName = '' }) {
+  const pct = Math.round(score * 100)
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm text-white font-medium">
-          {item.topic}
-          <span className="ml-2 text-xs text-[var(--color-muted)] capitalize">· {item.bloom_level}</span>
+      <div className="flex items-center justify-between text-xs mb-1.5">
+        <span className={`font-medium text-white ${titleClassName}`}>
+          {title}
+          {subtitle && (
+            <span className="ml-2 text-zinc-500 font-normal text-[11px]">
+              • {subtitle}
+            </span>
+          )}
         </span>
-        <span className="text-xs font-semibold text-white">{pct}%</span>
+        <span className="font-mono font-semibold text-zinc-200">{pct}%</span>
       </div>
-      <div className="h-2 bg-surface-border rounded-full overflow-hidden">
+      <div className="h-2 bg-zinc-900 border border-surface-border rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
-      <p className="text-xs text-[var(--color-muted)] mt-1">{item.attempts} attempt{item.attempts !== 1 ? 's' : ''}</p>
     </div>
   )
 }

@@ -42,14 +42,26 @@ class RefreshTokenRequest(BaseModel):
 # ══════════════════════════════════════════════════════════════
 
 class DocumentUploadResponse(BaseModel):
-    document_id: uuid.UUID
-    filename: str
+    document: Optional[str] = None
+    filename: Optional[str] = None
+    chunks_ingested: Optional[int] = Field(default=None, ge=0)
+    chunks_count: Optional[int] = Field(default=None, ge=0)
     subject: str
-    topic: Optional[str] = None
+    topic: str
+    source_type: str
     course: Optional[str] = None
-    source_type: str = "college"
-    chunks_count: int
     status: str = "ready"
+    document_id: Optional[uuid.UUID] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.filename is None and self.document is not None:
+            self.filename = self.document
+        elif self.document is None and self.filename is not None:
+            self.document = self.filename
+        if self.chunks_count is None and self.chunks_ingested is not None:
+            self.chunks_count = self.chunks_ingested
+        elif self.chunks_ingested is None and self.chunks_count is not None:
+            self.chunks_ingested = self.chunks_count
 
 
 
@@ -186,6 +198,19 @@ class AnswerEvaluationResponse(BaseModel):
     missing_points: list[str] = []
     strengths: list[str] = []
     reference_answer: Optional[str] = None
+
+
+# ══════════════════════════════════════════════════════════════
+# Documents (POST /documents/upload)
+# ══════════════════════════════════════════════════════════════
+
+class DocumentUploadResponse(BaseModel):
+    document: str
+    chunks_ingested: int = Field(ge=0)
+    subject: str
+    topic: str
+    source_type: str
+    document_id: Optional[uuid.UUID] = None
 
 
 # ══════════════════════════════════════════════════════════════
