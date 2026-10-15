@@ -7,7 +7,8 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 
 # ══════════════════════════════════════════════════════════════
@@ -72,15 +73,45 @@ class DocumentUploadResponse(BaseModel):
 class GenerateQuestionRequest(BaseModel):
     topic: str = Field(..., examples=["Transactions"])
     subject: str = Field(..., examples=["DBMS"])
-    bloom_level: str = Field(
-        ...,
+    bloom_level: Optional[str] = Field(
+        default=None,
         examples=["analyze"],
-        description="One of: remember | understand | apply | analyze | evaluate | create",
+        description=(
+            "One of: remember | understand | apply | analyze | evaluate | create. "
+            "Required unless adaptive=true, in which case it is ignored."
+        ),
     )
-    difficulty: str = Field(..., examples=["medium"], description="easy | medium | hard")
+    difficulty: Optional[str] = Field(
+        default=None,
+        examples=["medium"],
+        description="easy | medium | hard. Required unless adaptive=true (then ignored).",
+    )
     question_type: str = Field(default="open", description="mcq | open")
     document_id: Optional[uuid.UUID] = None
     num_questions: int = Field(default=1, ge=1, le=10)
+    adaptive: bool = Field(
+        default=False,
+        description=(
+            "When true, the learner's mastery profile picks the Bloom level and "
+            "difficulty (any supplied values are ignored)."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _require_bloom_and_difficulty_unless_adaptive(self) -> "GenerateQuestionRequest":
+        """Non-adaptive requests must still supply both (behaviour unchanged)."""
+        if not self.adaptive:
+            if not self.bloom_level:
+                raise PydanticCustomError(
+                    "missing_bloom_level",
+                    "bloom_level is required when adaptive is false",
+                )
+            if not self.difficulty:
+                raise PydanticCustomError(
+                    "missing_difficulty",
+                    "difficulty is required when adaptive is false",
+                )
+        return self
 
 
 class QuestionOut(BaseModel):
@@ -111,6 +142,10 @@ class GeneratedQuestion(BaseModel):
     topic: Optional[str] = None
     source_chunks: list[str] = []              # source_doc values used
     source_chunk_ids: list[str] = []
+    # Adaptive-selection metadata — only meaningful when the request asked for
+    # adaptive=true; defaults keep the non-adaptive response shape intact.
+    adaptive: bool = False
+    adaptive_reason: Optional[str] = None      # why this level was chosen
 
     def model_post_init(self, __context: Any) -> None:
         if not self.question_text and self.question:
@@ -230,3 +265,17 @@ class ProfileResponse(BaseModel):
     average_score: float
     mastery_breakdown: list[TopicMastery]
     stub: bool = True  # Remove when real profile logic is implemented
+
+
+# ══════════════════════════════════════════════════════════════
+# Mastery (GET /mastery/me)
+# ══════════════════════════════════════════════════════════════
+
+class MasteryRecordOut(BaseModel):
+    """One mastery record for a (user, subject, topic) triple."""
+    subject: str
+    topic: str
+    mastery_score: float = Field(ge=0.0, le=1.0)
+    attempts_count: int
+    bloom_breakdown: Dict[str, float] = {}      # {"remember": 0.8, "apply": 0.4}
+    last_updated: Optional[datetime] = None
