@@ -19,20 +19,17 @@ from app.api import auth, questions, attempts, profile, documents, mastery
 from app.core.config import settings
 from app.core.exceptions import QueryMindError
 from app.core.logging import RequestLoggingMiddleware, setup_logging
-from app.db.session import engine
-from app.models import base  # noqa: F401  — triggers model registration
 
 logger = logging.getLogger("querymind.app")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown lifecycle hook."""
-    # On startup: ensure DB tables are created
-    try:
-        base.Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        logger.warning("DB table creation warning: %s", e)
+    """Startup / shutdown lifecycle hook.
+
+    The database schema is owned by Alembic (``alembic upgrade head``); the app
+    deliberately does not create or alter tables on startup.
+    """
     yield
     # On shutdown: close connections, flush queues, etc.
 

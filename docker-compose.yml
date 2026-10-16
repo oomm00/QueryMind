@@ -19,8 +19,10 @@ services:
       retries: 5
 
   # ── ChromaDB (Vector Store) ──────────────────────────────
+  # Server tag mirrors the chromadb client pinned in backend/requirements.txt
+  # (chromadb==0.5.0) so client and server stay protocol-compatible.
   chroma:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.5.0
     container_name: querymind_chroma
     restart: unless-stopped
     ports:
@@ -30,6 +32,13 @@ services:
     environment:
       - IS_PERSISTENT=TRUE
       - ANONYMIZED_TELEMETRY=FALSE
+    healthcheck:
+      # v0.5.x exposes the heartbeat at /api/v1/heartbeat (server-native port 8000).
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/v1/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # ── FastAPI Backend ──────────────────────────────────────
   backend:
@@ -43,20 +52,18 @@ services:
     env_file:
       - .env
     environment:
-      # Override host to use docker service name
-      POSTGRES_HOST: db
-      CHROMA_HOST: chroma
       # Inside the compose network Chroma listens on its container port 8000.
       # CHROMA_PORT in .env is the *host* port published below (default 8001);
       # without this override the backend would dial chroma:8001 and silently
       # fall back to a local persistent store. Pin the in-network port here.
+      CHROMA_HOST: chroma
       CHROMA_PORT: 8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-querymind}:${POSTGRES_PASSWORD:-querymind_dev_password}@db:5432/${POSTGRES_DB:-querymind_db}
     depends_on:
       db:
         condition: service_healthy
       chroma:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./backend:/app
     command: >

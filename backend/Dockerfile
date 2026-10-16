@@ -2,18 +2,22 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System deps needed for psycopg2 / cryptography
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Install the CPU-only PyTorch wheel first. sentence-transformers depends on
+# torch; doing this here keeps pip from pulling the multi-GB CUDA build (plus the
+# nvidia-*/triton wheels) that the default PyPI index would otherwise resolve.
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
+# Remaining Python deps. Every package ships a manylinux wheel (psycopg2-binary
+# bundles libpq; torch/onnxruntime bundle their own libgomp), so no compiler or
+# system PostgreSQL headers are needed.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Source code is mounted as a volume in dev; copy here for prod builds
+# Source code is copied for prod builds; in dev, compose mounts ./backend over /app.
 COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run migrations before starting the API, so a plain `docker run` (without the
+# compose command override) also brings the schema up to date.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
