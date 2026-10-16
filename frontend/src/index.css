@@ -88,48 +88,52 @@ body {
 
   /* Primary button */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm font-semibold
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold
            bg-moss text-white transition-colors duration-150 hover:bg-moss/90
-           active:scale-[0.98] focus-visible outline-none focus-ring-2 focus-ring-[var(--focus)] focus-ring-offset-2;
+           active:scale-[0.98] outline-none
+           focus-visible:ring-2 focus-visible:ring-[var(--focus)] focus-visible:ring-offset-2;
   }
 
   /* Quiet / secondary button */
   .btn-quiet {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm
-           border border-line bg-surface/50 text-ink hover:bg-surface/60 hover:text-moss active:scale-[0.98] focus-visible outline-none focus-ring-2 focus-ring-[var(--focus)] focus-ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium
+           border border-line bg-surface/50 text-ink transition-colors duration-150
+           hover:bg-surface/60 hover:text-moss active:scale-[0.98] outline-none
+           focus-visible:ring-2 focus-visible:ring-[var(--focus)] focus-visible:ring-offset-2;
   }
 
   /* Danger button */
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium
            bg-rust text-white transition-colors duration-150 hover:bg-rust/90
-           active:scale-[0.98] focus-visible outline-none focus-ring-2 focus-ring-[var(--focus)] focus-ring-offset-2;
+           active:scale-[0.98] outline-none
+           focus-visible:ring-2 focus-visible:ring-[var(--focus)] focus-visible:ring-offset-2;
   }
 
   /* Input fields */
   .input {
     @apply w-full px-3.5 py-2.5 rounded-md bg-surface/50 border border-line text-ink placeholder-muted text-sm
-           focus:outline-none focus:ring-2 focus-ring-[var(--focus)] focus:border-[var(--focus)]
+           focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--focus)]
            transition-colors duration-150;
   }
 
   /* Textarea */
   .textarea {
     @apply w-full px-3.5 py-3 rounded-md bg-surface/50 border border-line text-ink placeholder-muted text-sm
-           focus:outline-none focus:ring-2 focus-ring-[var(--focus)] focus:border-[var(--focus)]
+           focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--focus)]
            resize-none transition-colors duration-150;
   }
 
   /* Select */
   .select {
-    @apply w-full px-3.5 py-2.5 rounded-md bg-surface/50 border border-line text-ink placeholder-muted text-sm
-           focus:outline-none focus:ring-2 focus-ring-[var(--focus)] focus:border-[var(--focus)]
-           appearance-none bg-no-repeat bg-right-4 [&>option]:p-1 transition-colors duration-150;
+    @apply w-full px-3.5 py-2.5 rounded-md bg-surface/50 border border-line text-ink text-sm
+           focus:outline-none focus:ring-2 focus:ring-[var(--focus)] focus:border-[var(--focus)]
+           appearance-none transition-colors duration-150;
   }
 
   /* Chip */
   .chip {
-    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors duration-150
+    @apply inline-flex items-center rounded-full border border-line px-2.5 py-0.5 text-xs font-medium transition-colors duration-150
            bg-surface/50 text-muted hover:bg-moss/20 hover:text-moss;
   }
 
@@ -158,12 +162,10 @@ body {
 
   /* Skeleton */
   .skeleton {
-    @apply bg-surface/60 rounded-md animate-shimmer;
-  }
-
-  @keyframes shimmer {
-    0% { background-position: -200% center; }
-    100% { background-position: 200% center; }
+    @apply rounded-md;
+    background: linear-gradient(90deg, var(--line) 25%, var(--surface) 37%, var(--line) 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
   }
 
   /* EmptyState */
@@ -207,4 +209,9 @@ body {
     @apply min-h-[calc(100vh-3rem)] flex flex-col justify-start p-4 sm:p-6;
     background: var(--bg);
   }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

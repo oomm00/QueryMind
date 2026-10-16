@@ -81,7 +81,7 @@ export default function LoginPage() {
                 className={`flex-1 py-2 text-xs font-semibold rounded-md capitalize transition-all duration-150 ${
                   tab === t
                     ? 'bg-[var(--moss)] text-white shadow-sm'
-                    : 'text-[var(--muted)] hover:text-[var(--moss)]'`
+                    : 'text-[var(--muted)] hover:text-[var(--moss)]'
                 }`}
               >
                 {t === 'login' ? 'Sign In' : 'Create Account'}

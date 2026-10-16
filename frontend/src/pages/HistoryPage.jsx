@@ -15,6 +15,8 @@ export default function HistoryPage() {
   const { userId } = useAuth()
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -24,9 +26,10 @@ export default function HistoryPage() {
       .getHistory(userId)
       .then((data) => {
         if (active) {
-          setHistory(Array.isArray(data) ? data : data?.attempts ?? [])
-          if (!history.length) {
-            Toast({
+          const list = Array.isArray(data) ? data : data?.attempts ?? []
+          setHistory(list)
+          if (!list.length) {
+            setToast({
               title: 'No history',
               description: 'No previous attempts recorded yet.',
               variant: 'default',
@@ -37,7 +40,7 @@ export default function HistoryPage() {
       .catch((err) => {
         if (active) {
           setError(err.message ?? 'Failed to load history')
-          Toast({
+          setToast({
             title: 'Failed to load history',
             description: err.message ?? 'Failed to load history',
             variant: 'error',
@@ -127,6 +130,12 @@ export default function HistoryPage() {
             + New Session
           </Link>
         </div>
+
+        {error && (
+          <p className="mt-4 text-sm text-[var(--rust)]">{error}</p>
+        )}
+
+        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
       </div>
     </div>
   )

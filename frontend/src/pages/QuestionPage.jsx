@@ -10,7 +10,8 @@ import { useNavigate } from 'react-router-dom'
 import { useSession } from '../context/SessionContext.jsx'
 import { getBloomColor } from '../constants/bloomTaxonomy.js'
 import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
+import { Textarea } from '../components/ui/Textarea'
+import { Panel } from '../components/ui/Panel'
 import { ProgressLine } from '../components/ui/ProgressLine'
 
 export default function QuestionPage() {
@@ -109,13 +110,12 @@ export default function QuestionPage() {
             <label htmlFor="answer" className="block text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-1.5">
               Your Answer / Reasoning
             </label>
-            <Input
+            <Textarea
               id="answer"
               rows={7}
               placeholder="Formulate your detailed answer here. Focus on precision, core mechanisms, and practical trade-offs…"
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              className="textarea"
               required
             />
           </div>
@@ -124,8 +124,8 @@ export default function QuestionPage() {
             <Button
               id="btn-back-setup"
               type="button"
+              variant="quiet"
               onClick={() => navigate('/setup')}
-              className="btn-quiet"
             >
               Back to Setup
             </Button>
@@ -134,7 +134,6 @@ export default function QuestionPage() {
               id="btn-submit-answer"
               type="submit"
               disabled={!answer.trim()}
-              className="btn-primary"
             >
               Submit Answer →
             </Button>

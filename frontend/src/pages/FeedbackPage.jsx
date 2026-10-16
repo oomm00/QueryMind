@@ -28,13 +28,18 @@ export default function FeedbackPage() {
     userAnswer,
     lastSubmission,
     recordSubmission,
+    setCurrentIdx,
   } = useSession()
 
   const timeTaken = location.state?.timeTaken ?? lastSubmission?.timeTaken ?? 30
 
-  const [feedback, setFeedback] = useState(lastSubmission?.feedback ?? null)
-  const [loading, setLoading] = useState(!lastSubmission)
+  const submissionMatches =
+    Boolean(lastSubmission) && lastSubmission.questionId === currentQuestion?.question_id
+
+  const [feedback, setFeedback] = useState(submissionMatches ? lastSubmission.feedback : null)
+  const [loading, setLoading] = useState(!submissionMatches)
   const [error, setError] = useState(null)
+  const [toast, setToast] = useState(null)
 
   // Redirect if no session exists
   useEffect(() => {
@@ -78,7 +83,7 @@ export default function FeedbackPage() {
             timeTaken,
           })
           // Show success toast
-          Toast({
+          setToast({
             title: 'Answer evaluated',
             description: `Score: ${Math.round((data.score ?? 0) * 100)}%`,
             variant: 'default',
@@ -88,7 +93,7 @@ export default function FeedbackPage() {
       .catch((err) => {
         if (active) {
           setError(err.message ?? 'Failed to evaluate answer')
-          Toast({
+          setToast({
             title: 'Evaluation failed',
             description: err.message ?? 'Failed to evaluate answer',
             variant: 'error',
@@ -146,7 +151,7 @@ export default function FeedbackPage() {
                 ? 'Strong grasp of core concepts'
                 : scorePercent >= 50
                   ? 'Good understanding, room for expansion'
-                  : 'Needs more development'
+                  : 'Needs more development'}
             </p>
           </div>
         </Panel>
@@ -237,13 +242,8 @@ export default function FeedbackPage() {
             type="button"
             onClick={() => {
               if (hasNext) {
-                // Advance index in session storage
-                const updateSession = (prev) => ({
-                  ...prev,
-                  currentIdx: prev.currentIdx + 1,
-                  userAnswer: '',
-                })
-                // We'll just navigate; the SessionContext will handle the rest
+                // Advance the session index; SessionContext persists it.
+                setCurrentIdx(currentIdx + 1)
                 navigate('/question')
               } else {
                 navigate('/dashboard')
@@ -254,6 +254,8 @@ export default function FeedbackPage() {
             {hasNext ? 'Next Question →' : 'Complete Session →'}
           </Button>
         </div>
+
+        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
       </div>
     </div>
   )
