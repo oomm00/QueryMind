@@ -273,7 +273,7 @@ class ProfileResponse(BaseModel):
     total_attempts: int
     average_score: float
     mastery_breakdown: list[TopicMastery]
-    stub: bool = True  # Remove when real profile logic is implemented
+    stub: bool = False  # Real profile logic is implemented
 
 
 # ══════════════════════════════════════════════════════════════
