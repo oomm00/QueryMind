@@ -10,6 +10,10 @@ import { questionsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { BLOOM_LEVELS, DIFFICULTIES } from '../constants/bloomTaxonomy.js'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Select } from '../components/ui/Select'
+import { Panel, PanelLarge, PanelSmall } from '../components/ui/Panel'
 
 export default function SetupPage() {
   const navigate = useNavigate()
@@ -64,35 +68,38 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="page-wrapper items-start py-8">
-      <div className="w-full max-w-2xl mx-auto animate-slide-up space-y-6">
+    <div className="min-h-screen bg-[var(--bg)]">
+      <div className="max-w-2xl mx-auto py-8">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
-            Preparation Setup
-          </h1>
-          <p className="text-zinc-400 mt-1 text-sm">
-            Configure your target domain, cognitive depth, and question count.
-          </p>
-        </div>
+        <PanelLarge className="mb-6">
+          <div>
+            <h1 className="text-2xl font-display font-bold text-[var(--ink)] tracking-tight">
+              Preparation Setup
+            </h1>
+            <p className="text-[var(--muted)] mt-1 text-sm">
+              Configure your target domain, cognitive depth, and question count.
+            </p>
+          </div>
+        </PanelLarge>
 
         {error && (
-          <div className="text-rose-400 text-xs bg-rose-950/40 border border-rose-900/60 rounded-lg p-3">
-            ⚠️ {error}
-          </div>
+          <Panel className="mb-4 p-3 rounded-md bg-[var(--rust)/10] border border-[var(--rust)]/50">
+            {error}
+          </Panel>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Target & Topic */}
-          <div className="card space-y-4">
-            <h2 className="font-semibold text-white text-sm flex items-center gap-2">
-              <span>🎯</span>
-              <span>Learning Objective</span>
+          <Panel>
+            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
+                🎯
+              </span>
+              Learning Objective
             </h2>
 
-            <div>
-              <label htmlFor="goal" className="label">Target Exam or Objective</label>
-              <input
+            <div className="space-y-3">
+              <Input
                 id="goal"
                 name="goal"
                 type="text"
@@ -101,11 +108,8 @@ export default function SetupPage() {
                 onChange={handleChange}
                 className="input"
               />
-            </div>
 
-            <div>
-              <label htmlFor="topic" className="label">Topic / Subject Area *</label>
-              <input
+              <Input
                 id="topic"
                 name="topic"
                 type="text"
@@ -116,13 +120,15 @@ export default function SetupPage() {
                 className="input"
               />
             </div>
-          </div>
+          </Panel>
 
           {/* Bloom's Taxonomy Level */}
-          <div className="card">
-            <h2 className="font-semibold text-white text-sm mb-3 flex items-center gap-2">
-              <span>🧠</span>
-              <span>Bloom's Cognitive Level</span>
+          <Panel>
+            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
+                🧠
+              </span>
+              Bloom's Cognitive Level
             </h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -132,10 +138,10 @@ export default function SetupPage() {
                   <label
                     key={level.value}
                     htmlFor={`bloom-${level.value}`}
-                    className={`cursor-pointer flex flex-col p-3 rounded-lg border transition-all duration-150 ${
+                    className={`cursor-pointer flex flex-col p-3 rounded-md border transition-colors duration-150 ${
                       isSelected
-                        ? 'border-brand-500 bg-brand-950/30 ring-1 ring-brand-500'
-                        : 'border-surface-border bg-zinc-950/40 hover:border-zinc-700'
+                        ? 'border-[var(--moss)] bg-[var(--moss)/10] ring-1 ring-[var(--moss)]'
+                        : 'border-[var(--line)] bg-[var(--surface)/40] hover:border-[var(--moss)]'
                     }`}
                   >
                     <input
@@ -148,48 +154,56 @@ export default function SetupPage() {
                       className="sr-only"
                     />
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-base">{level.emoji}</span>
-                      <span className="font-medium text-white text-xs capitalize">
-                        {level.label}
-                      </span>
+                      <span className="text-base capitalize">{level.label}</span>
+                      {/* emoji removed per design concept */}
                     </div>
-                    <span className="text-[11px] text-zinc-400 leading-tight">
+                    <span className="text-[10px] text-[var(--muted)] leading-tight">
                       {level.desc}
                     </span>
                   </label>
                 )
               })}
             </div>
-          </div>
+          </Panel>
 
           {/* Difficulty & Count */}
-          <div className="card">
-            <h2 className="font-semibold text-white text-sm mb-3 flex items-center gap-2">
-              <span>⚙️</span>
-              <span>Session Scope</span>
+          <Panel>
+            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
+                ⚙️
+              </span>
+              Session Scope
             </h2>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="difficulty" className="label">Difficulty</label>
-                <select
+                <label htmlFor="difficulty" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
+                  Difficulty
+                </label>
+                <Select
                   id="difficulty"
                   name="difficulty"
                   value={form.difficulty}
                   onChange={handleChange}
-                  className="input capitalize"
+                  className="input"
                 >
-                  {DIFFICULTIES.map((d) => (
-                    <option key={d.value} value={d.value} className="bg-zinc-900">
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
+                  <option key="easy" value="easy">
+                    Easy
+                  </option>
+                  <option key="medium" value="medium">
+                    Medium
+                  </option>
+                  <option key="hard" value="hard">
+                    Hard
+                  </option>
+                </Select>
               </div>
 
               <div>
-                <label htmlFor="count" className="label">Number of Questions (1–10)</label>
-                <input
+                <label htmlFor="count" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
+                  Number of Questions (1–10)
+                </label>
+                <Input
                   id="count"
                   name="count"
                   type="number"
@@ -201,16 +215,16 @@ export default function SetupPage() {
                 />
               </div>
             </div>
-          </div>
+          </Panel>
 
-          <button
+          <Button
             id="btn-start-session"
             type="submit"
             disabled={loading || !form.topic.trim()}
-            className="btn-primary w-full py-3 text-sm"
+            className="w-full py-3"
           >
             {loading ? 'Synthesizing Session Questions…' : 'Start Study Session →'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

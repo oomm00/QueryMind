@@ -12,7 +12,7 @@ export default function PublicRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-400">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--ink)]">
         <div className="text-center animate-pulse-soft">
           <div className="text-3xl mb-3">🧠</div>
           <p className="text-xs font-mono uppercase tracking-widest">Loading…</p>
