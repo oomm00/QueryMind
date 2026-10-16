@@ -13,6 +13,14 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download ChromaDB's default ONNX embedding model (all-MiniLM-L6-v2).
+# The download is lazy (triggered on the first embed call), so without this the
+# very first document upload blocks for minutes fetching ~80 MB, and it repeats
+# whenever the container is recreated. Calling the embedding function once caches
+# the extracted model under /root/.cache/chroma, which the runtime bind mount over
+# /app does not shadow.
+RUN python -c "from chromadb.utils import embedding_functions as ef; ef.DefaultEmbeddingFunction()(['warmup'])"
+
 # Source code is copied for prod builds; in dev, compose mounts ./backend over /app.
 COPY . .
 
