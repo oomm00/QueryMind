@@ -33,8 +33,13 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ValidationError
 from app.models.models import Document
 # Reuse retrieval's client factory + collection name so ingestion and retrieval
-# always talk to the exact same store (never create a second client setup).
-from app.services.retrieval import COLLECTION_NAME, get_chroma_client
+# always talk to the exact same store (never create a second client setup), and
+# invalidate retrieval's TTL cache after an upsert so new material is visible.
+from app.services.retrieval import (
+    COLLECTION_NAME,
+    get_chroma_client,
+    invalidate_retrieval_cache,
+)
 
 logger = logging.getLogger("querymind.ingestion")
 
@@ -434,6 +439,10 @@ def ingest_document(
 
     # Upsert (not add): deterministic IDs make re-uploads idempotent.
     collection.upsert(ids=ids, documents=chunks, metadatas=metadatas)
+
+    # The documents for this (subject, topic) just changed, so any cached
+    # retrieval for them is stale — drop it before anything can serve it.
+    invalidate_retrieval_cache(subject, topic)
 
     document_id: Optional[str] = None
     if db is not None:
