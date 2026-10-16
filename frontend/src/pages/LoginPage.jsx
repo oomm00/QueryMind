@@ -7,6 +7,8 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -50,23 +52,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="page-wrapper min-h-screen items-center justify-center py-12">
-      <div className="w-full max-w-md animate-slide-up">
+    <div className="min-h-screen flex items-center justify-center py-8 bg-[var(--bg)]">
+      <div className="w-full max-w-md animate-slide-up bg-white rounded-md p-8 shadow-sm">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-brand shadow-lg shadow-indigo-500/20 mb-3">
-            <span className="text-2xl">🧠</span>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-md bg-[var(--surface)] shadow-sm mb-3">
+            <span className="text-2xl">QM</span>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white tracking-tight">QueryMind</h1>
-          <p className="text-zinc-400 mt-1 text-sm">
+          <h1 className="text-3xl font-display font-bold text-[var(--ink)] tracking-tight">QueryMind</h1>
+          <p className="text-[var(--muted)] mt-1 text-sm">
             AI-powered adaptive learning & cognitive evaluation
           </p>
         </div>
 
         {/* Auth Card */}
-        <div className="card">
+        <div className="panel lg:panel-lg mt-6">
           {/* Tab Switcher */}
-          <div className="flex rounded-lg overflow-hidden border border-surface-border bg-zinc-950 p-1 mb-6">
+          <div className="flex rounded-md overflow-hidden mb-4">
             {['login', 'register'].map((t) => (
               <button
                 key={t}
@@ -78,8 +80,8 @@ export default function LoginPage() {
                 }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-md capitalize transition-all duration-150 ${
                   tab === t
-                    ? 'bg-zinc-800 text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-[var(--moss)] text-white shadow-sm'
+                    : 'text-[var(--muted)] hover:text-[var(--moss)]'`
                 }`}
               >
                 {t === 'login' ? 'Sign In' : 'Create Account'}
@@ -90,8 +92,10 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {tab === 'register' && (
               <div>
-                <label htmlFor="full_name" className="label">Full Name</label>
-                <input
+                <label htmlFor="full_name" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
+                  Full Name
+                </label>
+                <Input
                   id="full_name"
                   name="full_name"
                   type="text"
@@ -104,8 +108,10 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="label">Email Address</label>
-              <input
+              <label htmlFor="email" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
+                Email Address
+              </label>
+              <Input
                 id="email"
                 name="email"
                 type="email"
@@ -118,8 +124,10 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="label">Password</label>
-              <input
+              <label htmlFor="password" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
+                Password
+              </label>
+              <Input
                 id="password"
                 name="password"
                 type="password"
@@ -133,19 +141,19 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="text-rose-400 text-xs bg-rose-950/40 border border-rose-900/60 rounded-lg p-3">
+              <div className="mt-2 p-3 rounded-md bg-[var(--rust)/10] border border-[var(--rust)]/50">
                 {error}
               </div>
             )}
 
-            <button
+            <Button
               id="btn-submit-auth"
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-2.5 mt-2"
+              className="w-full py-2.5 mt-2"
             >
               {loading ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
-            </button>
+            </Button>
           </form>
         </div>
       </div>

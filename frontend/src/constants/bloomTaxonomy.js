@@ -1,16 +1,15 @@
 /**
  * Bloom's Revised Taxonomy Constants
- * 6-level cognitive scale from cool to warm:
- * remember -> understand -> apply -> analyze -> evaluate -> create
+ * 6-level cognitive scale with teal hue ramp, no emoji in labels.
  */
 
 export const BLOOM_COLORS = {
-  remember:   '#38bdf8', // Sky 400 (Cool)
-  understand: '#14b8a6', // Teal 500
-  apply:      '#22c55e', // Green 500
-  analyze:    '#eab308', // Yellow 500
-  evaluate:   '#f97316', // Orange 500
-  create:     '#f43f5e', // Rose 500 (Warm)
+  remember:   '#CDEFEA',  // very light teal
+  understand: '#9EDDD3',  // light teal
+  apply:      '#6CC8BB',  // medium teal
+  analyze:    '#3FAE9F',  // deep teal
+  evaluate:   '#23867A',  // darker teal
+  create:     '#136058',  // darkest teal
 }
 
 export const BLOOM_LEVELS = [
@@ -65,5 +64,5 @@ export const DIFFICULTIES = [
 ]
 
 export function getBloomColor(level) {
-  return BLOOM_COLORS[level?.toLowerCase()] ?? '#a1a1aa'
+  return BLOOM_COLORS[level?.toLowerCase()] ?? '#6CC8BB'
 }

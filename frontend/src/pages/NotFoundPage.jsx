@@ -7,11 +7,11 @@ import { Link } from 'react-router-dom'
 
 export default function NotFoundPage() {
   return (
-    <div className="page-wrapper items-center justify-center">
-      <div className="card max-w-md text-center p-8 animate-slide-up">
-        <div className="text-4xl mb-4">🔍</div>
-        <h1 className="text-2xl font-display font-bold text-white mb-2">404 - Page Not Found</h1>
-        <p className="text-sm text-zinc-400 mb-6">
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
+      <div className="panel text-center p-8">
+        <div className="text-6xl mb-4">🔍</div>
+        <h1 className="text-2xl font-display font-bold text-[var(--ink)] mb-2">404 - Page Not Found</h1>
+        <p className="text-[var(--muted)] mb-6">
           The page you are looking for does not exist or has been moved.
         </p>
         <Link to="/setup" className="btn-primary w-full">

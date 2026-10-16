@@ -9,6 +9,9 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../context/SessionContext.jsx'
 import { getBloomColor } from '../constants/bloomTaxonomy.js'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { ProgressLine } from '../components/ui/ProgressLine'
 
 export default function QuestionPage() {
   const navigate = useNavigate()
@@ -57,95 +60,84 @@ export default function QuestionPage() {
   }
 
   return (
-    <div className="page-wrapper items-start py-8">
-      <div className="w-full max-w-3xl mx-auto animate-fade-in space-y-6">
+    <div className="min-h-screen bg-[var(--bg)]">
+      <div className="max-w-3xl mx-auto">
         {/* Progress & Header */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
+        <div className="space-y-2 mb-6">
+          <div className="flex items-center justify-between text-[var(--muted)]">
             <span className="font-mono">
               Question {currentIdx + 1} of {questions.length}
             </span>
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider text-black"
-                style={{ backgroundColor: bloomColor }}
-              >
-                {currentQuestion.bloom_level}
-              </span>
-              <span className="badge uppercase text-[10px]">
-                {currentQuestion.difficulty}
-              </span>
-            </div>
+            <span className="text-sm">
+              {Math.round(progress)}% complete
+            </span>
           </div>
 
-          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-brand-500 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="h-1.5 bg-[var(--line)] rounded-full overflow-hidden">
+            <ProgressLine percentage={progress} />
           </div>
         </div>
 
         {/* Question Card */}
-        <div className="card space-y-3">
+        <Panel className="mb-6">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider font-semibold text-zinc-400">
+            <span className="text-xs uppercase tracking-wider font-medium text-[var(--muted])">
               Topic: {currentQuestion.topic || setup?.topic}
             </span>
             {currentQuestion.question_id && (
-              <span className="text-[10px] text-zinc-500 font-mono">
+              <span className="text-[10px] text-[var(--muted)] font-mono">
                 ID: {currentQuestion.question_id.slice(0, 8)}…
               </span>
             )}
           </div>
 
-          <p className="text-white text-base sm:text-lg leading-relaxed font-normal">
+          <p className="mt-3 text-[var(--ink)] text-base leading-relaxed font-normal">
             {currentQuestion.question_text}
           </p>
 
           {Array.isArray(currentQuestion.hints) && currentQuestion.hints.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-surface-border text-xs text-zinc-400">
-              <span className="text-zinc-500 font-medium mr-1">💡 Hint:</span>
+            <div className="mt-3 pt-3 border-t border-[var(--line)] text-[var(--muted)] text-xs">
+              <span className="font-medium mr-1">Hint:</span>
               {currentQuestion.hints[0]}
             </div>
           )}
-        </div>
+        </Panel>
 
         {/* Answer Input Form */}
-        <form onSubmit={handleSubmit} className="card space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="answer" className="label">
+            <label htmlFor="answer" className="block text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-1.5">
               Your Answer / Reasoning
             </label>
-            <textarea
+            <Input
               id="answer"
               rows={7}
               placeholder="Formulate your detailed answer here. Focus on precision, core mechanisms, and practical trade-offs…"
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              className="input resize-none leading-relaxed font-sans"
+              className="textarea"
               required
             />
           </div>
 
           <div className="flex items-center justify-between gap-3 pt-2">
-            <button
+            <Button
               id="btn-back-setup"
               type="button"
               onClick={() => navigate('/setup')}
-              className="btn-ghost"
+              className="btn-quiet"
             >
-              ← Back to Setup
-            </button>
+              Back to Setup
+            </Button>
 
-            <button
+            <Button
               id="btn-submit-answer"
               type="submit"
               disabled={!answer.trim()}
               className="btn-primary"
             >
               Submit Answer →
-            </button>
+            </Button>
           </div>
         </form>
       </div>
