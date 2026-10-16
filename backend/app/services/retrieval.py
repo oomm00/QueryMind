@@ -10,11 +10,19 @@ Retrieval Service — Two-Tier College & Public Knowledge Base Search
    nothing. Only when both tiers are empty does it return [].
 5. Returns top-k ranked chunks formatted as:
    {"text": ..., "source_type": ..., "score": ..., "source_doc": ...}
+
+Results are memoized in-process for a short TTL (RETRIEVAL_CACHE_TTL_SECONDS),
+keyed on (subject, topic, query_text). The cache is invalidated per
+(subject, topic) by the ingestion service whenever a document is upserted, so a
+freshly uploaded document is immediately visible.
 """
 
 from __future__ import annotations
 
 import logging
+import threading
+import time
+from collections import OrderedDict
 from typing import Any, Optional
 
 import chromadb
@@ -37,6 +45,82 @@ COLLECTION_NAME = "querymind_documents"
 # material existed). 0.45 sits just below the observed on-topic band while still
 # rejecting clearly off-topic matches.
 SIMILARITY_THRESHOLD = 0.45
+
+# ── In-memory TTL cache ───────────────────────────────────────────────────────
+# Retrieval is the expensive, network-bound step of generation, and the same
+# (subject, topic) query is repeated constantly. Cache the resolved chunk list
+# briefly. Both knobs are env-overridable via config.py.
+RETRIEVAL_CACHE_TTL_SECONDS: float = settings.retrieval_cache_ttl_seconds
+RETRIEVAL_CACHE_MAX_ENTRIES: int = settings.retrieval_cache_max_entries
+
+# key = (subject, topic, query_text) -> (expires_at_monotonic, chunks)
+_retrieval_cache: "OrderedDict[tuple[Optional[str], str, str], tuple[float, list[dict]]]" = (
+    OrderedDict()
+)
+_retrieval_cache_lock = threading.Lock()
+
+
+def _cache_get(key: tuple, now: float) -> Optional[list[dict]]:
+    """Return the cached chunks for ``key`` if present and unexpired, else None."""
+    with _retrieval_cache_lock:
+        entry = _retrieval_cache.get(key)
+        if entry is None:
+            return None
+        expires_at, chunks = entry
+        if expires_at <= now:
+            _retrieval_cache.pop(key, None)
+            return None
+        _retrieval_cache.move_to_end(key)  # LRU: refresh recency
+        # Copy so callers can never mutate the cached list in place.
+        return [dict(chunk) for chunk in chunks]
+
+
+def _cache_put(key: tuple, chunks: list[dict], now: float) -> None:
+    """Store ``chunks`` for ``key`` with a fresh TTL, evicting the LRU entry."""
+    with _retrieval_cache_lock:
+        _retrieval_cache[key] = (
+            now + RETRIEVAL_CACHE_TTL_SECONDS,
+            [dict(chunk) for chunk in chunks],
+        )
+        _retrieval_cache.move_to_end(key)
+        while len(_retrieval_cache) > RETRIEVAL_CACHE_MAX_ENTRIES:
+            _retrieval_cache.popitem(last=False)
+
+
+def invalidate_retrieval_cache(subject: Optional[str], topic: str) -> int:
+    """Drop cached retrievals for a ``(subject, topic)`` pair.
+
+    Called by the ingestion service after a document is upserted so freshly
+    uploaded material is visible on the very next query instead of being masked
+    by a stale cache entry. Entries keyed with ``subject=None`` (the topic-only
+    fallback search) are dropped too, since they cover the same topic. Returns
+    the number of entries evicted.
+    """
+    removed = 0
+    with _retrieval_cache_lock:
+        for key in list(_retrieval_cache):
+            key_subject, key_topic, _ = key
+            if key_topic == topic and key_subject in (subject, None):
+                del _retrieval_cache[key]
+                removed += 1
+    if removed:
+        logger.info(
+            "Invalidated %d retrieval cache entr%s for %s / %s",
+            removed, "y" if removed == 1 else "ies", subject, topic,
+        )
+    return removed
+
+
+def clear_retrieval_cache() -> None:
+    """Empty the cache (used by tests)."""
+    with _retrieval_cache_lock:
+        _retrieval_cache.clear()
+
+
+def retrieval_cache_size() -> int:
+    """Current number of cached entries (used by tests/introspection)."""
+    with _retrieval_cache_lock:
+        return len(_retrieval_cache)
 
 
 def get_chroma_client() -> ClientAPI:
@@ -151,7 +235,16 @@ def retrieve_context(
 
     Pass ``subject=None`` to search by topic across every subject (used as a
     fallback when the caller cannot supply a reliable subject).
+
+    Results are cached in-process for :data:`RETRIEVAL_CACHE_TTL_SECONDS`, keyed
+    on ``(subject, topic, query_text)``. The cache is bypassed whenever a
+    ``collection``/``client`` is injected (callers that manage their own store),
+    and is invalidated per ``(subject, topic)`` by the ingestion service.
     """
+    # An injected collection/client means the caller owns the store; never cache
+    # across such calls (also keeps tests hermetic).
+    injected = collection is not None or client is not None
+
     if collection is None:
         chroma_client = client or get_chroma_client()
         collection = chroma_client.get_or_create_collection(
@@ -165,6 +258,38 @@ def retrieve_context(
     # the (absent) subject.
     search_query = query_text or (f"{subject} {topic}" if subject else topic)
 
+    cache_key = (subject, topic, search_query)
+    if not injected:
+        cached = _cache_get(cache_key, time.monotonic())
+        if cached is not None:
+            logger.debug(
+                "Retrieval cache HIT for %s / %s (query=%r): %d chunk(s)",
+                subject, topic, search_query, len(cached),
+            )
+            return cached
+
+    result = _retrieve_uncached(
+        collection=collection,
+        search_query=search_query,
+        subject=subject,
+        topic=topic,
+        top_k=top_k,
+    )
+
+    if not injected:
+        _cache_put(cache_key, result, time.monotonic())
+
+    return result
+
+
+def _retrieve_uncached(
+    collection: Collection,
+    search_query: str,
+    subject: Optional[str],
+    topic: str,
+    top_k: int,
+) -> list[dict]:
+    """Two-tier retrieval (no caching) — the body behind :func:`retrieve_context`."""
     # Tier 1: College material
     college_chunks = _query_collection(
         collection=collection,

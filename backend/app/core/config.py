@@ -55,5 +55,14 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.3       # Low temp for deterministic structured output
     llm_eval_temperature: float = 0.0  # Minimal temp for consistent rubric scoring
 
+    # LLM reliability (env: LLM_TIMEOUT_SECONDS / LLM_MAX_CONCURRENCY)
+    llm_timeout_seconds: float = 45.0   # hard per-call timeout; a slower call is
+                                        # treated as transient and retried
+    llm_max_concurrency: int = 3        # max simultaneous Gemini calls per process
+
+    # Retrieval cache (env: RETRIEVAL_CACHE_TTL_SECONDS / RETRIEVAL_CACHE_MAX_ENTRIES)
+    retrieval_cache_ttl_seconds: float = 300.0   # 5 minutes
+    retrieval_cache_max_entries: int = 256
+
 
 settings = Settings()
