@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ── PostgreSQL Database ──────────────────────────────────
   db:
@@ -48,6 +46,11 @@ services:
       # Override host to use docker service name
       POSTGRES_HOST: db
       CHROMA_HOST: chroma
+      # Inside the compose network Chroma listens on its container port 8000.
+      # CHROMA_PORT in .env is the *host* port published below (default 8001);
+      # without this override the backend would dial chroma:8001 and silently
+      # fall back to a local persistent store. Pin the in-network port here.
+      CHROMA_PORT: 8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-querymind}:${POSTGRES_PASSWORD:-querymind_dev_password}@db:5432/${POSTGRES_DB:-querymind_db}
     depends_on:
       db:
