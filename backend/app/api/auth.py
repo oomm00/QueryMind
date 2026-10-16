@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -38,6 +39,21 @@ rate_limit_register = create_rate_limiter(requests_limit=5, window_seconds=60)
 rate_limit_login = create_rate_limiter(requests_limit=10, window_seconds=60)
 
 
+def _issue_tokens(user: User) -> TokenResponse:
+    """Build the standard access + refresh token response for *user*.
+
+    Shared by ``/register``, ``/login``, ``/token`` and ``/refresh`` so token
+    issuance (and the response shape) lives in exactly one place.
+    """
+    return TokenResponse(
+        access_token=create_access_token(user_id=user.id),
+        refresh_token=create_refresh_token(user_id=user.id),
+        token_type="bearer",
+        user_id=user.id,
+        email=user.email,
+    )
+
+
 @router.post(
     "/register",
     response_model=TokenResponse,
@@ -51,16 +67,7 @@ def register(
 ) -> TokenResponse:
     """Register a new user with hashed credentials and issue JWT tokens."""
     user = register_user(db=db, data=payload)
-    access_token = create_access_token(user_id=user.id)
-    refresh_token = create_refresh_token(user_id=user.id)
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        user_id=user.id,
-        email=user.email,
-    )
+    return _issue_tokens(user)
 
 
 @router.post(
@@ -75,16 +82,30 @@ def login(
 ) -> TokenResponse:
     """Authenticate user credentials and issue access + refresh tokens."""
     user = authenticate_user(db=db, email=payload.email, password=payload.password)
-    access_token = create_access_token(user_id=user.id)
-    refresh_token = create_refresh_token(user_id=user.id)
+    return _issue_tokens(user)
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        user_id=user.id,
-        email=user.email,
+
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    dependencies=[Depends(rate_limit_login)],
+    summary="OAuth2 password-flow login (form-encoded)",
+)
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """OAuth2 password-flow token endpoint, used by Swagger's Authorize dialog.
+
+    Accepts ``application/x-www-form-urlencoded`` (``username`` = the user's
+    email, plus ``password``) and returns the same token response as
+    ``POST /auth/login``. Both endpoints share the authentication and
+    token-issuing logic.
+    """
+    user = authenticate_user(
+        db=db, email=form_data.username, password=form_data.password
     )
+    return _issue_tokens(user)
 
 
 @router.post(
@@ -111,16 +132,7 @@ def refresh_token(
     if not user.is_active:
         raise AuthenticationError("User account is inactive")
 
-    new_access_token = create_access_token(user_id=user.id)
-    new_refresh_token = create_refresh_token(user_id=user.id)
-
-    return TokenResponse(
-        access_token=new_access_token,
-        refresh_token=new_refresh_token,
-        token_type="bearer",
-        user_id=user.id,
-        email=user.email,
-    )
+    return _issue_tokens(user)
 
 
 @router.get(
