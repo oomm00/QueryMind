@@ -8,15 +8,14 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { profileApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { selectPerTopicAverages, selectPerBloomAverages } from '../api/adapter.js'
 import { getBloomColor } from '../constants/bloomTaxonomy.js'
 import { Button } from '../components/ui/Button'
-import { Panel, PanelLarge, PanelSmall } from '../components/ui/Panel'
+import { Panel, PanelLarge } from '../components/ui/Panel'
 import { MetricBar } from '../components/ui/MetricBar'
-import { ProgressLine } from '../components/ui/ProgressLine'
 import { EmptyState } from '../components/ui/EmptyState'
 
 export default function DashboardPage() {
@@ -145,7 +144,7 @@ export default function DashboardPage() {
                 {topicAverages.map((item) => (
                   <MetricBar
                     key={item.topic}
-                    title={item.topic}
+                    label={item.topic}
                     subtitle={`${item.total_attempts} attempt${item.total_attempts !== 1 ? 's' : ''}`}
                     score={item.average_score}
                     color={getBloomColor(item.topic)}
@@ -170,52 +169,20 @@ export default function DashboardPage() {
               />
             ) : (
               <div className="space-y-3">
-                {bloomAverages.map((item) => {
-                  const color = getBloomColor(item.bloom_level)
-                  return (
-                    <MetricBar
-                      key={item.bloom_level}
-                      title={item.bloom_level}
-                      subtitle={`${item.total_attempts} question${item.total_attempts !== 1 ? 's' : ''}`}
-                      score={item.average_score}
-                      color={color}
-                    />
-                  )
-                })}
+                {bloomAverages.map((item) => (
+                  <MetricBar
+                    key={item.bloom_level}
+                    label={item.bloom_level}
+                    subtitle={`${item.total_attempts} question${item.total_attempts !== 1 ? 's' : ''}`}
+                    score={item.average_score}
+                    color={getBloomColor(item.bloom_level)}
+                  />
+                ))}
               </div>
             )}
           </div>
         </Panel>
       </div>
     </div>
-  )
-}
-
-/**
- * MetricBar — compact metric component for dashboard.
- * Flat fill, 1px border, no heavy shadows.
- */
-
-function MetricBar({ label, value, icon, color }) {
-  const pct = Math.round(value * 100)
-
-  return (
-    <Panel className="flex flex-col sm:flex-row items-center justify-between py-2">
-      <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
-      <span className="text-sm font-medium text-[var(--ink)]">{value}</span>
-
-      <div className="w-24 h-1.5 rounded-md bg-[var(--line)] overflow-hidden mt-1 sm:mt-0">
-        <div
-          className={`h-full rounded-md transition-all duration-500 ease-out ${color}`
-            ? `bg-[var(${color})]`
-            : ''
-          }`}
-          style={{ width: `${pct}%` }}
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow={pct}
-        />
-      </div>
-    </Panel>
   )
 }

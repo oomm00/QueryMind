@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,6 +8,23 @@ export default {
   theme: {
     extend: {
       colors: {
+        // App / "trail map" palette (light theme; dark theme is driven by the
+        // CSS variables in src/index.css via [data-theme="dark"]).
+        ink:   '#1B2540',
+        muted: '#5B6479',
+        line:  '#D9DEE8',
+        moss:  '#2E7D5B',
+        amber: '#E3A008',
+        rust:  '#C2410C',
+        focus: '#2B6CB0',
+        error: '#C2410C',
+        surface: {
+          DEFAULT: '#FFFFFF',
+          card:    '#FFFFFF',
+          subtle:  '#F5F5F5',
+          border:  '#D1D5DB',
+          hover:   '#F3F4F6',
+        },
         // Bloom cognitive level color scale (cool to warm)
         bloom: {
           remember:   '#38bdf8', // Sky 400
@@ -16,40 +34,24 @@ export default {
           evaluate:   '#f97316', // Orange 500
           create:     '#f43f5e', // Rose 500
         },
-        // Neutral Slate / Zinc Dark Theme
+        brand: {
+          50:  '#F2F4F8',
+          100: '#E4E6ED',
+          200: '#D1D5DB',
+          300: '#9CA3AF',
+          400: '#6B7280',
+          500: '#4B5563',
+        },
         zinc: {
           850: '#1f1f23',
           900: '#18181b',
           950: '#09090b',
         },
-        surface: {
-          DEFAULT: '#09090b', // Deep neutral background (zinc-950)
-          card:    '#141418', // Raised card surface
-          subtle:  '#1c1c22', // Subtle contrasting surface
-          border:  '#27272a', // Subtle neutral border (zinc-800)
-          hover:   '#2e2e34',
-        },
-        brand: {
-          50:  '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#6366f1',  // Indigo primary accent
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
-        },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
-      },
-      backgroundImage: {
-        'gradient-brand': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
-        'gradient-dark':  'linear-gradient(180deg, #141418 0%, #09090b 100%)',
+        sans:    ['Bricolage Grotesque', 'system-ui', 'sans-serif'],
+        display: ['Newsreader', 'Bricolage Grotesque', 'system-ui', 'sans-serif'],
+        mono:    ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       animation: {
         'fade-in':    'fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
