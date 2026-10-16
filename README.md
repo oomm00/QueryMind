@@ -108,7 +108,8 @@ pip install -r requirements.txt
 cp ../.env.example .env
 # Set POSTGRES_HOST=localhost in .env for local DB
 
-# Run database migrations
+# Run database migrations — Alembic is the single source of truth for the schema
+# (the app no longer auto-creates tables on startup), so run this before first start
 alembic upgrade head
 
 # Start the development server
