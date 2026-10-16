@@ -77,7 +77,11 @@ def upgrade() -> None:
     op.create_table(
         "knowledge_profiles",
         sa.Column("id",             postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id",        postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), unique=True, nullable=False),
+        # NOTE: not unique — KnowledgeProfile holds one row per
+        # (user_id, topic, bloom_level) (see ix_knowledge_profile_user_topic_bloom,
+        # added in e2f6a8b1c4d5). A per-user unique constraint would reject the
+        # second topic/bloom for a user.
+        sa.Column("user_id",        postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("mastery_data",   sa.Text,    nullable=True),
         sa.Column("total_attempts", sa.Integer, server_default="0"),
         sa.Column("average_score",  sa.Float,   server_default="0.0"),

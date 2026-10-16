@@ -17,20 +17,25 @@ down_revision: str | None = "e2a6c8d4b3f5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+# Portable JSON column: JSONB on PostgreSQL, plain JSON on SQLite. Mirrors the
+# ORM columns (``JSONB().with_variant(JSON, "sqlite")``) so this migration runs
+# cleanly on the SQLite dev database as well as PostgreSQL.
+JSONType = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
+
 
 def upgrade() -> None:
     # ── attempts ───────────────────────────────────────────────
     op.add_column(
         "attempts",
-        sa.Column("criteria_scores", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("criteria_scores", JSONType, nullable=True),
     )
 
     # ── questions ──────────────────────────────────────────────
     op.add_column("questions", sa.Column("question_type", sa.String(50), server_default="descriptive", nullable=True))
-    op.add_column("questions", sa.Column("options", postgresql.JSONB(astext_type=sa.Text()), nullable=True))
+    op.add_column("questions", sa.Column("options", JSONType, nullable=True))
     op.add_column("questions", sa.Column("starter_code", sa.Text(), nullable=True))
-    op.add_column("questions", sa.Column("test_cases", postgresql.JSONB(astext_type=sa.Text()), nullable=True))
-    op.add_column("questions", sa.Column("source_chunk_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=True))
+    op.add_column("questions", sa.Column("test_cases", JSONType, nullable=True))
+    op.add_column("questions", sa.Column("source_chunk_ids", JSONType, nullable=True))
 
     try:
         op.create_index(
