@@ -19,6 +19,7 @@ from app.api import auth, questions, attempts, profile, documents, mastery
 from app.core.config import settings
 from app.core.exceptions import QueryMindError
 from app.core.logging import RequestLoggingMiddleware, setup_logging
+from app.core.warmup import warm_up
 
 logger = logging.getLogger("querymind.app")
 
@@ -29,7 +30,16 @@ async def lifespan(app: FastAPI):
 
     The database schema is owned by Alembic (``alembic upgrade head``); the app
     deliberately does not create or alter tables on startup.
+
+    On startup (unless ``WARMUP_ON_STARTUP`` is disabled) we pre-load the heavy,
+    process-wide resources — the embedding model, the Chroma collection and the
+    structured-output schemas — so the first request is not ~8s slower than the
+    rest. ``warm_up()`` is best-effort and never raises.
     """
+    if settings.warmup_on_startup:
+        timings = warm_up()
+        if timings:
+            logger.info("Startup warm-up paid: %s", timings)
     yield
     # On shutdown: close connections, flush queues, etc.
 

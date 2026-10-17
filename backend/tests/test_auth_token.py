@@ -69,7 +69,14 @@ def user(db_session):
 
 
 @pytest.fixture
-def client(db_session):
+def client(db_session, monkeypatch):
+    import app.main as main
+
+    # The startup warm-up pre-loads the embedding model and touches ChromaDB;
+    # it is irrelevant to the auth contract and must not run in a unit test
+    # (its own behaviour is covered in test_llm_thinking.py).
+    monkeypatch.setattr(main, "warm_up", lambda: {})
+
     app = create_app()
     app.dependency_overrides[get_db] = lambda: db_session
     # NOTE: get_current_user is NOT overridden — the real bearer-token path runs.
