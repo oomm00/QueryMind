@@ -148,6 +148,41 @@ def get_chroma_client() -> ClientAPI:
         return chromadb.PersistentClient(path=chroma_path)
 
 
+# ── Shared default collection (process-wide memo) ─────────────────────────────
+# Constructing an HttpClient and resolving the collection costs a network
+# round-trip (plus a heartbeat that blocks for the connect timeout when the
+# Chroma service is down). The collection handle itself is thread-safe and
+# long-lived, so build it once per process instead of on every retrieval call.
+_default_collection: Optional[Collection] = None
+_default_collection_lock = threading.Lock()
+
+
+def get_default_collection() -> Collection:
+    """Return the shared retrieval collection, creating it on first use.
+
+    Memoized for the process lifetime: the returned handle is safe to reuse
+    across threads. Drop the memo with :func:`reset_default_collection` (tests).
+    """
+    global _default_collection
+    if _default_collection is not None:
+        return _default_collection
+    with _default_collection_lock:
+        if _default_collection is None:
+            client = get_chroma_client()
+            _default_collection = client.get_or_create_collection(
+                name=COLLECTION_NAME,
+                metadata={"hnsw:space": "cosine"},
+            )
+        return _default_collection
+
+
+def reset_default_collection() -> None:
+    """Drop the memoized default collection (used by tests)."""
+    global _default_collection
+    with _default_collection_lock:
+        _default_collection = None
+
+
 def _query_collection(
     collection: Collection,
     query_text: str,
@@ -245,13 +280,6 @@ def retrieve_context(
     # across such calls (also keeps tests hermetic).
     injected = collection is not None or client is not None
 
-    if collection is None:
-        chroma_client = client or get_chroma_client()
-        collection = chroma_client.get_or_create_collection(
-            name=COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"},
-        )
-
     # Short "<subject> <topic>" queries score higher (and more consistently) than
     # the earlier long generic phrase, so build the default query from just those
     # two fields when the caller does not supply one. A topic-only search omits
@@ -259,6 +287,10 @@ def retrieve_context(
     search_query = query_text or (f"{subject} {topic}" if subject else topic)
 
     cache_key = (subject, topic, search_query)
+
+    # Early cache lookup — before touching Chroma. A hit must NOT pay for client
+    # construction / collection resolution, which is the dominant per-request
+    # cost when Chroma is remote (or absent and falling back to disk).
     if not injected:
         cached = _cache_get(cache_key, time.monotonic())
         if cached is not None:
@@ -267,6 +299,16 @@ def retrieve_context(
                 subject, topic, search_query, len(cached),
             )
             return cached
+
+    if collection is None:
+        if client is not None:
+            collection = client.get_or_create_collection(
+                name=COLLECTION_NAME,
+                metadata={"hnsw:space": "cosine"},
+            )
+        else:
+            # Process-wide memoized collection (avoids rebuilding the client).
+            collection = get_default_collection()
 
     result = _retrieve_uncached(
         collection=collection,

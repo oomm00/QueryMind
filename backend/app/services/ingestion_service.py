@@ -37,7 +37,7 @@ from app.models.models import Document
 # invalidate retrieval's TTL cache after an upsert so new material is visible.
 from app.services.retrieval import (
     COLLECTION_NAME,
-    get_chroma_client,
+    get_default_collection,
     invalidate_retrieval_cache,
 )
 
@@ -282,16 +282,14 @@ def chunk_text(
 # ── ChromaDB helpers ──────────────────────────────────────────────────────────
 
 def _get_default_collection() -> Any:
-    """Open the shared retrieval collection using retrieval's client factory.
+    """Return the shared retrieval collection (process-wide memoized handle).
 
-    Uses the same default embedding function as :func:`retrieval.retrieve_context`
-    (Chroma's bundled all-MiniLM-L6-v2) so ingested vectors live in the same space.
+    Delegates to :func:`retrieval.get_default_collection` so ingestion and
+    retrieval share the same client/collection and never rebuild the Chroma
+    connection per upload. The same default embedding function (Chroma's bundled
+    all-MiniLM-L6-v2) is used, so ingested vectors live in the same space.
     """
-    client = get_chroma_client()
-    return client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"},
-    )
+    return get_default_collection()
 
 
 def _chunk_id(source_doc: str, chunk_index: int, content: str) -> str:
