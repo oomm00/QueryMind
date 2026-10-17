@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import time
+from functools import lru_cache
 from typing import Any, Optional
 
 from app.core.config import settings
@@ -106,12 +107,16 @@ class GeminiAdapter:
         )
 
 
+@lru_cache(maxsize=1)
 def _generation_schema() -> Any:
     """Build a Gemini ``Schema`` describing the generated-question JSON shape.
 
     Returning ``None`` (when google.genai is unavailable) keeps the previous
     behavior: JSON-mode without a schema. The existing JSON-retry fallback in
     :func:`llm_utils.call_json_with_retry` still applies.
+
+    Memoized: constructing the schema imports ``google.genai.types`` and builds
+    a nested object graph, so it is done once per process rather than per call.
     """
     try:
         from google.genai import types as genai_types  # type: ignore
