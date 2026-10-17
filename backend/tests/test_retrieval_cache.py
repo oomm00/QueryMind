@@ -28,10 +28,12 @@ from app.services.ingestion_service import ingest_document
 
 @pytest.fixture(autouse=True)
 def _isolated_cache():
-    """Every test starts and ends with an empty cache."""
+    """Every test starts and ends with an empty cache and no memoized collection."""
     retrieval.clear_retrieval_cache()
+    retrieval.reset_default_collection()
     yield
     retrieval.clear_retrieval_cache()
+    retrieval.reset_default_collection()
 
 
 def _client_returning(collection: MagicMock) -> MagicMock:
@@ -133,3 +135,67 @@ def test_injected_collection_bypasses_cache():
 
     assert collection.query.call_count == 2          # never memoized
     assert retrieval.retrieval_cache_size() == 0
+
+
+# ── Chroma client/collection memoization + early cache lookup ─────────────────
+
+def test_cache_hit_does_not_build_the_chroma_client(monkeypatch):
+    """A cache hit must return before the client is ever constructed."""
+    collection = MagicMock()
+    collection.query.return_value = _college_hit()
+    calls = {"n": 0}
+
+    def _factory():
+        calls["n"] += 1
+        return _client_returning(collection)
+
+    monkeypatch.setattr(retrieval, "get_chroma_client", _factory)
+
+    retrieval.retrieve_context(topic="Transactions", subject="DBMS")   # miss -> build
+    retrieval.retrieve_context(topic="Transactions", subject="DBMS")   # hit  -> no build
+    retrieval.retrieve_context(topic="Transactions", subject="DBMS")   # hit  -> no build
+
+    assert calls["n"] == 1
+    assert collection.query.call_count == 1
+
+
+def test_default_collection_is_memoized_across_calls(monkeypatch):
+    """Different cache misses must reuse ONE client/collection, built once."""
+    collection = MagicMock()
+    collection.query.return_value = _college_hit()
+    calls = {"n": 0}
+
+    def _factory():
+        calls["n"] += 1
+        return _client_returning(collection)
+
+    monkeypatch.setattr(retrieval, "get_chroma_client", _factory)
+
+    retrieval.retrieve_context(topic="Transactions", subject="DBMS")
+    retrieval.retrieve_context(topic="Deadlocks", subject="OS")        # cache miss
+    retrieval.retrieve_context(topic="Scheduling", subject="OS")       # cache miss
+
+    assert calls["n"] == 1                       # client built exactly once
+    assert collection.query.call_count == 3
+
+    # The memo handle is the exact object promised by the helper.
+    assert retrieval.get_default_collection() is collection
+
+
+def test_reset_default_collection_forces_rebuild(monkeypatch):
+    collection = MagicMock()
+    collection.query.return_value = _college_hit()
+    calls = {"n": 0}
+
+    def _factory():
+        calls["n"] += 1
+        return _client_returning(collection)
+
+    monkeypatch.setattr(retrieval, "get_chroma_client", _factory)
+
+    retrieval.retrieve_context(topic="Transactions", subject="DBMS")
+    retrieval.reset_default_collection()
+    retrieval.retrieve_context(topic="Deadlocks", subject="OS")   # miss -> rebuild
+
+    assert calls["n"] == 2                       # rebuilt after reset
+
