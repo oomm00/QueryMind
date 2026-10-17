@@ -4,6 +4,7 @@
  * Public:  /login
  * Default: /explore (redirect target after sign-in)
  * Built:   /dashboard, /history, /practice/{new,session,feedback},
+ *          /course/:id (course details and the topic list),
  *          /learn/:courseId/:topicId/:lessonId,
  *          /map/:courseId/:topicId (topic knowledge graph)
  * Stubs:   everything else renders <ComingSoon/>.
@@ -24,6 +25,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import ComingSoon from './pages/ComingSoon'
 import LessonPage from './pages/LessonPage'
 import MapPage from './pages/MapPage'
+import CoursePage from './pages/CoursePage'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import PublicRoute from './components/routing/PublicRoute'
 import AppShell from './AppShell'
@@ -131,7 +133,11 @@ export default function App() {
         <Route path="/settings" element={soon('Settings', 'Account, theme and study preferences.')} />
         <Route
           path="/course/:id"
-          element={soon('Course', 'Course details and the topic list.')}
+          element={
+            <Protected>
+              <CoursePage />
+            </Protected>
+          }
         />
         <Route
           path="/learn/:courseId/:topicId/:lessonId"
