@@ -303,6 +303,7 @@ def validate_question(
           "answerability_check": {...},
           "cognitive_alignment_check": {...},
           "reason": str | None,
+          "reason_code": "duplicate" | "answerability" | "cognitive" | None,
         }
     """
     payload = generated if isinstance(generated, dict) else generated.model_dump()
@@ -358,19 +359,27 @@ def validate_question(
     )
 
     reason: Optional[str] = None
+    # Machine-readable companion to *reason* so callers can map a failure to a
+    # specific error code (e.g. DUPLICATE_QUESTION) without string-matching the
+    # human-readable text. One of "duplicate" / "answerability" / "cognitive",
+    # or None when the question passed.
+    reason_code: Optional[str] = None
     if duplicate_check["is_duplicate"]:
+        reason_code = "duplicate"
         reason = (
             f"Duplicate question: {duplicate_check.get('similarity')} similarity "
             f"with existing question {duplicate_check.get('similar_to_id')} "
             f"(threshold {DUPLICATE_SIMILARITY_THRESHOLD})."
         )
     elif not answerability_check["is_answerable"]:
+        reason_code = "answerability"
         reason = (
             f"Answer not grounded in source material: best chunk similarity "
             f"{answerability_check.get('best_match_score')} < "
             f"{ANSWERABILITY_SIMILARITY_THRESHOLD}."
         )
     elif not cognitive_check["is_aligned"]:
+        reason_code = "cognitive"
         reason = (
             f"Cognitive level mismatch: question does not assess Bloom level '{bloom}' "
             f"({cognitive_check.get('reason')})."
@@ -382,4 +391,5 @@ def validate_question(
         "answerability_check": answerability_check,
         "cognitive_alignment_check": cognitive_check,
         "reason": reason,
+        "reason_code": reason_code,
     }
