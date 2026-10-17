@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: str = "sk-placeholder"
     gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
-    llm_model: str = "gemini-3.8-flash"
+    llm_model: str = "gemini-flash-lite-latest"
     # Judge model. Left empty by default so it inherits LLM_MODEL (env: LLM_EVAL_MODEL).
     # Set it explicitly to route generation and evaluation to different models
     # (e.g. a cheaper/less rate-limited model for scoring).
@@ -64,13 +64,14 @@ class Settings(BaseSettings):
     # JSON, so they do not need deep reasoning: the default keeps thinking at the
     # lowest level the *configuration* model supports.
     #
-    # NOTE ON DEFAULTS: the shipped default model is ``gemini-3.8-flash``, whose
-    # documented thinking levels are low/medium/high — ``minimal`` is REJECTED with a
-    # 400 ("Thinking level MINIMAL is not supported for this model"). ``low`` is
-    # therefore the lowest universally-valid level across the Gemini 3 family and is
-    # what we default to. Models that do support ``minimal`` (e.g. gemini-3.5-flash-lite)
-    # can opt in via ``LLM_THINKING_LEVEL=minimal``. ``LLM_THINKING_BUDGET`` is for
-    # Gemini 2.5 models (which use ``thinkingBudget`` instead of ``thinkingLevel``).
+    # NOTE ON DEFAULTS: the shipped default is a ``*-lite`` model, which has the
+    # most generous free-tier quota and needs no billing. ``low`` is the lowest
+    # thinking level accepted across the Gemini 3 family — ``minimal`` is REJECTED
+    # by some models with a 400 ("Thinking level MINIMAL is not supported for this
+    # model"), so ``low`` is the safe universal default. Models that do support
+    # ``minimal`` (e.g. gemini-3.5-flash-lite) can opt in via
+    # ``LLM_THINKING_LEVEL=minimal``. ``LLM_THINKING_BUDGET`` is for Gemini 2.5
+    # models (which use ``thinkingBudget`` instead of ``thinkingLevel``).
     llm_thinking_level: str = "low"
     llm_thinking_budget: Optional[int] = None
     llm_max_output_tokens: int = 2048  # hard cap; thinking tokens count toward it
@@ -83,8 +84,9 @@ class Settings(BaseSettings):
     # Ordered fallback models (env: LLM_FALLBACK_MODELS, comma-separated). When the
     # primary model returns a quota error (429 / RESOURCE_EXHAUSTED) or keeps
     # returning 503 after the built-in retries, the call is retried against the next
-    # model in this list instead of failing the request. Empty (the default) keeps
-    # the single-model behaviour exactly as before. Raw value; use
+    # model in this list instead of failing the request. Empty (this code default)
+    # keeps the single-model behaviour exactly as before; the committed
+    # ``.env.example`` ships a sensible lite-model fallback list. Raw value; use
     # ``settings.fallback_models`` for the parsed list (mirrors ALLOWED_ORIGINS).
     llm_fallback_models: Union[List[str], str] = []
 
