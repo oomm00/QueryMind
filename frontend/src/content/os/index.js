@@ -13,7 +13,8 @@
  *
  * Both topic shapes are normalised into one graph, and the loose lesson
  * references in topic.json (file stems, "lesson-*" ids) are resolved to
- * canonical lesson ids.
+ * canonical lesson ids. A lesson's check question may be a block or a
+ * top-level `check` object; both are normalised to the block form.
  */
 
 const modules = import.meta.glob('./**/*.json', { eager: true })
@@ -37,6 +38,15 @@ const COURSE = {
 
 // Folder topics carry no title of their own; name any that differ from the slug.
 const TOPIC_TITLES = { 'memory-management': 'Memory Management' }
+
+// The Explore catalog identifies courses by its own slugs; map them onto the
+// content course so /learn/operating-systems/... resolves as well as /learn/os/...
+const COURSE_ALIASES = { 'operating-systems': 'os' }
+
+function resolveCourseId(courseId) {
+  if (!courseId) return COURSE.id
+  return COURSE_ALIASES[courseId] ?? courseId
+}
 
 const RE_FLAT_TOPIC = /^\.\/([^/]+)\.json$/
 const RE_FOLDER_TOPIC = /^\.\/([^/]+)\/topic\.json$/
@@ -73,9 +83,25 @@ for (const [path, mod] of Object.entries(modules)) {
   else if (lesson) lessonSources.push({ topicId: lesson[1], stem: lesson[2], data })
 }
 
+/**
+ * Lessons come in two shapes. Current lessons carry their check question as a
+ * block; older stubs carry it as a top-level `check` object. Both are supported
+ * and normalised to the block form, so consumers only ever see `blocks`.
+ */
+function normalizeBlocks(data) {
+  const blocks = Array.isArray(data.blocks) ? [...data.blocks] : []
+  const legacy = data.check
+  if (legacy && typeof legacy === 'object') {
+    for (const check of Array.isArray(legacy) ? legacy : [legacy]) {
+      blocks.push({ kind: 'check', ...check })
+    }
+  }
+  return blocks
+}
+
 for (const { topicId, stem, data } of lessonSources) {
   const id = data.id || `lesson-${stem}`
-  lessonsById.set(id, { ...data, id, topicId })
+  lessonsById.set(id, { ...data, id, topicId, blocks: normalizeBlocks(data) })
   lessonAliases.set(id, id)
   lessonAliases.set(stem, id)
   lessonAliases.set(`lesson-${stem}`, id)
@@ -85,6 +111,46 @@ for (const { topicId, stem, data } of lessonSources) {
 export function resolveLessonId(reference) {
   if (reference == null) return null
   return lessonAliases.get(reference) ?? null
+}
+
+export const PLACEHOLDER_TITLE = 'Coming soon'
+
+/**
+ * A lesson the outline knows about but whose body has not been written yet:
+ * it is literally titled "Coming soon", or it has no blocks at all. The reader
+ * renders a "not written yet" state for these instead of an error.
+ */
+export function isPlaceholderLesson(lesson) {
+  if (!lesson) return false
+  const title = String(lesson.title ?? '').trim().toLowerCase()
+  return title === PLACEHOLDER_TITLE.toLowerCase() || (lesson.blocks?.length ?? 0) === 0
+}
+
+/** Light lesson record for navigational surfaces, so they need not load blocks. */
+function lessonSummary(lesson) {
+  return {
+    id: lesson.id,
+    title: lesson.title,
+    estMinutes: lesson.estMinutes ?? null,
+    topicId: lesson.topicId,
+    isPlaceholder: isPlaceholderLesson(lesson),
+  }
+}
+
+/**
+ * A concept with its graph resolved: prerequisites as objects, lessons as
+ * summaries. Both the topic and the concept endpoints return this shape, so a
+ * consumer never has to resolve ids itself.
+ */
+function conceptWithGraph(concept) {
+  return {
+    ...concept,
+    prerequisites: concept.prerequisiteIds
+      .map((id) => conceptsById.get(id))
+      .filter(Boolean)
+      .map(({ id, title, topicId }) => ({ id, title, topicId })),
+    lessons: concept.lessonIds.map((id) => lessonSummary(lessonsById.get(id))),
+  }
 }
 
 // ── Normalise the graph ─────────────────────────────────────
@@ -138,7 +204,7 @@ for (const { topicId, data } of topicSources) {
 // ── Public read API ─────────────────────────────────────────
 
 export function getCourse(courseId = COURSE.id) {
-  if (courseId !== COURSE.id) return null
+  if (resolveCourseId(courseId) !== COURSE.id) return null
   const topics = COURSE.topicIds
     .map((id) => topicsById.get(id))
     .filter(Boolean)
@@ -147,6 +213,7 @@ export function getCourse(courseId = COURSE.id) {
       title: topic.title,
       conceptCount: topic.conceptIds.length,
       lessonCount: topic.lessonIds.length,
+      lessonIds: topic.lessonIds,
     }))
   return { ...COURSE, topics }
 }
@@ -154,18 +221,17 @@ export function getCourse(courseId = COURSE.id) {
 export function getTopic(topicId) {
   const topic = topicsById.get(topicId)
   if (!topic) return null
-  const concepts = topic.conceptIds.map((id) => conceptsById.get(id)).filter(Boolean)
+  const concepts = topic.conceptIds
+    .map((id) => conceptsById.get(id))
+    .filter(Boolean)
+    .map(conceptWithGraph)
   return { ...topic, concepts }
 }
 
 export function getConcept(conceptId) {
   const concept = conceptsById.get(conceptId)
   if (!concept) return null
-  return {
-    ...concept,
-    prerequisites: concept.prerequisiteIds.map((id) => conceptsById.get(id)).filter(Boolean),
-    lessons: concept.lessonIds.map((id) => lessonsById.get(id)).filter(Boolean),
-  }
+  return conceptWithGraph(concept)
 }
 
 export function getLesson(lessonId) {

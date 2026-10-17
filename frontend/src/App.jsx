@@ -3,7 +3,8 @@
  *
  * Public:  /login
  * Default: /explore (redirect target after sign-in)
- * Built:   /dashboard, /history, /practice/{new,session,feedback}
+ * Built:   /dashboard, /history, /practice/{new,session,feedback},
+ *          /learn/:courseId/:topicId/:lessonId
  * Stubs:   everything else renders <ComingSoon/>.
  *
  * Legacy paths (/setup, /question, /feedback) redirect to their new homes.
@@ -20,6 +21,7 @@ import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ComingSoon from './pages/ComingSoon'
+import LessonPage from './pages/LessonPage'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import PublicRoute from './components/routing/PublicRoute'
 import AppShell from './AppShell'
@@ -131,7 +133,11 @@ export default function App() {
         />
         <Route
           path="/learn/:courseId/:topicId/:lessonId"
-          element={soon('Lesson', 'The lesson reading workspace.')}
+          element={
+            <Protected>
+              <LessonPage />
+            </Protected>
+          }
         />
         <Route
           path="/map/:courseId/:topicId"
