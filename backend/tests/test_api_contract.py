@@ -11,6 +11,10 @@ Covered here:
    exact (subject, topic) filter yields no material — the frontend's adapter
    derives ``subject`` from the free-text ``topic`` (subject == topic), which
    would otherwise never match material filed under a real subject.
+3. ``POST /questions/generate`` rejects a *persistent* near-duplicate with a
+   stable, machine-readable ``DUPLICATE_QUESTION`` code plus an actionable
+   message ("try a different topic or Bloom level"), while non-duplicate
+   validation failures keep the generic ``VALIDATION_ERROR`` code.
 
 Related contract fixes are covered next to their feature tests:
 - file-only multipart upload -> ``tests/test_ingestion_service.py``
@@ -105,6 +109,26 @@ _PAYLOAD = {
     "question_type": "open",
 }
 
+# A validation verdict that failed BECAUSE the question was a near-duplicate.
+# It carries reason_code="duplicate", which the route maps to DUPLICATE_QUESTION.
+_DUPLICATE = {
+    "passed": False,
+    "duplicate_check": {"is_duplicate": True, "similarity": 0.96, "similar_to_id": "abc123"},
+    "answerability_check": {"is_answerable": True, "best_match_score": 0.8},
+    "reason": "Duplicate question: 0.96 similarity with existing question abc123 (threshold 0.9).",
+    "reason_code": "duplicate",
+}
+
+# A validation verdict that failed for a NON-duplicate reason: it must keep the
+# generic VALIDATION_ERROR code rather than DUPLICATE_QUESTION.
+_ANSWERABILITY_FAIL = {
+    "passed": False,
+    "duplicate_check": {"is_duplicate": False, "similarity": 0.1},
+    "answerability_check": {"is_answerable": False, "best_match_score": 0.2},
+    "reason": "Answer not grounded in source material: best chunk similarity 0.2 < 0.3.",
+    "reason_code": "answerability",
+}
+
 
 def _patch_generation(monkeypatch):
     monkeypatch.setattr(
@@ -191,3 +215,56 @@ def test_generate_does_not_fall_back_when_material_found(authed_client, monkeypa
     assert resp.status_code == 200
     assert len(calls) == 1
     assert calls[0]["subject"] == "Concurrency"
+
+
+def _patch_failing_validation(monkeypatch, verdict: dict):
+    """Patch generation so BOTH the first attempt and the retry fail validation.
+
+    The route only rejects after the corrective regeneration, so both the first
+    and the second ``validate_question`` call must return the failing verdict.
+    """
+    monkeypatch.setattr(
+        questions_module,
+        "generate_question",
+        MagicMock(side_effect=lambda **kwargs: _generated()),
+    )
+    monkeypatch.setattr(
+        questions_module,
+        "validate_question",
+        MagicMock(return_value=verdict),
+    )
+    monkeypatch.setattr(
+        questions_module,
+        "retrieve_context",
+        lambda **kwargs: [{"text": "2PL context.", "source_doc": "lec.pdf"}],
+    )
+
+
+def test_duplicate_rejection_is_machine_readable(authed_client, monkeypatch):
+    """A persistent near-duplicate must be 422 with code ``DUPLICATE_QUESTION``.
+
+    Contract: clients branch on the stable ``code`` (not the prose) and can show
+    the learner the actionable hint ("try a different topic or Bloom level").
+    """
+    client, _ = authed_client
+    _patch_failing_validation(monkeypatch, _DUPLICATE)
+
+    resp = client.post("/questions/generate", json=_PAYLOAD)
+
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["code"] == "DUPLICATE_QUESTION"
+    assert "try a different topic or bloom level" in body["detail"].lower()
+    # No stack trace or raw SDK text leaks into the detail.
+    assert "traceback" not in body["detail"].lower()
+
+
+def test_non_duplicate_validation_failure_keeps_generic_code(authed_client, monkeypatch):
+    """A non-duplicate validation failure must NOT use the DUPLICATE_QUESTION code."""
+    client, _ = authed_client
+    _patch_failing_validation(monkeypatch, _ANSWERABILITY_FAIL)
+
+    resp = client.post("/questions/generate", json=_PAYLOAD)
+
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "VALIDATION_ERROR"

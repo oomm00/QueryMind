@@ -78,6 +78,28 @@ class ValidationError(QueryMindError):
         super().__init__(detail)
 
 
+class DuplicateQuestionError(ValidationError):
+    """Raised when generated material is a near-duplicate of an existing question.
+
+    A distinct subclass (rather than a bare ``ValidationError``) so clients can
+    branch on a stable machine-readable ``code`` ("DUPLICATE_QUESTION") and show
+    the learner a targeted hint (try a different topic or Bloom level) instead of
+    a generic "validation failed" message.
+    """
+
+    status_code = 422
+    code = "DUPLICATE_QUESTION"
+
+    def __init__(
+        self,
+        detail: str = (
+            "This topic already has a very similar question. "
+            "Try a different topic or Bloom level."
+        ),
+    ) -> None:
+        super().__init__(detail)
+
+
 class ConflictError(QueryMindError):
     """Raised on uniqueness violations (e.g. duplicate email registration)."""
 

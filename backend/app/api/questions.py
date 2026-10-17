@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import DuplicateQuestionError, NotFoundError, ValidationError
 from app.core.timing import stage
 from app.db.session import get_db
 from app.models.models import Attempt, Question, User
@@ -192,6 +192,17 @@ def generate_questions(
                 db=db,
             )
         if not validation["passed"]:
+            # A near-duplicate is a recoverable *user* situation, not a server
+            # fault: surface a stable DUPLICATE_QUESTION code + an actionable hint
+            # so the client can suggest a different topic / Bloom level. Other
+            # validation failures stay a generic 422 VALIDATION_ERROR.
+            if validation.get("reason_code") == "duplicate":
+                similarity = validation.get("duplicate_check", {}).get("similarity")
+                raise DuplicateQuestionError(
+                    "The generated question was too similar to one that already "
+                    f"exists for this topic (similarity {similarity}). "
+                    "Try a different topic or Bloom level."
+                )
             raise ValidationError(
                 "Generated question failed pre-delivery validation after "
                 f"regeneration: {validation['reason']}"

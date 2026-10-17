@@ -286,6 +286,7 @@ _FAIL_DUP = {
     "duplicate_check": {"is_duplicate": True, "similar_to_id": "abc", "similarity": 0.93},
     "answerability_check": {"is_answerable": True, "best_match_score": 0.8},
     "reason": "Duplicate question (threshold 0.85).",
+    "reason_code": "duplicate",
 }
 
 
@@ -331,8 +332,10 @@ def test_endpoint_returns_422_when_still_invalid_after_retry(api_client, monkeyp
 
     assert resp.status_code == 422
     body = resp.json()
-    assert body["code"] == "VALIDATION_ERROR"
-    assert "Duplicate" in body["detail"]
+    # A near-duplicate gets a dedicated machine-readable code plus an actionable
+    # hint, rather than the generic VALIDATION_ERROR (see test_api_contract.py).
+    assert body["code"] == "DUPLICATE_QUESTION"
+    assert "different topic or bloom level" in body["detail"].lower()
 
     assert mock_gen.call_count == 2                       # only ONE retry
     fake_db.add.assert_not_called()                       # nothing persisted
