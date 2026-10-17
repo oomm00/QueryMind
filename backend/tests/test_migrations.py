@@ -18,15 +18,40 @@ import os
 import sqlite3
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 INDEX_NAME = "ix_attempts_user_created"
+#: The developer's real database — the one thing this suite must NEVER touch.
+DEV_DB = (BACKEND_DIR / "querymind.db").resolve()
+
+
+def _assert_safe_database_url(database_url: str) -> None:
+    """Fail loudly unless ``database_url`` points at a fresh temp sqlite file.
+
+    Guards against the whole class of accidents where an unset/incorrect
+    ``DATABASE_URL`` sends ``alembic upgrade/downgrade`` at the real dev DB.
+    """
+    if not database_url.startswith("sqlite:///"):
+        raise RuntimeError(
+            f"refusing to run alembic against a non-temp sqlite URL: {database_url!r}"
+        )
+    db_path = Path(database_url[len("sqlite:///"):]).resolve()
+    if db_path == DEV_DB:
+        raise RuntimeError(f"refusing to run alembic against the dev DB: {DEV_DB}")
+    tmp_root = Path(tempfile.gettempdir()).resolve()
+    if db_path != tmp_root and tmp_root not in db_path.parents:
+        raise RuntimeError(
+            f"refusing to run alembic outside the temp dir ({tmp_root}): {db_path}"
+        )
 
 
 def _run_alembic(*args: str, database_url: str) -> subprocess.CompletedProcess:
+    # Belt and braces: this both forces the temp URL and hard-fails on anything else.
+    _assert_safe_database_url(database_url)
     env = {**os.environ, "DATABASE_URL": database_url}
     return subprocess.run(
         [sys.executable, "-m", "alembic", *args],
@@ -82,3 +107,20 @@ def test_orm_declares_the_same_attempt_index():
     )
     assert index is not None, f"{INDEX_NAME} missing from the ORM metadata"
     assert [col.name for col in index.columns] == ["user_id", "created_at"]
+
+
+def test_dev_db_is_rejected_loudly():
+    """A dev-DB URL must be refused, not silently accepted."""
+    with pytest.raises(RuntimeError, match="dev DB"):
+        _assert_safe_database_url("sqlite:///" + DEV_DB.as_posix())
+
+
+def test_non_temp_db_is_rejected_loudly():
+    """Any sqlite path outside the temp dir must be refused."""
+    with pytest.raises(RuntimeError, match="outside the temp dir"):
+        _assert_safe_database_url("sqlite:///" + BACKEND_DIR.as_posix() + "/not_the_dev.db")
+
+
+def test_temp_db_is_accepted(tmp_path):
+    """The throwaway URL the fixtures build must pass the guard."""
+    _assert_safe_database_url(_sqlite_url(tmp_path / "ok.db"))
