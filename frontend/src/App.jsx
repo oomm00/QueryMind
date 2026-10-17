@@ -115,7 +115,7 @@ export default function App() {
         {/* Wired but not yet built */}
         <Route
           path="/learning"
-          element={soon('My Learning', 'Your enrolled courses and progress will live here.')}
+          element={soon('My courses', 'The courses you have started, with your practice progress.')}
         />
         <Route
           path="/interview"

@@ -209,6 +209,15 @@ export const IconMore = (p) => (
   </Svg>
 )
 
+export const IconMap = (p) => (
+  <Svg {...p}>
+    <circle cx="6" cy="6" r="2.5" />
+    <circle cx="18" cy="9" r="2.5" />
+    <circle cx="9.5" cy="18.5" r="2.5" />
+    <path d="M8.3 6.8 15.6 8.3M7 8.4l1.7 7.7M15.9 11.2l-4.5 5.5" />
+  </Svg>
+)
+
 export const IconLogout = (p) => (
   <Svg {...p}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

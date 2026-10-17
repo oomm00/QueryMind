@@ -1,14 +1,14 @@
 /**
  * CoursePage — /course/:id
  *
- * The page behind a catalog card: what the course covers, how far the reader has
- * got, and the topic list. Every topic opens either on its outline (the reading
- * order) or on its knowledge graph — the graph is the same one the outline links
- * to, keyed by the topic, so a catalog card reaches it in two clicks.
+ * The page behind a catalog card. QueryMind is an assessment platform, so the
+ * page leads with practice: what the course covers, how much of it is measured,
+ * and a topic list where each row starts practice, jumps to the topic's optional
+ * study material, or opens its knowledge graph.
  *
- * Progress comes from the lessonProgress store: lessons reviewed, and mastery as
- * the share of checks answered in this session. The catalog's own completion and
- * mastery figures are not used here, so nothing on this page is invented.
+ * Mastery comes from answered questions and study-notes review from the
+ * lessonProgress store; the catalog's own completion and mastery figures are not
+ * used here, so nothing on this page is invented.
  *
  * A catalog entry whose content has not been written yet, or an id that is not in
  * the catalog at all, says so instead of rendering an empty course.
@@ -20,6 +20,7 @@ import { useCatalog } from '../hooks/useCatalog'
 import { useCourse } from '../hooks/useCourse'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { getConceptMastery, useLessonProgress } from '../content/lessonProgress.js'
+import { practiceLink } from '../lib/practiceLink'
 import { sentenceCase } from '../lib/text'
 import { Button, buttonClasses } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -30,7 +31,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorState } from '../components/ui/ErrorState'
 import { Skeleton } from '../components/ui/Skeleton'
 import { statusFor, statusLine, toneClass } from '../components/map/conceptStatus'
-import { IconArrowRight, IconLearning, IconSearch } from '../components/ui/Icons'
+import { IconArrowRight, IconLearning, IconMap, IconSearch } from '../components/ui/Icons'
 
 const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
 const EXPLORE_CRUMB = { label: 'Explore', to: '/explore' }
@@ -43,15 +44,25 @@ function reviewedIn(lessonIds, completed) {
   return lessonIds.filter((lessonId) => completed[lessonId]).length
 }
 
+/** What a topic is judged by: what it covers, and what can be practised. */
+function topicCounts(topic) {
+  return {
+    concepts: topic.conceptCount ?? 0,
+    resources: topic.resourceCount ?? 0,
+    questions: topic.questionCount ?? 0,
+  }
+}
+
 function TopicRow({ courseId, topic, progress }) {
   const lessonIds = topic.lessonIds ?? []
+  const counts = topicCounts(topic)
   // getConceptMastery takes any set of lesson ids, so a topic reuses it.
   const mastery = getConceptMastery(lessonIds)
   const status = statusFor(mastery)
   const StatusIcon = status.icon
   const reviewed = reviewedIn(lessonIds, progress.completed)
+  const started = reviewed > 0 || mastery !== null
   const percent = lessonIds.length ? Math.round((reviewed / lessonIds.length) * 100) : 0
-  const firstLessonId = lessonIds[0] ?? null
 
   return (
     <li className="py-4">
@@ -59,47 +70,48 @@ function TopicRow({ courseId, topic, progress }) {
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-ink">{sentenceCase(topic.title)}</h3>
           <p className="mt-0.5 text-xs text-muted">
-            {plural(topic.conceptCount ?? 0, 'concept')} · {plural(lessonIds.length, 'lesson')}
+            {plural(counts.concepts, 'concept')} · {plural(counts.resources, 'resource')} ·{' '}
+            {plural(counts.questions, 'question')}
           </p>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {firstLessonId && (
-            <Link
-              to={`/learn/${courseId}/${topic.id}/${firstLessonId}`}
-              className={buttonClasses({ size: 'sm' })}
-            >
-              Open outline
-            </Link>
-          )}
-          <Link
-            to={`/map/${courseId}/${topic.id}`}
+          <Link to={practiceLink({ topic: topic.title })} className={buttonClasses({ size: 'sm' })}>
+            {started ? 'Continue practice' : 'Start practice'}
+          </Link>
+          <a
+            href={`#study-material-${topic.id}`}
             className={buttonClasses({ variant: 'secondary', size: 'sm' })}
           >
-            Knowledge graph
+            Study material
+          </a>
+          <Link
+            to={`/map/${courseId}/${topic.id}`}
+            className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'px-2' })}
+            aria-label={`Open the knowledge graph for ${sentenceCase(topic.title)}`}
+            title="Knowledge graph"
+          >
+            <IconMap size={16} />
           </Link>
         </div>
       </div>
 
-      {lessonIds.length ? (
-        <>
-          <div className="mt-3 flex items-center justify-between text-xs">
-            <span className="text-muted">Lessons reviewed</span>
+      {lessonIds.length > 0 && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted">Study notes reviewed</span>
             <span className="font-medium tabular-nums text-ink">
               {reviewed} of {lessonIds.length}
             </span>
           </div>
           <ProgressLine className="mt-1.5" percentage={percent} />
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
-            <StatusIcon size={14} aria-hidden="true" className={`shrink-0 ${toneClass(status.tone)}`} />
-            {statusLine(mastery)}
-          </p>
-        </>
-      ) : (
-        <p className="mt-3 text-xs leading-relaxed text-muted">
-          No lessons written for this topic yet — its graph shows the concepts it will cover.
-        </p>
+        </div>
       )}
+
+      <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
+        <StatusIcon size={14} aria-hidden="true" className={`shrink-0 ${toneClass(status.tone)}`} />
+        {statusLine(mastery)}
+      </p>
     </li>
   )
 }
@@ -148,7 +160,7 @@ export default function CoursePage() {
 
   const topics = course?.topics ?? []
   // The content course has its own id (the catalog uses its own slugs); links
-  // follow the course so both the outline and the graph land on real content.
+  // follow the course so practice, the notes and the graph all land on content.
   const courseId = course?.id ?? id
   const lessonIds = topics.flatMap((topic) => topic.lessonIds ?? [])
   const reviewed = reviewedIn(lessonIds, progress.completed)
@@ -156,19 +168,17 @@ export default function CoursePage() {
   const status = statusFor(mastery)
   const StatusIcon = status.icon
   const completionPct = lessonIds.length ? Math.round((reviewed / lessonIds.length) * 100) : 0
+  const resourceCount = topics.reduce((sum, topic) => sum + topicCounts(topic).resources, 0)
+  const questionCount = topics.reduce((sum, topic) => sum + topicCounts(topic).questions, 0)
 
-  // The reading order: the first lesson not reviewed yet, else the very first.
-  const readingPath = topics.flatMap((topic) =>
-    (topic.lessonIds ?? []).map((lessonId) => ({ topicId: topic.id, lessonId }))
-  )
-  const nextStep =
-    readingPath.find((step) => !progress.completed[step.lessonId]) ?? readingPath[0] ?? null
-  const started = reviewed > 0
-
-  const primary = nextStep
+  // Practice starts where the course does: its first topic that has questions.
+  const practiceTopic =
+    topics.find((topic) => topicCounts(topic).questions > 0) ?? topics[0] ?? null
+  const started = reviewed > 0 || mastery !== null
+  const primary = practiceTopic
     ? {
-        to: `/learn/${courseId}/${nextStep.topicId}/${nextStep.lessonId}`,
-        label: started ? 'Continue learning' : 'Start learning',
+        to: practiceLink({ topic: practiceTopic.title }),
+        label: started ? 'Continue practice' : 'Start practice',
       }
     : null
 
@@ -191,10 +201,10 @@ export default function CoursePage() {
         <PanelLarge>
           <EmptyState
             icon={entry ? IconSearch : IconLearning}
-            title={entry ? 'No lessons written yet' : 'We could not find that course'}
+            title={entry ? 'No practice questions yet' : 'We could not find that course'}
             description={
               entry
-                ? `${entry.title} is in the catalog, but none of its topics or lessons have been written yet. Its card will start working as soon as they are.`
+                ? `${entry.title} is in the catalog, but none of its topics, questions or study material have been written yet. Its card will start working as soon as they are.`
                 : 'The catalog has no course with this address. It may have been renamed, or the link may be out of date.'
             }
           />
@@ -214,19 +224,21 @@ export default function CoursePage() {
               <div>
                 <h2 className="text-sm font-semibold text-ink">Your progress</h2>
                 <p className="mt-0.5 text-xs text-muted">
-                  From the lessons you have reviewed and the checks you have answered in this
+                  From the study notes you have reviewed and the checks you have answered in this
                   session.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="neutral" label={plural(topics.length, 'topic')} />
-                <Badge tone="neutral" label={plural(lessonIds.length, 'lesson')} />
+                <Badge tone="neutral" label={plural(questionCount, 'question')} />
+                <Badge tone="neutral" label={plural(resourceCount, 'resource')} />
+                <Badge tone="neutral" label={plural(lessonIds.length, 'study note')} />
               </div>
             </div>
 
             <div className="mt-4">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Lessons reviewed</span>
+                <span className="text-muted">Study notes reviewed</span>
                 <span className="font-medium tabular-nums text-ink">
                   {reviewed} of {lessonIds.length}
                 </span>
@@ -238,7 +250,7 @@ export default function CoursePage() {
               </p>
               <p className="mt-1 text-[11px] leading-snug text-muted">
                 Mastery is the share of answered checks that were correct, so a course with no
-                answered checks has no estimate yet — reviewing a lesson never changes it.
+                answered checks has no estimate yet — reviewing a study note never changes it.
               </p>
             </div>
           </PanelLarge>
@@ -246,7 +258,7 @@ export default function CoursePage() {
           <PanelLarge>
             <h2 className="text-sm font-semibold text-ink">Topics</h2>
             <p className="mt-0.5 text-xs text-muted">
-              Each topic opens on its outline or on its knowledge graph.
+              Each topic starts practice, or opens its study material and knowledge graph.
             </p>
             <ol className="mt-2 divide-y divide-line">
               {topics.map((topic) => (

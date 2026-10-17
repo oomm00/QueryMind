@@ -132,7 +132,7 @@ export default function DashboardPage() {
         description={`Performance telemetry for ${user?.email || 'authenticated user'}.`}
         actions={
           <Button icon={<IconPlus size={16} />} onClick={() => navigate('/practice/new')}>
-            Start practice
+            Continue practice
           </Button>
         }
       />

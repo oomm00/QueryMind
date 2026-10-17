@@ -143,7 +143,7 @@ function CourseCard({ course, onOpen }) {
               onOpen(course.id)
             }}
           >
-            Continue learning
+            Continue practice
           </Button>
         ) : (
           <Button
@@ -154,7 +154,7 @@ function CourseCard({ course, onOpen }) {
               onOpen(course.id)
             }}
           >
-            Start learning
+            Start practice
           </Button>
         )}
       </div>
@@ -266,7 +266,8 @@ export default function ExplorePage() {
         Explore your next subject
       </h1>
       <p className="mt-1 max-w-2xl text-sm text-muted">
-        Pick a computer science course and start a guided path of lessons, practice and feedback.
+        Pick a computer science course and start practising. Every answer is scored, and study
+        material is there when you want it.
       </p>
 
       {/* ── Search + filters ─────────────────────────────── */}
@@ -365,19 +366,19 @@ export default function ExplorePage() {
       {/* ── Bottom banner ────────────────────────────────── */}
       <Panel className="mt-8 flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-sm font-semibold text-ink">Not sure where to begin?</h2>
+          <h2 className="text-sm font-semibold text-ink">Not sure what to practise first?</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Tell us your goal and we will sequence a few courses into one path.
+            Tell us what you are preparing for and we will put a practice plan together.
           </p>
         </div>
         <Button
           variant="secondary"
           icon={<IconArrowRight size={16} />}
           onClick={() => {
-            /* stub — learning-path builder ships later */
+            /* stub — practice plan builder ships later */
           }}
         >
-          Create a learning path
+          Create a practice plan
         </Button>
       </Panel>
     </div>

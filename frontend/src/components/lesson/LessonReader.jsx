@@ -101,6 +101,9 @@ export function LessonReader({
       )}
 
       <header className="space-y-2">
+        {/* The written lesson is optional study material on an assessment
+            platform, so the workspace says what it is. */}
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted">Study notes</p>
         {crumb && (
           <p className="text-[11px] font-medium text-muted">{crumb}</p>
         )}
