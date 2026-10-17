@@ -1,0 +1,46 @@
+{
+  "concepts": {
+    "address-translation": {
+      "id": "address-translation",
+      "title": "Address Translation",
+      "prerequisiteIds": [],
+      "lessonIds": ["lesson-address-translation-basics"]
+    },
+    "paging": {
+      "id": "paging",
+      "title": "Paging",
+      "prerequisiteIds": ["address-translation"],
+      "lessonIds": ["paging-from-virtual-to-physical", "paging-page-table-walkthrough", "paging-practice"]
+    },
+    "segmentation": {
+      "id": "segmentation",
+      "title": "Segmentation",
+      "prerequisiteIds": ["address-translation"],
+      "lessonIds": ["segmentation-basics"]
+    },
+    "virtual-memory": {
+      "id": "virtual-memory",
+      "title": "Virtual Memory",
+      "prerequisiteIds": ["paging"],
+      "lessonIds": ["virtual-memory-fundamentals"]
+    },
+    "demand-paging": {
+      "id": "demand-paging",
+      "title": "Demand Paging",
+      "prerequisiteIds": ["virtual-memory"],
+      "lessonIds": ["demand-paging-fundamentals"]
+    },
+    "page-replacement": {
+      "id": "page-replacement",
+      "title": "Page Replacement",
+      "prerequisiteIds": ["demand-paging"],
+      "lessonIds": ["page-replacement-algorithms"]
+    },
+    "working-sets": {
+      "id": "working-sets",
+      "title": "Working Sets",
+      "prerequisiteIds": ["page-replacement"],
+      "lessonIds": ["working-sets-fundamentals"]
+    }
+  }
+}
