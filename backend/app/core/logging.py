@@ -22,6 +22,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core import timing
+
 
 # ── JSON Formatter ────────────────────────────────────────────────────────────
 
@@ -42,8 +44,18 @@ class JSONFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
 
-        # Include structured extras when attached to the LogRecord
-        for key in ("request_id", "method", "path", "status_code", "latency_ms"):
+        # Include structured extras when attached to the LogRecord. The
+        # ``event``/``stages`` pair carries per-stage pipeline timings
+        # (see app.core.timing); the rest is request-correlation metadata.
+        for key in (
+            "request_id",
+            "method",
+            "path",
+            "status_code",
+            "latency_ms",
+            "event",
+            "stages",
+        ):
             val = getattr(record, key, None)
             if val is not None:
                 log_entry[key] = val
@@ -80,12 +92,37 @@ def setup_logging(*, level: str = "INFO") -> None:
 logger = logging.getLogger("querymind.request")
 
 
+def _log_stage_timing(
+    request: Request, request_id: str, stages: dict, latency_ms: float
+) -> None:
+    """Emit one structured line with the per-stage pipeline timings for a request.
+
+    Only requests that actually ran an instrumented stage produce a line; simple
+    endpoints (health, auth, ...) stay quiet.
+    """
+    if not stages:
+        return
+    logger.info(
+        "stage_timing",
+        extra={
+            "event": "stage_timing",
+            "request_id": request_id,
+            "path": request.url.path,
+            "latency_ms": latency_ms,
+            "stages": stages,
+        },
+    )
+
+
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """ASGI middleware to log HTTP request/response metrics and correlate via request_id."""
 
     async def dispatch(self, request: Request, call_next) -> Response:
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
+        # Open a per-request timing scope; instrumented handlers accumulate
+        # their pipeline-stage durations into this dict (see app.core.timing).
+        stages = timing.begin(request_id)
 
         start = time.perf_counter()
         try:
@@ -105,6 +142,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     "latency_ms": latency_ms,
                 },
             )
+            _log_stage_timing(request, request_id, stages, latency_ms)
             raise
 
         latency_ms = round((time.perf_counter() - start) * 1000, 2)
@@ -122,6 +160,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 "latency_ms": latency_ms,
             },
         )
+        _log_stage_timing(request, request_id, stages, latency_ms)
 
         response.headers["X-Request-ID"] = request_id
         return response
