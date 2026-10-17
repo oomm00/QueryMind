@@ -1,5 +1,5 @@
 /**
- * FeedbackPage — /feedback
+ * FeedbackPage — /practice/feedback
  * Submits the user's answer to attemptsApi.submit and displays evaluation scores,
  * optional criteria scores, feedback text, and reference answer.
  * Uses SessionContext and AuthContext (no nil-UUID fallback).
@@ -10,16 +10,26 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { attemptsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
+import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { Button } from '../components/ui/Button'
-import { Panel, PanelLarge } from '../components/ui/Panel'
+import { Panel } from '../components/ui/Panel'
 import { ProgressLine } from '../components/ui/ProgressLine'
-import { EmptyState } from '../components/ui/EmptyState'
+import { MetricBar } from '../components/ui/MetricBar'
+import { PageHeader } from '../components/ui/PageHeader'
+import { ErrorState } from '../components/ui/ErrorState'
+import { Skeleton } from '../components/ui/Skeleton'
 import { Toast } from '../components/ui/Toast'
+import { IconCheck, IconNotes, IconDashboard, IconArrowRight } from '../components/ui/Icons'
 
 export default function FeedbackPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { userId } = useAuth()
+  useBreadcrumbs([
+    { label: 'Workspace', to: '/dashboard' },
+    { label: 'Practice', to: '/practice/new' },
+    { label: 'Feedback' },
+  ])
   const {
     hasActiveSession,
     questions,
@@ -28,18 +38,23 @@ export default function FeedbackPage() {
     userAnswer,
     lastSubmission,
     recordSubmission,
+    setCurrentIdx,
   } = useSession()
 
   const timeTaken = location.state?.timeTaken ?? lastSubmission?.timeTaken ?? 30
 
-  const [feedback, setFeedback] = useState(lastSubmission?.feedback ?? null)
-  const [loading, setLoading] = useState(!lastSubmission)
+  const submissionMatches =
+    Boolean(lastSubmission) && lastSubmission.questionId === currentQuestion?.question_id
+
+  const [feedback, setFeedback] = useState(submissionMatches ? lastSubmission.feedback : null)
+  const [loading, setLoading] = useState(!submissionMatches)
   const [error, setError] = useState(null)
+  const [toast, setToast] = useState(null)
 
   // Redirect if no session exists
   useEffect(() => {
     if (!hasActiveSession || !currentQuestion) {
-      navigate('/setup', { replace: true })
+      navigate('/practice/new', { replace: true })
     }
   }, [hasActiveSession, currentQuestion, navigate])
 
@@ -78,7 +93,7 @@ export default function FeedbackPage() {
             timeTaken,
           })
           // Show success toast
-          Toast({
+          setToast({
             title: 'Answer evaluated',
             description: `Score: ${Math.round((data.score ?? 0) * 100)}%`,
             variant: 'default',
@@ -88,7 +103,7 @@ export default function FeedbackPage() {
       .catch((err) => {
         if (active) {
           setError(err.message ?? 'Failed to evaluate answer')
-          Toast({
+          setToast({
             title: 'Evaluation failed',
             description: err.message ?? 'Failed to evaluate answer',
             variant: 'error',
@@ -109,152 +124,157 @@ export default function FeedbackPage() {
   const hasNext = currentIdx + 1 < questions.length
   const scorePercent = Math.round((feedback?.score ?? 0) * 100)
 
-  // Status color based on score
-  const getScoreColor = () => {
-    if (scorePercent >= 80) return 'moss'
-    if (scorePercent >= 50) return 'amber'
-    return 'rust'
+  // Tone based on score
+  const scoreTone = scorePercent >= 80 ? 'success' : scorePercent >= 50 ? 'warning' : 'danger'
+  const scoreSummary =
+    scorePercent >= 80
+      ? 'Strong grasp of core concepts'
+      : scorePercent >= 50
+        ? 'Good understanding, room for expansion'
+        : 'Needs more development'
+
+  const header = (
+    <PageHeader
+      title="Evaluation & feedback"
+      description={`Question ${currentIdx + 1} of ${questions.length} — completed in ${timeTaken}s`}
+    />
+  )
+
+  if (loading) {
+    return (
+      <>
+        {header}
+        <Panel className="p-6">
+          <div className="flex flex-col items-center gap-4">
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-12 w-32" />
+            <Skeleton className="h-2 w-full" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+        </Panel>
+      </>
+    )
+  }
+
+  if (error && !feedback) {
+    return (
+      <>
+        {header}
+        <ErrorState title="Evaluation failed" message={error} />
+      </>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <PanelLarge className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-display font-bold text-[var(--ink)] tracking-tight">
-                Evaluation & Feedback
-              </h1>
-              <p className="text-[var(--muted)] mt-1">
-                Question {currentIdx + 1} of {questions.length} • Completed in {timeTaken}s
-              </p>
-            </div>
-          </div>
-        </PanelLarge>
+    <>
+      {header}
 
-        {/* Score Card */}
-        <Panel>
-          <div className="text-center">
-            <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Overall Evaluator Score</span>
-            <div className="text-6xl font-display font-bold text-[var(--ink)] my-2">
-              {scorePercent}%
-            </div>
-            <ProgressLine percentage={scorePercent} />
-            <p className="text-[var(--muted)] text-sm mt-1">
-              {scorePercent >= 80
-                ? 'Strong grasp of core concepts'
-                : scorePercent >= 50
-                  ? 'Good understanding, room for expansion'
-                  : 'Needs more development'
-            </p>
+      {/* Score card */}
+      <Panel className="p-6 text-center">
+        <span className="text-xs font-medium uppercase tracking-wider text-muted">
+          Overall evaluator score
+        </span>
+        <div className="my-2 text-5xl font-semibold tabular-nums text-ink">{scorePercent}%</div>
+        <ProgressLine percentage={scorePercent} tone={scoreTone} />
+        <p className="mt-2 text-sm text-muted">{scoreSummary}</p>
+      </Panel>
+
+      {/* Criteria scores grid */}
+      {feedback?.criteria_scores && (
+        <Panel className="mt-4 p-5">
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">
+            Criteria scores
+          </h2>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {Object.entries(feedback.criteria_scores).map(([criterion, val]) => (
+              <div
+                key={criterion}
+                className="rounded-control border border-line bg-surface-raised p-3"
+              >
+                <MetricBar
+                  label={criterion.replace(/_/g, ' ')}
+                  value={`${Math.round(val * 100)}%`}
+                  score={val}
+                  tone={scoreTone}
+                />
+              </div>
+            ))}
           </div>
         </Panel>
+      )}
 
-        {/* Criteria Scores Grid */}
-        {feedback?.criteria_scores && (
-          <Panel className="mt-4">
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
-              Criteria Scores
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {Object.entries(feedback.criteria_scores).map(([criterion, val]) => {
-                const critPct = Math.round(val * 100)
-                const scoreColor = getScoreColor()
-                return (
-                  <div
-                    key={criterion}
-                    className="rounded-md bg-[var(--surface)/50] border border-[var(--line)] p-3"
-                  >
-                    <span className="text-xs font-medium text-[var(--muted)] uppercase block mb-1">
-                      {criterion.replace(/_/g, ' ')}
-                    </span>
-                    <span className="text-lg font-mono font-bold text-[var(--ink)]">
-                      {critPct}%
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </Panel>
-        )}
+      {/* AI feedback */}
+      {feedback && (
+        <Panel className="mt-4 p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted">
+            <IconNotes size={15} />
+            Cognitive feedback
+          </h2>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">
+            {feedback.feedback_text}
+          </p>
+        </Panel>
+      )}
 
-        {/* AI Feedback */}
-        {feedback && (
-          <Panel className="mt-4">
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
-              Cognitive Feedback
-            </h2>
-            <p className="text-[var(--ink)] text-sm leading-relaxed whitespace-pre-wrap">
-              {feedback.feedback_text}
-            </p>
-          </Panel>
-        )}
+      {/* Reference answer */}
+      {feedback?.correct_answer && (
+        <Panel className="mt-4 p-5">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted">
+            <IconCheck size={15} />
+            Model reference answer
+          </h2>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">
+            {feedback.correct_answer}
+          </p>
+        </Panel>
+      )}
 
-        {/* Reference Answer */}
-        {feedback?.correct_answer && (
-          <Panel className="mt-4 p-3 rounded-md bg-[var(--surface)/50] border border-[var(--line)]">
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-2">
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
-                ✅
-              </span>
-              Model Reference Answer
-            </h2>
-            <p className="text-[var(--ink)] text-sm leading-relaxed whitespace-pre-wrap">
-              {feedback.correct_answer}
-            </p>
-          </Panel>
-        )}
+      {/* Your answer */}
+      {userAnswer && (
+        <Panel className="mt-4 p-5">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted">
+            <IconNotes size={15} />
+            Submitted answer
+          </h2>
+          <p className="whitespace-pre-wrap rounded-control bg-surface-raised p-3 text-sm leading-relaxed text-ink">
+            {userAnswer}
+          </p>
+        </Panel>
+      )}
 
-        {/* Your Answer */}
-        {userAnswer && (
-          <Panel className="mt-4 p-3 rounded-md bg-[var(--surface)/50] border border-[var(--line)]">
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-2">
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
-                📝
-              </span>
-              Submitted Answer
-            </h2>
-            <p className="text-[var(--ink)] text-sm leading-relaxed whitespace-pre-wrap bg-[var(--surface)/60] p-3 rounded">
-              {userAnswer}
-            </p>
-          </Panel>
-        )}
+      {/* Navigation actions */}
+      <div className="mt-6 flex items-center gap-3 pt-2">
+        <Button
+          id="btn-go-dashboard"
+          type="button"
+          variant="secondary"
+          className="flex-1"
+          icon={<IconDashboard size={16} />}
+          onClick={() => navigate('/dashboard')}
+        >
+          Mastery dashboard
+        </Button>
 
-        {/* Navigation Actions */}
-        <div className="mt-6 flex items-center gap-3 pt-2">
-          <Button
-            id="btn-go-dashboard"
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="btn-quiet flex-1"
-          >
-            Mastery Dashboard
-          </Button>
-
-          <Button
-            id="btn-next-question"
-            type="button"
-            onClick={() => {
-              if (hasNext) {
-                // Advance index in session storage
-                const updateSession = (prev) => ({
-                  ...prev,
-                  currentIdx: prev.currentIdx + 1,
-                  userAnswer: '',
-                })
-                // We'll just navigate; the SessionContext will handle the rest
-                navigate('/question')
-              } else {
-                navigate('/dashboard')
-              }
-            }}
-            className="btn-primary flex-1"
-          >
-            {hasNext ? 'Next Question →' : 'Complete Session →'}
-          </Button>
-        </div>
+        <Button
+          id="btn-next-question"
+          type="button"
+          className="flex-1"
+          icon={<IconArrowRight size={16} />}
+          onClick={() => {
+            if (hasNext) {
+              // Advance the session index; SessionContext persists it.
+              setCurrentIdx(currentIdx + 1)
+              navigate('/practice/session')
+            } else {
+              navigate('/dashboard')
+            }
+          }}
+        >
+          {hasNext ? 'Next question' : 'Complete session'}
+        </Button>
       </div>
-    </div>
+
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+    </>
   )
 }

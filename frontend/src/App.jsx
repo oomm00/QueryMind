@@ -1,7 +1,12 @@
 /**
- * App — Root router with ProtectedRoute/PublicRoute and new AppShell layout.
- * Routes are protected; unauthed users go to /login.
- * Authenticated users see the new shell (top bar + left rail / bottom tab bar).
+ * App — root router.
+ *
+ * Public:  /login
+ * Default: /explore (redirect target after sign-in)
+ * Built:   /dashboard, /history, /practice/{new,session,feedback}
+ * Stubs:   everything else renders <ComingSoon/>.
+ *
+ * Legacy paths (/setup, /question, /feedback) redirect to their new homes.
  */
 
 import React from 'react'
@@ -11,32 +16,32 @@ import SetupPage from './pages/SetupPage'
 import QuestionPage from './pages/QuestionPage'
 import FeedbackPage from './pages/FeedbackPage'
 import DashboardPage from './pages/DashboardPage'
+import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
 import NotFoundPage from './pages/NotFoundPage'
+import ComingSoon from './pages/ComingSoon'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import PublicRoute from './components/routing/PublicRoute'
 import AppShell from './AppShell'
 
-function AppLayout({ children }) {
-  return (
-    <div className="pt-0">
-      {children}
-    </div>
-  )
+function Protected({ children }) {
+  return <ProtectedRoute>{children}</ProtectedRoute>
 }
 
-// ---------------------------------------------------------------------------
-// Top‑bar search/ theme stub (moved to AppShell but kept here for standalone)
-// ---------------------------------------------------------------------------
+const soon = (title, description) => (
+  <Protected>
+    <ComingSoon title={title} description={description} />
+  </Protected>
+)
 
 export default function App() {
   return (
     <AppShell>
       <Routes>
-        {/* Root redirect */}
-        <Route path="/" element={<Navigate to="/setup" replace />} />
+        {/* Default landing */}
+        <Route path="/" element={<Navigate to="/explore" replace />} />
 
-        {/* Public route — login accessible when logged out */}
+        {/* Public */}
         <Route
           path="/login"
           element={
@@ -46,63 +51,94 @@ export default function App() {
           }
         />
 
-        {/* Protected routes — require authentication */}
+        {/* Built destinations */}
         <Route
-          path="/setup"
+          path="/explore"
           element={
-            <ProtectedRoute>
-              <AppLayout>
-                <SetupPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <Protected>
+              <ExplorePage />
+            </Protected>
           }
         />
-
-        <Route
-          path="/question"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <QuestionPage />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/feedback"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <FeedbackPage />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
-
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
-              <AppLayout>
-                <DashboardPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <Protected>
+              <DashboardPage />
+            </Protected>
           }
         />
-
         <Route
           path="/history"
           element={
-            <ProtectedRoute>
-              <AppLayout>
-                <HistoryPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <Protected>
+              <HistoryPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice/new"
+          element={
+            <Protected>
+              <SetupPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice/session"
+          element={
+            <Protected>
+              <QuestionPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice/feedback"
+          element={
+            <Protected>
+              <FeedbackPage />
+            </Protected>
           }
         />
 
-        {/* 404 catch‑all */}
+        {/* Legacy path aliases */}
+        <Route path="/setup" element={<Navigate to="/practice/new" replace />} />
+        <Route path="/question" element={<Navigate to="/practice/session" replace />} />
+        <Route path="/feedback" element={<Navigate to="/practice/feedback" replace />} />
+
+        {/* Wired but not yet built */}
+        <Route
+          path="/learning"
+          element={soon('My Learning', 'Your enrolled courses and progress will live here.')}
+        />
+        <Route
+          path="/interview"
+          element={soon('Interview Prep', 'Timed mock interviews tailored to your weak areas.')}
+        />
+        <Route
+          path="/analytics"
+          element={soon('Analytics', 'Deeper insight into your mastery over time.')}
+        />
+        <Route
+          path="/weak-areas"
+          element={soon('Weak Areas', 'Topics that need attention, ranked by mastery.')}
+        />
+        <Route path="/notes" element={soon('My Notes', 'Your saved notes and highlights.')} />
+        <Route path="/settings" element={soon('Settings', 'Account, theme and study preferences.')} />
+        <Route
+          path="/course/:id"
+          element={soon('Course', 'Course details and the topic list.')}
+        />
+        <Route
+          path="/learn/:courseId/:topicId/:lessonId"
+          element={soon('Lesson', 'The lesson reading workspace.')}
+        />
+        <Route
+          path="/map/:courseId/:topicId"
+          element={soon('Knowledge graph', 'A visual map of how this topic connects.')}
+        />
+
+        {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AppShell>

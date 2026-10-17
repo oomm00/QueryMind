@@ -1,5 +1,5 @@
 /**
- * QuestionPage — /question
+ * QuestionPage — /practice/session
  * Renders the active question in the study session.
  * Fixes timer bug by resetting startTime per question index.
  * Session state is read from SessionContext (backed by sessionStorage).
@@ -8,13 +8,22 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../context/SessionContext.jsx'
-import { getBloomColor } from '../constants/bloomTaxonomy.js'
+import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
+import { Textarea } from '../components/ui/Textarea'
+import { Panel } from '../components/ui/Panel'
 import { ProgressLine } from '../components/ui/ProgressLine'
+import { PageHeader } from '../components/ui/PageHeader'
+import { Badge } from '../components/ui/Badge'
+import { IconArrowLeft, IconArrowRight } from '../components/ui/Icons'
 
 export default function QuestionPage() {
   const navigate = useNavigate()
+  useBreadcrumbs([
+    { label: 'Workspace', to: '/dashboard' },
+    { label: 'Practice', to: '/practice/new' },
+    { label: 'Session' },
+  ])
   const {
     hasActiveSession,
     questions,
@@ -30,7 +39,7 @@ export default function QuestionPage() {
   // If page is refreshed or visited with no session, redirect to setup
   useEffect(() => {
     if (!hasActiveSession || !currentQuestion) {
-      navigate('/setup', { replace: true })
+      navigate('/practice/new', { replace: true })
     }
   }, [hasActiveSession, currentQuestion, navigate])
 
@@ -43,7 +52,7 @@ export default function QuestionPage() {
   if (!currentQuestion) return null
 
   const progress = questions.length ? ((currentIdx + 1) / questions.length) * 100 : 0
-  const bloomColor = getBloomColor(currentQuestion.bloom_level)
+  const topic = currentQuestion.topic || setup?.topic || 'General'
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -52,7 +61,7 @@ export default function QuestionPage() {
     const timeTaken = Math.max(1, Math.round((Date.now() - startTime) / 1000))
     saveSessionAnswer(answer)
 
-    navigate('/feedback', {
+    navigate('/practice/feedback', {
       state: {
         timeTaken,
       },
@@ -60,87 +69,73 @@ export default function QuestionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <div className="max-w-3xl mx-auto">
-        {/* Progress & Header */}
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center justify-between text-[var(--muted)]">
-            <span className="font-mono">
-              Question {currentIdx + 1} of {questions.length}
-            </span>
-            <span className="text-sm">
-              {Math.round(progress)}% complete
-            </span>
-          </div>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title={`Question ${currentIdx + 1} of ${questions.length}`}
+        description={`Topic: ${topic}`}
+        actions={
+          <span className="text-sm tabular-nums text-muted">{Math.round(progress)}% complete</span>
+        }
+      />
 
-          <div className="h-1.5 bg-[var(--line)] rounded-full overflow-hidden">
-            <ProgressLine percentage={progress} />
-          </div>
+      <ProgressLine percentage={progress} className="mb-6" />
+
+      {/* Question card */}
+      <Panel className="mb-6 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <Badge variant="primary" label={topic} />
+          {currentQuestion.question_id && (
+            <span className="font-mono text-[11px] text-muted">
+              ID: {currentQuestion.question_id.slice(0, 8)}…
+            </span>
+          )}
         </div>
 
-        {/* Question Card */}
-        <Panel className="mb-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider font-medium text-[var(--muted])">
-              Topic: {currentQuestion.topic || setup?.topic}
-            </span>
-            {currentQuestion.question_id && (
-              <span className="text-[10px] text-[var(--muted)] font-mono">
-                ID: {currentQuestion.question_id.slice(0, 8)}…
-              </span>
-            )}
+        <p className="mt-3 text-base font-normal leading-relaxed text-ink">
+          {currentQuestion.question_text}
+        </p>
+
+        {Array.isArray(currentQuestion.hints) && currentQuestion.hints.length > 0 && (
+          <div className="mt-3 border-t border-line pt-3 text-xs text-muted">
+            <span className="mr-1 font-medium text-ink">Hint:</span>
+            {currentQuestion.hints[0]}
           </div>
+        )}
+      </Panel>
 
-          <p className="mt-3 text-[var(--ink)] text-base leading-relaxed font-normal">
-            {currentQuestion.question_text}
-          </p>
+      {/* Answer input form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Textarea
+          id="answer"
+          label="Your answer / reasoning"
+          rows={7}
+          placeholder="Formulate your detailed answer here. Focus on precision, core mechanisms, and practical trade-offs…"
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          required
+        />
 
-          {Array.isArray(currentQuestion.hints) && currentQuestion.hints.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-[var(--line)] text-[var(--muted)] text-xs">
-              <span className="font-medium mr-1">Hint:</span>
-              {currentQuestion.hints[0]}
-            </div>
-          )}
-        </Panel>
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <Button
+            id="btn-back-setup"
+            type="button"
+            variant="secondary"
+            icon={<IconArrowLeft size={16} />}
+            onClick={() => navigate('/practice/new')}
+          >
+            Back to setup
+          </Button>
 
-        {/* Answer Input Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="answer" className="block text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-1.5">
-              Your Answer / Reasoning
-            </label>
-            <Input
-              id="answer"
-              rows={7}
-              placeholder="Formulate your detailed answer here. Focus on precision, core mechanisms, and practical trade-offs…"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              className="textarea"
-              required
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 pt-2">
-            <Button
-              id="btn-back-setup"
-              type="button"
-              onClick={() => navigate('/setup')}
-              className="btn-quiet"
-            >
-              Back to Setup
-            </Button>
-
-            <Button
-              id="btn-submit-answer"
-              type="submit"
-              disabled={!answer.trim()}
-              className="btn-primary"
-            >
-              Submit Answer →
-            </Button>
-          </div>
-        </form>
-      </div>
+          <Button
+            id="btn-submit-answer"
+            type="submit"
+            icon={<IconArrowRight size={16} />}
+            disabled={!answer.trim()}
+          >
+            Submit answer
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

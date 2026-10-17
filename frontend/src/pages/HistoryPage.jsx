@@ -7,14 +7,41 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { attemptsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import { Panel, PanelLarge } from '../components/ui/Panel'
+import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
+import { PageHeader } from '../components/ui/PageHeader'
+import { Panel } from '../components/ui/Panel'
+import { Badge } from '../components/ui/Badge'
+import { ProgressRing } from '../components/ui/ProgressRing'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Toast } from '../components/ui/Toast'
+import { Skeleton } from '../components/ui/Skeleton'
+import { buttonClasses } from '../components/ui/Button'
+import { IconPlus, IconClock } from '../components/ui/Icons'
+
+function cap(value) {
+  const text = String(value ?? '')
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : ''
+}
+
+function scoreTone(pct) {
+  if (pct >= 70) return 'success'
+  if (pct >= 40) return 'warning'
+  return 'danger'
+}
+
+function formatStamp(value) {
+  if (!value) return ''
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? new Date(time).toLocaleString() : ''
+}
 
 export default function HistoryPage() {
   const { userId } = useAuth()
+  useBreadcrumbs([{ label: 'Workspace', to: '/dashboard' }, { label: 'History' }])
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -24,9 +51,10 @@ export default function HistoryPage() {
       .getHistory(userId)
       .then((data) => {
         if (active) {
-          setHistory(Array.isArray(data) ? data : data?.attempts ?? [])
-          if (!history.length) {
-            Toast({
+          const list = Array.isArray(data) ? data : data?.attempts ?? []
+          setHistory(list)
+          if (!list.length) {
+            setToast({
               title: 'No history',
               description: 'No previous attempts recorded yet.',
               variant: 'default',
@@ -37,7 +65,7 @@ export default function HistoryPage() {
       .catch((err) => {
         if (active) {
           setError(err.message ?? 'Failed to load history')
-          Toast({
+          setToast({
             title: 'Failed to load history',
             description: err.message ?? 'Failed to load history',
             variant: 'error',
@@ -54,80 +82,78 @@ export default function HistoryPage() {
   }, [userId])
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <div className="max-w-4xl mx-auto py-8">
-        {/* Header */}
-        <PanelLarge className="mb-6">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-[var(--ink)] tracking-tight">
-              Attempt History
-            </h1>
-            <p className="text-[var(--muted)] mt-1">
-              Review your past study questions, answers, and scores.
-            </p>
-          </div>
-        </PanelLarge>
+    <div>
+      <PageHeader
+        title="History"
+        description="Review your past study questions, answers, and scores."
+        actions={
+          <Link to="/practice/new" className={buttonClasses({ variant: 'primary' })}>
+            <IconPlus size={16} />
+            New session
+          </Link>
+        }
+      />
 
-        {loading ? (
-          <Panel className="text-center py-8">
-            <div className="animate-spin h-6 w-6 mx-auto mb-3"></div>
-            <p className="text-[var(--muted)]">Loading history…</p>
-          </Panel>
-        ) : history.length === 0 ? (
+      {loading ? (
+        <div role="status" className="space-y-3">
+          <span className="sr-only">Loading history…</span>
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+      ) : history.length === 0 ? (
+        <Panel>
           <EmptyState
-            icon="ℹ️"
+            icon={IconClock}
             title="No previous attempts"
             description="Start your first study session to build your history."
+            action={
+              <Link
+                to="/practice/new"
+                className={buttonClasses({ variant: 'primary', size: 'sm' })}
+              >
+                New session
+              </Link>
+            }
           />
-        ) : (
-          <Panel>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-[var(--line)] border-b">
-                  <tr>
-                    <th className="py-3 px-4 text-[var(--muted)] uppercase tracking-wider text-xs">
-                      Topic
-                    </th>
-                    <th className="py-3 px-4 text-[var(--muted)] uppercase tracking-wider text-xs">
-                      Bloom Level
-                    </th>
-                    <th className="py-3 px-4 text-[var(--muted)] uppercase tracking-wider text-xs">
-                      Difficulty
-                    </th>
-                    <th className="py-3 px-4 text-right text-[var(--muted)] uppercase tracking-wider text-xs">
-                      Score
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--line)]">
-                  {history.map((item, idx) => (
-                    <tr key={item.attempt_id || idx} className="hover:bg-[var(--surface)/50] transition-colors">
-                      <td className="py-3.5 px-4 font-medium text-[var(--ink)]">
-                        {item.topic}
-                      </td>
-                      <td className="py-3.5 px-4 capitalize text-[var(--muted)]">
-                        {item.bloom_level}
-                      </td>
-                      <td className="py-3.5 px-4 capitalize text-[var(--muted)]">
-                        {item.difficulty}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-medium text-[var(--ink)]">
-                        {Math.round((item.score ?? 0) * 100)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-        )}
+        </Panel>
+      ) : (
+        <div className="space-y-3">
+          {history.map((item, idx) => {
+            const pct = Math.round((item.score ?? 0) * 100)
+            const stamp = formatStamp(
+              item.submitted_at || item.created_at || item.timestamp || item.createdAt
+            )
 
-        <div className="mt-6">
-          <Link to="/setup" className="btn-primary">
-            + New Session
-          </Link>
+            return (
+              <Panel
+                key={item.attempt_id || idx}
+                className="flex items-center gap-4 p-4 transition-colors hover:bg-surface-raised"
+              >
+                <ProgressRing value={pct} size={46} tone={scoreTone(pct)} />
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">{item.topic}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {item.bloom_level && <Badge variant="primary" label={cap(item.bloom_level)} />}
+                    {item.difficulty && <Badge variant="neutral" label={cap(item.difficulty)} />}
+                    {stamp && (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted">
+                        <IconClock size={13} />
+                        {stamp}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Panel>
+            )
+          })}
         </div>
-      </div>
+      )}
+
+      {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </div>
   )
 }

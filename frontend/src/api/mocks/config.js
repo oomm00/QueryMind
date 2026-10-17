@@ -12,6 +12,7 @@ export const DEFAULT_MOCK_SETTINGS = {
   next_params: true,
   profile: true,
   history: true,
+  catalog: true,
 }
 
 /**

@@ -8,20 +8,45 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { profileApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { selectPerTopicAverages, selectPerBloomAverages } from '../api/adapter.js'
 import { getBloomColor } from '../constants/bloomTaxonomy.js'
 import { Button } from '../components/ui/Button'
-import { Panel, PanelLarge, PanelSmall } from '../components/ui/Panel'
+import { PanelLarge } from '../components/ui/Panel'
+import { PageHeader } from '../components/ui/PageHeader'
+import { StatCard } from '../components/ui/StatCard'
 import { MetricBar } from '../components/ui/MetricBar'
 import { ProgressLine } from '../components/ui/ProgressLine'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorState } from '../components/ui/ErrorState'
+import { Skeleton } from '../components/ui/Skeleton'
+import {
+  IconTarget,
+  IconLearning,
+  IconClock,
+  IconWeakAreas,
+  IconAnalytics,
+  IconPlus,
+} from '../components/ui/Icons'
+
+function scoreTone(pct) {
+  if (pct >= 70) return 'success'
+  if (pct >= 40) return 'warning'
+  return 'danger'
+}
+
+function labelize(value) {
+  const text = String(value ?? '')
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : ''
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { userId, user } = useAuth()
+  useBreadcrumbs([{ label: 'Workspace', to: '/dashboard' }, { label: 'Dashboard' }])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -52,28 +77,42 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <Panel className="text-center">
-          <div className="animate-spin h-12 w-12 rounded-md flex items-center justify-center"></div>
-          <p className="mt-2 text-[var(--muted)]">Aggregating mastery profiles…</p>
-        </Panel>
+      <div>
+        <div role="status" className="sr-only">
+          Loading dashboard…
+        </div>
+        <Skeleton className="h-7 w-44" />
+        <Skeleton className="mt-2 h-4 w-72" />
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <div className="mt-4 space-y-4">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-56" />
+          <Skeleton className="h-56" />
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <Panel className="text-center max-w-md">
-          <p className="text-[var(--rust)]">⚠️ {error}</p>
-          <Button
-            variant="quiet"
-            onClick={() => navigate('/setup')}
-            className="mt-3"
-          >
-            Return to Setup
-          </Button>
-        </Panel>
+      <div className="flex flex-col items-center gap-4 py-10">
+        <ErrorState
+          className="w-full max-w-md"
+          title="Could not load your mastery profile"
+          message={error}
+        />
+        <Button
+          variant="secondary"
+          icon={<IconPlus size={16} />}
+          onClick={() => navigate('/practice/new')}
+        >
+          Start practice
+        </Button>
       </div>
     )
   }
@@ -82,140 +121,128 @@ export default function DashboardPage() {
   const topicAverages = selectPerTopicAverages(breakdown)
   const bloomAverages = selectPerBloomAverages(breakdown)
 
+  const overallPct = Math.round((profile?.average_score ?? 0) * 100)
+  const attemptCount = profile?.total_attempts ?? 0
+  const weakAreaCount = topicAverages.filter((item) => item.average_score < 0.7).length
+
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <PanelLarge className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <PageHeader
+        title="Dashboard"
+        description={`Performance telemetry for ${user?.email || 'authenticated user'}.`}
+        actions={
+          <Button icon={<IconPlus size={16} />} onClick={() => navigate('/practice/new')}>
+            Start practice
+          </Button>
+        }
+      />
+
+      <div className="space-y-4">
+        {/* Headline metrics */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            label="Overall mastery"
+            value={`${overallPct}%`}
+            hint="Average score"
+            icon={IconTarget}
+            tone={scoreTone(overallPct)}
+          />
+          <StatCard
+            label="Topics tracked"
+            value={topicAverages.length}
+            hint="In this profile"
+            icon={IconLearning}
+            tone="primary"
+          />
+          <StatCard
+            label="Total attempts"
+            value={attemptCount}
+            hint="Questions answered"
+            icon={IconClock}
+            tone="neutral"
+          />
+          <StatCard
+            label="Weak areas"
+            value={weakAreaCount}
+            hint="Topics below 70%"
+            icon={IconWeakAreas}
+            tone={weakAreaCount > 0 ? 'danger' : 'success'}
+          />
+        </div>
+
+        {/* Overall mastery progress */}
+        <PanelLarge>
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-display font-bold text-[var(--ink)] tracking-tight">
-                Mastery Dashboard
-              </h1>
-              <p className="text-[var(--muted)] mt-1">
-                Performance telemetry for {user?.email || 'authenticated user'}
+              <h2 className="text-sm font-semibold text-ink">Mastery progress</h2>
+              <p className="mt-0.5 text-xs text-muted">
+                Your average across every recorded attempt.
               </p>
             </div>
-
-            <Button
-              variant="quiet"
-              onClick={() => navigate('/setup')}
-              className="sm:self-auto"
-            >
-              + New Study Session
-            </Button>
+            <span className="text-xl font-semibold tabular-nums text-ink">{overallPct}%</span>
           </div>
+          <ProgressLine className="mt-3" percentage={overallPct} tone={scoreTone(overallPct)} />
         </PanelLarge>
 
-        {/* Top-Level Metric Stats */}
-        <Panel>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <MetricBar
-              label="Total Attempts"
-              value={profile?.total_attempts ?? 0}
-              icon="🎯"
-            />
-            <MetricBar
-              label="Average Score"
-              value={`${Math.round((profile?.average_score ?? 0) * 100)}%`}
-              icon="📈"
-            />
-            <MetricBar
-              label="Tracked Topics"
-              value={topicAverages.length}
-              icon="📚"
-            />
-          </div>
-        </Panel>
-
         {/* Mastery Breakdown: By Topic */}
-        <Panel>
-          <div>
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
-              Topic Mastery
-            </h2>
+        <PanelLarge>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Topic Mastery
+          </h2>
+          <div className="mt-3">
             {topicAverages.length === 0 ? (
               <EmptyState
-                icon="ℹ️"
+                icon={IconLearning}
                 title="No topic data yet"
                 description="Complete a study session to populate your mastery breakdown."
               />
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {topicAverages.map((item) => (
                   <MetricBar
                     key={item.topic}
-                    title={item.topic}
-                    subtitle={`${item.total_attempts} attempt${item.total_attempts !== 1 ? 's' : ''}`}
+                    label={item.topic}
+                    subtitle={`${item.total_attempts} attempt${
+                      item.total_attempts !== 1 ? 's' : ''
+                    }`}
                     score={item.average_score}
-                    color={getBloomColor(item.topic)}
                   />
                 ))}
               </div>
             )}
           </div>
-        </Panel>
+        </PanelLarge>
 
         {/* Mastery Breakdown: By Bloom's Taxonomy Level */}
-        <Panel>
-          <div>
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
-              Cognitive Depth (Bloom Taxonomy)
-            </h2>
+        <PanelLarge>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Cognitive Depth (Bloom Taxonomy)
+          </h2>
+          <div className="mt-3">
             {bloomAverages.length === 0 ? (
               <EmptyState
-                icon="ℹ️"
+                icon={IconAnalytics}
                 title="No Bloom data yet"
                 description="Complete study sessions to see cognitive level progress."
               />
             ) : (
-              <div className="space-y-3">
-                {bloomAverages.map((item) => {
-                  const color = getBloomColor(item.bloom_level)
-                  return (
-                    <MetricBar
-                      key={item.bloom_level}
-                      title={item.bloom_level}
-                      subtitle={`${item.total_attempts} question${item.total_attempts !== 1 ? 's' : ''}`}
-                      score={item.average_score}
-                      color={color}
-                    />
-                  )
-                })}
+              <div className="space-y-1">
+                {bloomAverages.map((item) => (
+                  <MetricBar
+                    key={item.bloom_level}
+                    label={labelize(item.bloom_level)}
+                    subtitle={`${item.total_attempts} question${
+                      item.total_attempts !== 1 ? 's' : ''
+                    }`}
+                    score={item.average_score}
+                    color={getBloomColor(item.bloom_level)}
+                  />
+                ))}
               </div>
             )}
           </div>
-        </Panel>
+        </PanelLarge>
       </div>
     </div>
-  )
-}
-
-/**
- * MetricBar — compact metric component for dashboard.
- * Flat fill, 1px border, no heavy shadows.
- */
-
-function MetricBar({ label, value, icon, color }) {
-  const pct = Math.round(value * 100)
-
-  return (
-    <Panel className="flex flex-col sm:flex-row items-center justify-between py-2">
-      <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
-      <span className="text-sm font-medium text-[var(--ink)]">{value}</span>
-
-      <div className="w-24 h-1.5 rounded-md bg-[var(--line)] overflow-hidden mt-1 sm:mt-0">
-        <div
-          className={`h-full rounded-md transition-all duration-500 ease-out ${color}`
-            ? `bg-[var(${color})]`
-            : ''
-          }`}
-          style={{ width: `${pct}%` }}
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow={pct}
-        />
-      </div>
-    </Panel>
   )
 }

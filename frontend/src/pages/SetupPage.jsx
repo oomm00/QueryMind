@@ -1,7 +1,7 @@
 /**
- * SetupPage — /setup
+ * SetupPage — /practice/new
  * Preparation Setup form: goal, topic, Bloom level, difficulty, and question count.
- * Uses questionsApi.generate and initializes SessionContext before navigating to /question.
+ * Uses questionsApi.generate and initializes SessionContext before navigating to /practice/session.
  */
 
 import React, { useState } from 'react'
@@ -9,16 +9,35 @@ import { useNavigate } from 'react-router-dom'
 import { questionsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
+import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { BLOOM_LEVELS, DIFFICULTIES } from '../constants/bloomTaxonomy.js'
+import { cx } from '../lib/cx'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
-import { Panel, PanelLarge, PanelSmall } from '../components/ui/Panel'
+import { Panel } from '../components/ui/Panel'
+import { PageHeader } from '../components/ui/PageHeader'
+import { ErrorState } from '../components/ui/ErrorState'
+import { IconTarget, IconLearning, IconSettings } from '../components/ui/Icons'
+
+function SectionHeading({ icon: Icon, children }) {
+  return (
+    <h2 className="mb-3 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted">
+      <Icon size={15} />
+      {children}
+    </h2>
+  )
+}
 
 export default function SetupPage() {
   const navigate = useNavigate()
   const { userId } = useAuth()
   const { initSession } = useSession()
+  useBreadcrumbs([
+    { label: 'Workspace', to: '/dashboard' },
+    { label: 'Practice', to: '/practice/new' },
+    { label: 'New session' },
+  ])
 
   const [form, setForm] = useState({
     goal: '',
@@ -59,7 +78,7 @@ export default function SetupPage() {
 
       // Initialize persistent study session in SessionContext
       initSession(form, questionsList)
-      navigate('/question')
+      navigate('/practice/session')
     } catch (err) {
       setError(err.message ?? 'Failed to generate session questions')
     } finally {
@@ -68,165 +87,121 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <div className="max-w-2xl mx-auto py-8">
-        {/* Header */}
-        <PanelLarge className="mb-6">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-[var(--ink)] tracking-tight">
-              Preparation Setup
-            </h1>
-            <p className="text-[var(--muted)] mt-1 text-sm">
-              Configure your target domain, cognitive depth, and question count.
-            </p>
+    <div className="mx-auto max-w-2xl">
+      <PageHeader
+        title="Preparation setup"
+        description="Configure your target domain, cognitive depth, and question count."
+      />
+
+      {error && (
+        <ErrorState className="mb-4" title="Could not start session" message={error} />
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Target & topic */}
+        <Panel className="p-5">
+          <SectionHeading icon={IconTarget}>Learning objective</SectionHeading>
+
+          <div className="space-y-3">
+            <Input
+              id="goal"
+              name="goal"
+              type="text"
+              label="Goal (optional)"
+              placeholder="e.g. Pass AWS Solutions Architect, Technical interview prep"
+              value={form.goal}
+              onChange={handleChange}
+            />
+
+            <Input
+              id="topic"
+              name="topic"
+              type="text"
+              label="Topic"
+              placeholder="e.g. Distributed consensus, SQL query optimization, Concurrency"
+              value={form.topic}
+              onChange={handleChange}
+              required
+            />
           </div>
-        </PanelLarge>
+        </Panel>
 
-        {error && (
-          <Panel className="mb-4 p-3 rounded-md bg-[var(--rust)/10] border border-[var(--rust)]/50">
-            {error}
-          </Panel>
-        )}
+        {/* Bloom's taxonomy level */}
+        <Panel className="p-5">
+          <SectionHeading icon={IconLearning}>Bloom&apos;s cognitive level</SectionHeading>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Target & Topic */}
-          <Panel>
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
-                🎯
-              </span>
-              Learning Objective
-            </h2>
-
-            <div className="space-y-3">
-              <Input
-                id="goal"
-                name="goal"
-                type="text"
-                placeholder="e.g. Pass AWS Solutions Architect, Technical Interview Prep"
-                value={form.goal}
-                onChange={handleChange}
-                className="input"
-              />
-
-              <Input
-                id="topic"
-                name="topic"
-                type="text"
-                placeholder="e.g. Distributed Consensus, SQL Query Optimization, Concurrency"
-                value={form.topic}
-                onChange={handleChange}
-                required
-                className="input"
-              />
-            </div>
-          </Panel>
-
-          {/* Bloom's Taxonomy Level */}
-          <Panel>
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
-                🧠
-              </span>
-              Bloom's Cognitive Level
-            </h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {BLOOM_LEVELS.map((level) => {
-                const isSelected = form.bloom === level.value
-                return (
-                  <label
-                    key={level.value}
-                    htmlFor={`bloom-${level.value}`}
-                    className={`cursor-pointer flex flex-col p-3 rounded-md border transition-colors duration-150 ${
-                      isSelected
-                        ? 'border-[var(--moss)] bg-[var(--moss)/10] ring-1 ring-[var(--moss)]'
-                        : 'border-[var(--line)] bg-[var(--surface)/40] hover:border-[var(--moss)]'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      id={`bloom-${level.value}`}
-                      name="bloom"
-                      value={level.value}
-                      checked={isSelected}
-                      onChange={handleChange}
-                      className="sr-only"
-                    />
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-base capitalize">{level.label}</span>
-                      {/* emoji removed per design concept */}
-                    </div>
-                    <span className="text-[10px] text-[var(--muted)] leading-tight">
-                      {level.desc}
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
-          </Panel>
-
-          {/* Difficulty & Count */}
-          <Panel>
-            <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface)/50] px-2.5 py-0.5 text-[var(--muted)]">
-                ⚙️
-              </span>
-              Session Scope
-            </h2>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="difficulty" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
-                  Difficulty
-                </label>
-                <Select
-                  id="difficulty"
-                  name="difficulty"
-                  value={form.difficulty}
-                  onChange={handleChange}
-                  className="input"
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            {BLOOM_LEVELS.map((level) => {
+              const isSelected = form.bloom === level.value
+              return (
+                <label
+                  key={level.value}
+                  htmlFor={`bloom-${level.value}`}
+                  className={cx(
+                    'flex cursor-pointer flex-col rounded-control border p-3 transition-colors duration-150',
+                    'focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus',
+                    isSelected
+                      ? 'border-primary bg-primary-tint'
+                      : 'border-line bg-surface-raised hover:border-line-strong'
+                  )}
                 >
-                  <option key="easy" value="easy">
-                    Easy
-                  </option>
-                  <option key="medium" value="medium">
-                    Medium
-                  </option>
-                  <option key="hard" value="hard">
-                    Hard
-                  </option>
-                </Select>
-              </div>
-
-              <div>
-                <label htmlFor="count" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
-                  Number of Questions (1–10)
+                  <input
+                    type="radio"
+                    id={`bloom-${level.value}`}
+                    name="bloom"
+                    value={level.value}
+                    checked={isSelected}
+                    onChange={handleChange}
+                    className="sr-only"
+                  />
+                  <span className="mb-1 text-sm font-medium capitalize text-ink">
+                    {level.label}
+                  </span>
+                  <span className="text-[11px] leading-tight text-muted">{level.desc}</span>
                 </label>
-                <Input
-                  id="count"
-                  name="count"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={form.count}
-                  onChange={handleChange}
-                  className="input"
-                />
-              </div>
-            </div>
-          </Panel>
+              )
+            })}
+          </div>
+        </Panel>
 
-          <Button
-            id="btn-start-session"
-            type="submit"
-            disabled={loading || !form.topic.trim()}
-            className="w-full py-3"
-          >
-            {loading ? 'Synthesizing Session Questions…' : 'Start Study Session →'}
-          </Button>
-        </form>
-      </div>
+        {/* Difficulty & count */}
+        <Panel className="p-5">
+          <SectionHeading icon={IconSettings}>Session scope</SectionHeading>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              id="difficulty"
+              name="difficulty"
+              label="Difficulty"
+              value={form.difficulty}
+              onChange={handleChange}
+              options={DIFFICULTIES}
+            />
+
+            <Input
+              id="count"
+              name="count"
+              type="number"
+              label="Number of questions (1–10)"
+              min={1}
+              max={10}
+              value={form.count}
+              onChange={handleChange}
+            />
+          </div>
+        </Panel>
+
+        <Button
+          id="btn-start-session"
+          type="submit"
+          fullWidth
+          size="lg"
+          loading={loading}
+          disabled={!form.topic.trim()}
+        >
+          {loading ? 'Synthesizing session questions…' : 'Start study session'}
+        </Button>
+      </form>
     </div>
   )
 }
