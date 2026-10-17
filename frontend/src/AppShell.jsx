@@ -4,6 +4,10 @@
  * notifications and an account menu.
  *
  * It is layout-only: it renders the routed page tree passed in as `children`.
+ *
+ * On the reading routes (/learn, /map) the rail collapses to icons and the
+ * 1200px workspace max-width is dropped, so the reading column gets the full
+ * width. Every manual toggle is remembered per route group.
  */
 
 import React, { useEffect, useRef, useState } from 'react'
@@ -30,7 +34,54 @@ import {
 } from './components/ui/Icons'
 import { cx } from './lib/cx'
 
+// Pre-group key: still read once to seed the workspace group.
 const RAIL_KEY = 'qm-rail-collapsed'
+// A manual rail choice is remembered per route group, so collapsing the rail to
+// read does not follow the user back to the workspace (or the other way round).
+const RAIL_GROUPS_KEY = 'qm-rail-groups'
+
+// Reading routes show the rail as icons only and give up the workspace
+// max-width: the lesson reader and the topic map are wide layouts where the
+// reading column is worth more than the labels in the rail.
+const READING_ROUTE_PREFIXES = ['/learn', '/map']
+
+function railGroupFor(pathname) {
+  const reading = READING_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+  return reading ? 'reading' : 'workspace'
+}
+
+function readRailGroups() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RAIL_GROUPS_KEY) || 'null')
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+/** The remembered choice for a group. Reading routes collapse by default. */
+function readRailCollapsed(group) {
+  const groups = readRailGroups()
+  if (typeof groups[group] === 'boolean') return groups[group]
+  if (group === 'reading') return true
+  try {
+    return localStorage.getItem(RAIL_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeRailCollapsed(group, collapsed) {
+  try {
+    const groups = readRailGroups()
+    if (groups[group] === collapsed) return
+    localStorage.setItem(RAIL_GROUPS_KEY, JSON.stringify({ ...groups, [group]: collapsed }))
+  } catch {
+    /* ignore */
+  }
+}
 
 const ICON_BTN =
   'inline-flex h-9 w-9 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-raised hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
@@ -155,25 +206,25 @@ function AppShell({ children }) {
   const { theme, toggleTheme } = useTheme()
   const { weakAreaCount, weekly } = useRailStats()
 
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(RAIL_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
+  const railGroup = railGroupFor(location.pathname)
+  const readingLayout = railGroup === 'reading'
+
+  const [collapsed, setCollapsed] = useState(() => readRailCollapsed(railGroup))
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
+  // Adopt the remembered rail choice for the group we land in: /learn and /map
+  // collapse to icons unless the user has expanded the rail there before.
   useEffect(() => {
-    try {
-      localStorage.setItem(RAIL_KEY, collapsed ? '1' : '0')
-    } catch {
-      /* ignore */
-    }
-  }, [collapsed])
+    setCollapsed(readRailCollapsed(railGroup))
+  }, [railGroup])
+
+  // Remember every manual toggle against the group it was made in.
+  useEffect(() => {
+    writeRailCollapsed(railGroup, collapsed)
+  }, [railGroup, collapsed])
 
   // Global ⌘K / Ctrl+K opens the command palette.
   useEffect(() => {
@@ -405,7 +456,10 @@ function AppShell({ children }) {
           </div>
         </header>
 
-        <main id="main-content" className="max-w-[1200px] p-6 pb-24 md:pb-6">
+        <main
+          id="main-content"
+          className={cx('p-6 pb-24 md:pb-6', readingLayout ? 'w-full' : 'max-w-[1200px]')}
+        >
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
