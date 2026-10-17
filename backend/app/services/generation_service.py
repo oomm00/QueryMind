@@ -82,26 +82,74 @@ class GeminiAdapter:
     through this code path.
     """
 
-    def __init__(self, client: Any, model: str, temperature: float) -> None:
+    def __init__(self, client: Any, model: str, temperature: float, response_schema: Any = None) -> None:
         self._client = client
         self._model = model
         self._temperature = temperature
+        self._response_schema = response_schema
 
     def generate_content(self, prompt: str) -> Any:
         """Call the Gemini API and return a response object with a ``.text`` attribute."""
         from google.genai import types as genai_types  # local import keeps module-level clean
 
+        config_kwargs = {
+            "temperature": self._temperature,
+            "response_mime_type": "application/json",
+        }
+        if self._response_schema is not None:
+            config_kwargs["response_schema"] = self._response_schema
+
         return self._client.models.generate_content(
             model=self._model,
             contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                temperature=self._temperature,
-                response_mime_type="application/json",
-            ),
+            config=genai_types.GenerateContentConfig(**config_kwargs),
         )
 
 
-def _configure_genai() -> GeminiAdapter:
+def _generation_schema() -> Any:
+    """Build a Gemini ``Schema`` describing the generated-question JSON shape.
+
+    Returning ``None`` (when google.genai is unavailable) keeps the previous
+    behavior: JSON-mode without a schema. The existing JSON-retry fallback in
+    :func:`llm_utils.call_json_with_retry` still applies.
+    """
+    try:
+        from google.genai import types as genai_types  # type: ignore
+    except Exception:  # pragma: no cover - optional dependency path
+        return None
+    T = genai_types.Type
+    return genai_types.Schema(
+        type=T.OBJECT,
+        properties={
+            "question": {"type": T.STRING},
+            "question_text": {"type": T.STRING},
+            "options": {"type": T.ARRAY, "items": {"type": T.STRING}},
+            "starter_code": {"type": T.STRING},
+            "test_cases": {
+                "type": T.ARRAY,
+                "items": {
+                    "type": T.OBJECT,
+                    "properties": {
+                        "input": {"type": T.STRING},
+                        "output": {"type": T.STRING},
+                        "explanation": {"type": T.STRING},
+                    },
+                    "required": ["input", "output"],
+                },
+            },
+            "correct_answer": {"type": T.STRING},
+            "explanation": {"type": T.STRING},
+            "bloom_level": {"type": T.STRING},
+            "difficulty": {"type": T.STRING},
+            "topic": {"type": T.STRING},
+            "source_chunks": {"type": T.ARRAY, "items": {"type": T.STRING}},
+            "source_chunk_ids": {"type": T.ARRAY, "items": {"type": T.STRING}},
+        },
+        required=["question", "question_text", "correct_answer", "explanation", "bloom_level", "difficulty"],
+    )
+
+
+def _configure_genai(response_schema: Any = None) -> GeminiAdapter:
     """Configure and return a ``GeminiAdapter`` backed by a real google.genai client."""
     api_key = settings.gemini_api_key
     if not api_key:
@@ -113,7 +161,7 @@ def _configure_genai() -> GeminiAdapter:
     import google.genai as genai  # local import to avoid top-level side-effects during tests
 
     client = genai.Client(api_key=api_key)
-    return GeminiAdapter(client, settings.llm_model, settings.llm_temperature)
+    return GeminiAdapter(client, settings.llm_model, settings.llm_temperature, response_schema=response_schema)
 
 
 # ── Prompt Builder ────────────────────────────────────────────────────────────
@@ -355,7 +403,10 @@ def generate_question(
     # ── Step 3: Resolve client ────────────────────────────────────────────────
     # If no client is injected, create the real GeminiAdapter. Test mocks pass
     # their own object exposing ``generate_content(prompt)``.
-    client = llm_client if llm_client is not None else _configure_genai()
+    if llm_client is not None:
+        client = llm_client
+    else:
+        client = _configure_genai(response_schema=_generation_schema())
 
     # ── Step 4: LLM round-trip ────────────────────────────────────────────────
     # llm_utils handles the transient-error backoff and the single malformed-JSON

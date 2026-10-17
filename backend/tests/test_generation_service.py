@@ -388,3 +388,66 @@ def test_llm_output_invalid_bloom_level_triggers_retry(mock_retrieve):
 
     assert mock_client.generate_content.call_count == 2  # original + 1 stricter retry
     assert exc_info.value.code == "GENERATION_FAILED"
+
+
+# ── Structured output (response_schema) ──────────────────────────────────────
+
+def test_generation_schema_describes_question_shape():
+    """_generation_schema returns a Gemini Schema requiring the question fields."""
+    from app.services.generation_service import _generation_schema
+
+    schema = _generation_schema()
+    if schema is None:  # google.genai not installed — fallback path is intentional
+        pytest.skip("google.genai is not available")
+
+    assert schema.type is not None
+    assert "question_text" in schema.properties
+    assert "correct_answer" in schema.properties
+    assert "question_text" in (schema.required or [])
+
+
+def test_gemini_adapter_passes_response_schema_into_config():
+    """GeminiAdapter must forward response_schema into GenerateContentConfig."""
+    genai = pytest.importorskip("google.genai")
+    from app.services.generation_service import GeminiAdapter
+
+    schema = genai.types.Schema(type=genai.types.Type.OBJECT, properties={"a": {"type": genai.types.Type.STRING}})
+    inner_client = MagicMock()
+    adapter = GeminiAdapter(inner_client, "test-model", 0.2, response_schema=schema)
+
+    adapter.generate_content("hello")
+
+    _, kwargs = inner_client.models.generate_content.call_args
+    config = kwargs["config"]
+    assert config.response_schema is schema
+    assert config.response_mime_type == "application/json"
+
+
+def test_gemini_adapter_omits_schema_when_absent():
+    """Without a schema the adapter still requests JSON mode (previous behaviour)."""
+    from app.services.generation_service import GeminiAdapter
+
+    inner_client = MagicMock()
+    adapter = GeminiAdapter(inner_client, "test-model", 0.2)
+
+    adapter.generate_content("hello")
+
+    _, kwargs = inner_client.models.generate_content.call_args
+    config = kwargs["config"]
+    assert getattr(config, "response_schema", None) is None
+    assert config.response_mime_type == "application/json"
+
+
+@patch("app.services.generation_service.retrieve_context")
+def test_injected_client_bypasses_real_gemini_configure(mock_retrieve):
+    """When a client is injected, _configure_genai must NOT be called (routing fix)."""
+    mock_retrieve.return_value = FAKE_CONTEXT_CHUNKS
+    mock_client = _make_llm_client(VALID_OPEN_RESPONSE)
+
+    with patch("app.services.generation_service._configure_genai") as mock_configure:
+        generate_question(
+            topic="Transactions", subject="DBMS", bloom_level="analyze",
+            difficulty="hard", question_type="open", llm_client=mock_client,
+        )
+        mock_configure.assert_not_called()
+
