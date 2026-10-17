@@ -269,6 +269,40 @@ def test_reingesting_same_file_does_not_duplicate(mem_collection, db_session):
     assert db_session.query(Document).count() == 1
 
 
+def test_ingestion_batches_chunks_into_a_single_upsert(db_session):
+    """A multi-chunk document must reach Chroma in ONE upsert call.
+
+    Regression guard for the ingestion performance path: calling``upsert`` once
+    per chunk would issue N round-trips to Chroma; a single batched call keeps
+    ingestion at one round-trip regardless of document size.
+    """
+    from unittest.mock import MagicMock
+
+    # ~6000 chars -> at least 3 chunks at CHUNK_SIZE_CHARS=2000.
+    paragraph = (
+        "A deadlock occurs when a set of processes are blocked waiting for resources "
+        "held by each other, forming a circular wait. The four Coffman conditions are "
+        "mutual exclusion, hold and wait, no preemption, and circular wait. "
+    )
+    data = (paragraph * 40).encode()
+
+    spy = MagicMock()
+    result = ingest_document(
+        data, "deadlocks.txt", "OS", "Deadlocks", "college",
+        db_session, user_id=uuid.uuid4(), collection=spy,
+    )
+
+    assert result["chunks_ingested"] >= 3
+    spy.upsert.assert_called_once()
+    _, kwargs = spy.upsert.call_args
+    assert len(kwargs["ids"]) == result["chunks_ingested"]
+    assert len(kwargs["documents"]) == result["chunks_ingested"]
+    assert len(kwargs["metadatas"]) == result["chunks_ingested"]
+    # No per-chunk ``add`` calls either.
+    spy.add.assert_not_called()
+
+
+
 def test_metadata_shape_matches_retrieval_filter(mem_collection, db_session):
     content = (
         "A deadlock occurs when a set of processes are blocked waiting for resources "
