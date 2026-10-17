@@ -1,0 +1,13 @@
+# Dev-only compose override — auto-loaded by `docker compose up` when present.
+#
+# This file is GITIGNORED on purpose: a fresh clone must be demo-safe (plain
+# uvicorn, 2 workers, no file-watching reloader). Create it locally (copy from
+# docker-compose.override.example.yml) to get hot-reload during development.
+#
+# NOTE: uvicorn's --reload requires a single worker, so it overrides the base
+# command's `--workers 2`.
+services:
+  backend:
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"

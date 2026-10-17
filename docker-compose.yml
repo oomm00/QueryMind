@@ -50,7 +50,12 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     env_file:
-      - .env
+      # The repo-root .env supplies POSTGRES_*/GEMINI_API_KEY etc. to the
+      # container. It is OPTIONAL: a fresh clone that only has backend/.env still
+      # works, because the app loads backend/.env directly (see
+      # app/core/config.py) and backend/ is bind-mounted to /app.
+      - path: .env
+        required: false
     environment:
       # Inside the compose network Chroma listens on its container port 8000.
       # CHROMA_PORT in .env is the *host* port published below (default 8001);
@@ -66,9 +71,13 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    # Demo/production default: plain uvicorn, no file-watching reloader. For
+    # local hot-reload, copy docker-compose.override.example.yml over
+    # docker-compose.override.yml (compose auto-loads it; it is gitignored so
+    # fresh clones stay demo-safe).
     command: >
       sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
 
 volumes:
   postgres_data:
