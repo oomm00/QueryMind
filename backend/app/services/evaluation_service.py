@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import time
+from functools import lru_cache
 from typing import Any, Optional
 
 from app.core.config import settings
@@ -143,12 +144,15 @@ RUBRIC — score each criterion from 0 (absent/wrong) to 10 (excellent):
 
 # ── Judge client ──────────────────────────────────────────────────────────────
 
+@lru_cache(maxsize=1)
 def _evaluation_schema() -> Any:
     """OpenAPI schema for the judge's structured output, or ``None`` if unavailable.
 
     Returning ``None`` when ``google.genai`` is not installed lets the caller fall
     back to the prompt-described JSON contract (with the JSON-retry wrapper) so
     the service still works without structured-output support.
+
+    Memoized so the (import-bound) schema is built once per process.
     """
     try:
         from google.genai import types as genai_types  # local import keeps module import side-effect free
