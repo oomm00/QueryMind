@@ -44,6 +44,11 @@ LLM_MAX_RETRIES = 3               # retries after the initial attempt
 LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s, 2s, 4s
 TRANSIENT_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
 
+# Status codes that mean "this particular model is not usable right now" (rate
+# limited / out of quota / overloaded) and that a *different* model may still
+# serve. Used by the LLM_FALLBACK_MODELS path below.
+MODEL_FALLBACK_STATUS_CODES = {429, 503}
+
 # ── Reliability: hard timeout + concurrency cap ───────────────────────────────
 # Every Gemini round-trip is bounded by *LLM_CALL_TIMEOUT_SECONDS*; a call that
 # overruns raises a (transient) TimeoutError so the existing backoff retry below
@@ -105,6 +110,65 @@ def is_transient_error(exc: Exception) -> bool:
     return any(needle in message for needle in needles)
 
 
+def is_model_fallback_error(exc: Exception) -> bool:
+    """Return True if *exc* should fall back to the next configured model.
+
+    That is a quota/rate-limit (HTTP 429 / ``RESOURCE_EXHAUSTED``) or a persistent
+    unavailability (HTTP 503) — the two cases where trying a *different* model can
+    plausibly succeed. Ordinary transient errors are already retried against the
+    same model by :func:`generate_with_retry`, so reaching this helper means those
+    retries were spent.
+
+    Our own post-retry wrapper (:class:`QueryMindError` with code
+    ``LLM_CALL_FAILED``) is unwrapped to the underlying SDK error before the
+    status/message is inspected, so a 429 that survived the retries is still
+    recognised.
+    """
+    # Malformed-output / validation failures are never a "try another model" case.
+    if isinstance(exc, ValidationError):
+        return False
+
+    root: Exception = exc
+    for _ in range(10):  # bound the walk; unwrap __cause__ to the original error
+        cause = getattr(root, "__cause__", None)
+        if cause is None:
+            break
+        root = cause
+
+    for attr in ("status_code", "code", "http_status"):
+        value = getattr(root, attr, None)
+        if isinstance(value, int) and value in MODEL_FALLBACK_STATUS_CODES:
+            return True
+
+    # We raise LLM_CALL_FAILED (503) once a model's retries are exhausted.
+    if getattr(exc, "code", None) == "LLM_CALL_FAILED":
+        return True
+
+    message = str(root).lower()
+    needles = (
+        "resource_exhausted", "resource exhausted", "quota", "rate limit",
+        "429", "503", "unavailable", "high demand", "overloaded",
+    )
+    return any(needle in message for needle in needles)
+
+
+def resolve_model_chain(primary: str) -> Optional[list[str]]:
+    """Return ``[primary, *fallbacks]`` when fallbacks are configured, else ``None``.
+
+    ``None`` (the default — ``LLM_FALLBACK_MODELS`` empty) tells the caller to keep
+    the historical single-model code path byte-for-byte. Duplicates are dropped and
+    *primary* is always first.
+    """
+    fallbacks = settings.fallback_models
+    if not fallbacks:
+        return None
+    chain = [primary]
+    for model in fallbacks:
+        if model not in chain:
+            chain.append(model)
+    return chain if len(chain) > 1 else None
+
+
 def _call_with_timeout(fn: Callable[[], Any], timeout: float) -> Any:
     """Run ``fn()`` in a worker thread and fail with :class:`TimeoutError` if it
     exceeds ``timeout`` seconds.
@@ -137,11 +201,31 @@ def _call_with_timeout(fn: Callable[[], Any], timeout: float) -> Any:
     return outcome.get("value")
 
 
-def generate_with_retry(client: Any, prompt: str, *, sleep: Callable[[float], None] = time.sleep) -> Any:
+def _invoke_generate(client: Any, prompt: str, model: Optional[str]) -> Any:
+    """Call ``client.generate_content``, pinning *model* when one is given.
+
+    Keeps the documented test-client interface intact: a client that only accepts
+    ``generate_content(prompt)`` is still called without the extra kwarg when
+    ``model`` is ``None``.
+    """
+    if model is None:
+        return client.generate_content(prompt)
+    return client.generate_content(prompt, model=model)
+
+
+def generate_with_retry(
+    client: Any,
+    prompt: str,
+    *,
+    sleep: Callable[[float], None] = time.sleep,
+    model: Optional[str] = None,
+) -> Any:
     """Call ``client.generate_content(prompt)`` with exponential-backoff retries.
 
     Each attempt is wrapped in a hard timeout (:data:`LLM_CALL_TIMEOUT_SECONDS`)
-    and a process-wide concurrency semaphore (:data:`LLM_MAX_CONCURRENCY`).
+    and a process-wide concurrency semaphore (:data:`LLM_MAX_CONCURRENCY`). When
+    *model* is supplied it is pinned for this attempt (used by the model-fallback
+    path so one adapter can serve several models).
 
     Only *transient* failures (503/429/timeout/connection) are retried; permanent
     errors are raised immediately. After the retries are exhausted a
@@ -156,7 +240,7 @@ def generate_with_retry(client: Any, prompt: str, *, sleep: Callable[[float], No
             # most LLM_MAX_CONCURRENCY Gemini calls are in flight at once.
             with _LLM_SEMAPHORE:
                 return _call_with_timeout(
-                    lambda: client.generate_content(prompt),
+                    lambda: _invoke_generate(client, prompt, model),
                     LLM_CALL_TIMEOUT_SECONDS,
                 )
         except Exception as exc:  # noqa: BLE001 — re-raised below if not transient
@@ -179,12 +263,25 @@ def generate_with_retry(client: Any, prompt: str, *, sleep: Callable[[float], No
     ) from last_exc
 
 
-def request_text(client: Any, prompt: str, *, sleep: Callable[[float], None] = time.sleep) -> str:
+def request_text(
+    client: Any,
+    prompt: str,
+    *,
+    sleep: Callable[[float], None] = time.sleep,
+    models: Optional[list[str]] = None,
+) -> str:
     """One round-trip: retry transient errors, unwrap the response, and return raw text.
 
     Permanent transport failures are surfaced as a :class:`QueryMindError`
     (503 / ``LLM_CALL_FAILED``) so callers never see an opaque SDK exception.
+
+    When *models* holds more than one model id (see :func:`resolve_model_chain`),
+    the models are tried in order — primary first — and a model that exhausts its
+    retries with a quota/unavailability error is abandoned for the next one. With
+    ``models`` ``None``/single the historical single-model path runs unchanged.
     """
+    if models and len(models) > 1:
+        return _request_text_with_fallback(client, prompt, list(models), sleep=sleep)
     try:
         response = generate_with_retry(client, prompt, sleep=sleep)
     except QueryMindError:
@@ -196,6 +293,59 @@ def request_text(client: Any, prompt: str, *, sleep: Callable[[float], None] = t
             code="LLM_CALL_FAILED",
         ) from exc
     return response.text
+
+
+def _request_text_with_fallback(
+    client: Any,
+    prompt: str,
+    models: list[str],
+    *,
+    sleep: Callable[[float], None] = time.sleep,
+) -> str:
+    """Try each model in *models* in order until one answers.
+
+    Only :func:`is_model_fallback_error` failures (429/RESOURCE_EXHAUSTED or
+    persistent 503) move on to the next model; anything else propagates
+    immediately. When every model fails the caller gets a clean
+    ``502 / LLM_MODELS_EXHAUSTED`` naming the models that were tried.
+    """
+    last_exc: Optional[Exception] = None
+
+    for index, model in enumerate(models):
+        try:
+            response = generate_with_retry(client, prompt, sleep=sleep, model=model)
+        except QueryMindError as exc:
+            if not is_model_fallback_error(exc):
+                raise
+            last_exc = exc
+            if index < len(models) - 1:
+                logger.warning(
+                    "Model %r unavailable (%s) — falling back to %r",
+                    model, getattr(exc, "code", "ERROR"), models[index + 1],
+                )
+            continue
+        except Exception as exc:  # non-transient: not a fallback case
+            raise QueryMindError(
+                f"LLM call failed: {exc}",
+                status_code=503,
+                code="LLM_CALL_FAILED",
+            ) from exc
+
+        if index > 0:
+            logger.info(
+                "LLM request served by fallback model %r (after %d model(s) failed)",
+                model, index,
+            )
+        else:
+            logger.info("LLM request served by primary model %r", model)
+        return response.text
+
+    raise QueryMindError(
+        "All configured LLM models are unavailable right now "
+        f"({', '.join(models)}). Please try again later.",
+        status_code=502,
+        code="LLM_MODELS_EXHAUSTED",
+    ) from last_exc
 
 
 # ── JSON extraction & normalization ───────────────────────────────────────────

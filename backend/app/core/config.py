@@ -80,6 +80,14 @@ class Settings(BaseSettings):
                                         # treated as transient and retried
     llm_max_concurrency: int = 3        # max simultaneous Gemini calls per process
 
+    # Ordered fallback models (env: LLM_FALLBACK_MODELS, comma-separated). When the
+    # primary model returns a quota error (429 / RESOURCE_EXHAUSTED) or keeps
+    # returning 503 after the built-in retries, the call is retried against the next
+    # model in this list instead of failing the request. Empty (the default) keeps
+    # the single-model behaviour exactly as before. Raw value; use
+    # ``settings.fallback_models`` for the parsed list (mirrors ALLOWED_ORIGINS).
+    llm_fallback_models: Union[List[str], str] = []
+
     # Retrieval cache (env: RETRIEVAL_CACHE_TTL_SECONDS / RETRIEVAL_CACHE_MAX_ENTRIES)
     retrieval_cache_ttl_seconds: float = 300.0   # 5 minutes
     retrieval_cache_max_entries: int = 256
@@ -106,6 +114,31 @@ class Settings(BaseSettings):
     def _normalize_thinking_level(cls, value: Any) -> str:
         """Normalize the level so ``LOW`` / `` low `` behave like ``low``."""
         return str(value or "").strip().lower()
+
+    @property
+    def fallback_models(self) -> List[str]:
+        """Parsed ``LLM_FALLBACK_MODELS`` (comma-separated, or a JSON list).
+
+        ``pydantic-settings`` would otherwise demand a JSON array for a ``List[str]``
+        field, so — exactly like ``ALLOWED_ORIGINS`` above — the raw value is accepted
+        as-is and split here. Blank / ``none`` / ``off`` / ``null`` mean "no fallbacks".
+        """
+        value = self.llm_fallback_models
+        if isinstance(value, str):
+            text = value.strip()
+            if not text or text.lower() in ("[]", "none", "off", "null"):
+                return []
+            if text.startswith("["):
+                import json
+
+                try:
+                    parsed = json.loads(text)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except Exception:
+                    pass  # fall through to comma splitting
+            return [part.strip() for part in text.split(",") if part.strip()]
+        return [str(item).strip() for item in value if str(item).strip()]
 
     @model_validator(mode="after")
     def _default_eval_model(self) -> "Settings":

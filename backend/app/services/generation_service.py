@@ -106,8 +106,12 @@ class GeminiAdapter:
         self._thinking_budget = thinking_budget
         self._max_output_tokens = max_output_tokens
 
-    def generate_content(self, prompt: str) -> Any:
-        """Call the Gemini API and return a response object with a ``.text`` attribute."""
+    def generate_content(self, prompt: str, model: Optional[str] = None) -> Any:
+        """Call the Gemini API and return a response object with a ``.text`` attribute.
+
+        ``model`` overrides the adapter's configured model for this call; the
+        model-fallback path uses it to pin each attempt to a specific model.
+        """
         from google.genai import types as genai_types  # local import keeps module-level clean
 
         config_kwargs = {
@@ -125,7 +129,7 @@ class GeminiAdapter:
             config_kwargs["thinking_config"] = thinking
 
         return self._client.models.generate_content(
-            model=self._model,
+            model=model or self._model,
             contents=prompt,
             config=genai_types.GenerateContentConfig(**config_kwargs),
         )
@@ -442,15 +446,20 @@ def generate_question(
     # their own object exposing ``generate_content(prompt)``.
     if llm_client is not None:
         client = llm_client
+        model_chain = None
     else:
         client = _configure_genai(response_schema=_generation_schema())
+        # LLM_FALLBACK_MODELS: on a quota/503 error, retry against the next model.
+        model_chain = llm_utils.resolve_model_chain(settings.llm_model)
 
     # ── Step 4: LLM round-trip ────────────────────────────────────────────────
-    # llm_utils handles the transient-error backoff and the single malformed-JSON
-    # retry (shared with the evaluation service). `time.sleep` is threaded through
-    # so tests can patch it at the module level.
+    # llm_utils handles the transient-error backoff, the cross-model fallback and
+    # the single malformed-JSON retry (shared with the evaluation service).
+    # `time.sleep` is threaded through so tests can patch it at the module level.
     def _request(prompt_text: str) -> str:
-        return llm_utils.request_text(client, prompt_text, sleep=time.sleep)
+        return llm_utils.request_text(
+            client, prompt_text, sleep=time.sleep, models=model_chain
+        )
 
     try:
         return llm_utils.call_json_with_retry(

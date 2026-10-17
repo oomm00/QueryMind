@@ -134,6 +134,43 @@ npm run dev
 
 ---
 
+## LLM configuration & resilience
+
+All LLM settings live in `.env` (see `.env.example` for the full annotated list):
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | — | Google AI Studio key (required for generation) |
+| `LLM_MODEL` | `gemini-3.8-flash` | Primary model for question generation |
+| `LLM_EVAL_MODEL` | *(inherits `LLM_MODEL`)* | Model used by the answer-evaluation judge |
+| `LLM_FALLBACK_MODELS` | *(empty)* | Comma-separated models to try, **in order**, when the primary is rate-limited |
+| `LLM_THINKING_LEVEL` | `low` | Gemini 3 thinking level (`minimal`/`low`/`medium`/`high`; `off` disables) |
+| `LLM_THINKING_BUDGET` | *(unset)* | Gemini 2.5 thinking budget (tokens) |
+| `LLM_MAX_OUTPUT_TOKENS` | `2048` | Output cap; thinking tokens count toward it (`0` = uncapped) |
+| `LLM_TIMEOUT_SECONDS` | `45` | Hard per-call timeout |
+| `LLM_MAX_CONCURRENCY` | `3` | Max simultaneous Gemini calls per process |
+
+### Model fallback on quota errors
+
+Free-tier Gemini keys are quota-limited per model (e.g. 20 requests/day/model).
+With `LLM_FALLBACK_MODELS` set, a request that would fail because the primary
+model is rate-limited keeps working:
+
+```bash
+# Try the primary, then these two, in order
+LLM_FALLBACK_MODELS=gemini-3.7-flash,gemini-3.5-flash-lite
+```
+
+Only quota/availability errors trigger the fallback — a `429` /
+`RESOURCE_EXHAUSTED`, or a `503` that persists after the built-in retries. Any
+other error (bad request, malformed output) fails immediately as before. Each
+attempt is logged (`LLM request served by … model`) so you can see which model
+answered. If **every** model is unavailable the API returns a clean
+`502 LLM_MODELS_EXHAUSTED` JSON error rather than a stack trace. Leaving the
+variable empty keeps the original single-model behaviour.
+
+---
+
 
 ## License
 
