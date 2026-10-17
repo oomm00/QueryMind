@@ -214,6 +214,42 @@ def normalize_str(value: Any) -> str:
     return str(value).strip().lower()
 
 
+# ── Thinking control ──────────────────────────────────────────────────────────
+
+#: Level tokens that mean "do not send a thinking config at all".
+_THINKING_OFF = {"", "none", "off", "unset", "default", "null"}
+
+
+def build_thinking_config(level: Optional[str], budget: Optional[int]) -> Any:
+    """Build a ``google.genai`` ``ThinkingConfig``, or ``None`` when thinking is off.
+
+    Gemini 3 / 4 models are steered with ``thinking_level``; Gemini 2.5 models use
+    ``thinking_budget``. The two must NOT be sent together (the API rejects the
+    combination with a 400), so ``level`` wins whenever it is set.
+
+    Returns ``None`` when both knobs are unset/disabled or when ``google.genai`` is
+    unavailable — callers then simply omit ``thinking_config`` and get the model
+    default.
+    """
+    normalized = str(level or "").strip().lower()
+    if normalized in _THINKING_OFF:
+        normalized = None
+    if normalized is None and budget is None:
+        return None
+    try:
+        from google.genai import types as genai_types  # local import: optional dep
+    except Exception:  # pragma: no cover - google.genai is installed in production
+        return None
+    try:
+        if normalized is not None:
+            return genai_types.ThinkingConfig(thinking_level=normalized)
+        return genai_types.ThinkingConfig(thinking_budget=int(budget))  # type: ignore[arg-type]
+    except Exception as exc:  # pragma: no cover - defensive: never break a request
+        logger.warning("Could not build thinking config (level=%r budget=%r): %s",
+                       level, budget, exc)
+        return None
+
+
 # ── JSON round-trip with a single strict retry ────────────────────────────────
 
 def call_json_with_retry(
