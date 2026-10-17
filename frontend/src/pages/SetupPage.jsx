@@ -5,13 +5,14 @@
  */
 
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { questionsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { BLOOM_LEVELS, DIFFICULTIES } from '../constants/bloomTaxonomy.js'
 import { cx } from '../lib/cx'
+import { clampPracticeCount } from '../lib/practiceLink'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
@@ -33,19 +34,22 @@ export default function SetupPage() {
   const navigate = useNavigate()
   const { userId } = useAuth()
   const { initSession } = useSession()
+  const [searchParams] = useSearchParams()
   useBreadcrumbs([
     { label: 'Workspace', to: '/dashboard' },
     { label: 'Practice', to: '/practice/new' },
     { label: 'New session' },
   ])
 
-  const [form, setForm] = useState({
+  // A link can arrive with a prepared topic and question count, e.g. from a
+  // concept on the knowledge graph. Both are optional and validated here.
+  const [form, setForm] = useState(() => ({
     goal: '',
-    topic: '',
+    topic: searchParams.get('topic')?.trim() ?? '',
     bloom: 'understand',
     difficulty: 'medium',
-    count: 3,
-  })
+    count: searchParams.has('count') ? clampPracticeCount(searchParams.get('count')) : 3,
+  }))
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)

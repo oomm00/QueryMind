@@ -33,14 +33,15 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
+import { useDocumentTheme } from '../hooks/useDocumentTheme'
 import { useMediaQuery } from '../hooks/useMediaQuery'
-import { useTheme } from '../hooks/useTheme'
 import { useTopic } from '../hooks/useTopic'
 import { getConceptMastery, useLessonProgress } from '../content/lessonProgress.js'
 import { NODE_HEIGHT, NODE_WIDTH, layoutGraph } from '../lib/graphLayout'
 import { sentenceCase } from '../lib/text'
 import { ConceptNode } from '../components/map/ConceptNode'
 import { PrerequisiteEdge } from '../components/map/PrerequisiteEdge'
+import { SelectedConceptPanel } from '../components/map/SelectedConceptPanel'
 import { STATUS_LIST, statusFor, toneClass } from '../components/map/conceptStatus'
 import { Panel } from '../components/ui/Panel'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -174,7 +175,7 @@ function StatusLegend() {
 function TopicGraph({ courseId, topicId, topic }) {
   const concepts = topic.concepts
   const progress = useLessonProgress()
-  const { theme } = useTheme()
+  const theme = useDocumentTheme()
   const isNarrow = !useMediaQuery('(min-width: 768px)')
 
   const [view, setView] = useState(() => (isNarrow ? 'list' : 'graph'))
@@ -543,23 +544,15 @@ function TopicGraph({ courseId, topicId, topic }) {
           </div>
 
           <aside className="min-w-0 lg:max-w-[320px] lg:shrink-0 xl:w-[320px]">
-            <Panel className="p-4">
-              {selectedConcept ? (
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-ink">
-                    {sentenceCase(selectedConcept.title)}
-                  </p>
-                  <p className="text-xs text-muted">
-                    The selected concept panel lands in the next commit.
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-muted">
-                  Select a concept to see its mastery, the concepts it depends on and the next
-                  thing to do.
-                </p>
-              )}
-            </Panel>
+            <SelectedConceptPanel
+              courseId={courseId}
+              topicId={topicId}
+              topic={topic}
+              concept={selectedConcept}
+              mastery={selectedConcept ? masteryByConcept[selectedConcept.id] ?? null : null}
+              masteryById={masteryByConcept}
+              onSelect={selectConcept}
+            />
           </aside>
         </div>
       ) : (
