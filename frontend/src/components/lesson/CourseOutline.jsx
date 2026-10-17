@@ -12,6 +12,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { cx } from '../../lib/cx'
+import { sentenceCase } from '../../lib/text'
 import { Input } from '../ui/Input'
 import { ProgressLine } from '../ui/ProgressLine'
 import { Skeleton } from '../ui/Skeleton'
@@ -88,7 +89,7 @@ function TopicNode({ courseId, topic, isCurrent, conceptId, currentLessonId, nee
         ) : (
           <IconChevronRight size={14} className="shrink-0 text-muted" />
         )}
-        <span className="min-w-0 flex-1 truncate">{topic.title}</span>
+        <span className="min-w-0 flex-1 truncate">{sentenceCase(topic.title)}</span>
         <span className="shrink-0 text-[11px] tabular-nums text-muted">{topic.lessonCount}</span>
       </button>
 
@@ -123,7 +124,7 @@ function TopicNode({ courseId, topic, isCurrent, conceptId, currentLessonId, nee
                         }))
                       }
                       aria-expanded={showLessons}
-                      aria-label={`${showLessons ? 'Hide' : 'Show'} lessons in ${concept.title}`}
+                      aria-label={`${showLessons ? 'Hide' : 'Show'} lessons in ${sentenceCase(concept.title)}`}
                       className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-raised hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                     >
                       {showLessons ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
@@ -144,12 +145,12 @@ function TopicNode({ courseId, topic, isCurrent, conceptId, currentLessonId, nee
                       )}
                     >
                       <ConceptStatus state={state} />
-                      <span className="min-w-0 flex-1 truncate">{concept.title}</span>
+                      <span className="min-w-0 flex-1 truncate">{sentenceCase(concept.title)}</span>
                     </Link>
                   ) : (
                     <span className="flex min-w-0 flex-1 items-start gap-2 px-1.5 py-1.5 text-[13px] text-muted">
                       <ConceptStatus state={state} />
-                      <span className="min-w-0 flex-1 truncate">{concept.title}</span>
+                      <span className="min-w-0 flex-1 truncate">{sentenceCase(concept.title)}</span>
                     </span>
                   )}
                 </div>

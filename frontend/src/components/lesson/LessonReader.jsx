@@ -25,6 +25,7 @@ import {
   IconTarget,
 } from '../ui/Icons'
 import { BlockRenderer } from './BlockRenderer'
+import { sentenceCase } from '../../lib/text'
 import { completeLesson, useLessonProgress } from '../../content/lessonProgress.js'
 import { isPlaceholderLesson } from '../../content/os/index.js'
 
@@ -68,7 +69,7 @@ export function LessonReader({
     .filter(Boolean)
     .join(' · ')
 
-  const crumb = [topic?.title, concept?.title].filter(Boolean).join(' / ')
+  const crumb = [topic?.title, concept?.title].filter(Boolean).map(sentenceCase).join(' / ')
 
   return (
     <div className="min-w-0 flex-1 space-y-6">

@@ -15,6 +15,7 @@ import { ProgressRing } from '../ui/ProgressRing'
 import { buttonClasses } from '../ui/Button'
 import { IconArrowRight, IconTarget } from '../ui/Icons'
 import { getConceptMastery, getLessonMastery, useLessonProgress } from '../../content/lessonProgress.js'
+import { sentenceCase } from '../../lib/text'
 
 function formatWhen(iso) {
   if (!iso) return null
@@ -95,7 +96,7 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
 
   const issue =
     weakest && weakest.mastery < 0.6
-      ? `${weakest.title} is at ${percent(weakest.mastery)} — worth reviewing before you move on.`
+      ? `${sentenceCase(weakest.title)} is at ${percent(weakest.mastery)} — worth reviewing before you move on.`
       : null
 
   // Recommend the next lesson that has not been marked reviewed, staying in the
@@ -111,7 +112,7 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
     const next = concepts[index + 1]
     const nextLesson = next?.lessons.find((lesson) => !lesson.isPlaceholder)
     if (nextLesson) {
-      return { id: nextLesson.id, title: nextLesson.title, reason: `Starts ${next.title}` }
+      return { id: nextLesson.id, title: nextLesson.title, reason: `Starts ${sentenceCase(next.title)}` }
     }
     return null
   }, [lessons, concepts, concept, progress])
@@ -179,7 +180,7 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
                     onClick={onNavigate}
                     className="text-[13px] text-primary hover:underline"
                   >
-                    {item.title}
+                    {sentenceCase(item.title)}
                   </Link>
                 </li>
               ))}
@@ -197,7 +198,7 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
                 if (!target) {
                   return (
                     <li key={item.id} className="text-[13px] text-muted">
-                      {item.title}
+                      {sentenceCase(item.title)}
                     </li>
                   )
                 }
@@ -208,7 +209,7 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
                       onClick={onNavigate}
                       className="text-[13px] text-primary hover:underline"
                     >
-                      {item.title}
+                      {sentenceCase(item.title)}
                     </Link>
                   </li>
                 )
