@@ -124,6 +124,11 @@ class Question(Base):
 
 class Attempt(Base):
     __tablename__ = "attempts"
+    __table_args__ = (
+        # Per-user history / mastery reads filter on user_id and sort by
+        # created_at, so a composite index serves both without a sort.
+        Index("ix_attempts_user_created", "user_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
