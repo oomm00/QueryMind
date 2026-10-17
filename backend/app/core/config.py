@@ -3,7 +3,7 @@ Application configuration — loaded from environment / .env file.
 """
 
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -59,6 +59,22 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.3       # Low temp for deterministic structured output
     llm_eval_temperature: float = 0.0  # Minimal temp for consistent rubric scoring
 
+    # LLM thinking control + output cap (env: LLM_THINKING_LEVEL / LLM_THINKING_BUDGET
+    # / LLM_MAX_OUTPUT_TOKENS). Both generation and evaluation emit short, structured
+    # JSON, so they do not need deep reasoning: the default keeps thinking at the
+    # lowest level the *configuration* model supports.
+    #
+    # NOTE ON DEFAULTS: the shipped default model is ``gemini-3.8-flash``, whose
+    # documented thinking levels are low/medium/high — ``minimal`` is REJECTED with a
+    # 400 ("Thinking level MINIMAL is not supported for this model"). ``low`` is
+    # therefore the lowest universally-valid level across the Gemini 3 family and is
+    # what we default to. Models that do support ``minimal`` (e.g. gemini-3.5-flash-lite)
+    # can opt in via ``LLM_THINKING_LEVEL=minimal``. ``LLM_THINKING_BUDGET`` is for
+    # Gemini 2.5 models (which use ``thinkingBudget`` instead of ``thinkingLevel``).
+    llm_thinking_level: str = "low"
+    llm_thinking_budget: Optional[int] = None
+    llm_max_output_tokens: int = 2048  # hard cap; thinking tokens count toward it
+
     # LLM reliability (env: LLM_TIMEOUT_SECONDS / LLM_MAX_CONCURRENCY)
     llm_timeout_seconds: float = 45.0   # hard per-call timeout; a slower call is
                                         # treated as transient and retried
@@ -67,6 +83,29 @@ class Settings(BaseSettings):
     # Retrieval cache (env: RETRIEVAL_CACHE_TTL_SECONDS / RETRIEVAL_CACHE_MAX_ENTRIES)
     retrieval_cache_ttl_seconds: float = 300.0   # 5 minutes
     retrieval_cache_max_entries: int = 256
+
+    # Startup warm-up (env: WARMUP_ON_STARTUP). When true the FastAPI lifespan
+    # pre-loads the embedding model, Chroma collection and structured-output
+    # schemas so the first request does not pay that one-time cost.
+    warmup_on_startup: bool = True
+
+    @field_validator("llm_thinking_budget", mode="before")
+    @classmethod
+    def _blank_budget_is_none(cls, value: Any) -> Any:
+        """Treat an empty LLM_THINKING_BUDGET (or ``none``/``off``) as unset."""
+        if value is None:
+            return None
+        if isinstance(value, str):
+            text = value.strip().lower()
+            if text in ("", "none", "off", "unset", "null"):
+                return None
+        return value
+
+    @field_validator("llm_thinking_level")
+    @classmethod
+    def _normalize_thinking_level(cls, value: Any) -> str:
+        """Normalize the level so ``LOW`` / `` low `` behave like ``low``."""
+        return str(value or "").strip().lower()
 
     @model_validator(mode="after")
     def _default_eval_model(self) -> "Settings":

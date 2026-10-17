@@ -81,13 +81,30 @@ class GeminiAdapter:
     ``_call_llm``.  Using an explicit adapter (rather than duck-typing via
     ``hasattr``) means test ``MagicMock`` objects are never accidentally routed
     through this code path.
+
+    Also the single place the request ``GenerateContentConfig`` is assembled:
+    ``response_schema`` (structured output), ``max_output_tokens`` (hard output
+    cap) and ``thinking_config`` (reasoning-effort control) are all applied here
+    for both generation and evaluation.
     """
 
-    def __init__(self, client: Any, model: str, temperature: float, response_schema: Any = None) -> None:
+    def __init__(
+        self,
+        client: Any,
+        model: str,
+        temperature: float,
+        response_schema: Any = None,
+        thinking_level: Any = None,
+        thinking_budget: Any = None,
+        max_output_tokens: Any = None,
+    ) -> None:
         self._client = client
         self._model = model
         self._temperature = temperature
         self._response_schema = response_schema
+        self._thinking_level = thinking_level
+        self._thinking_budget = thinking_budget
+        self._max_output_tokens = max_output_tokens
 
     def generate_content(self, prompt: str) -> Any:
         """Call the Gemini API and return a response object with a ``.text`` attribute."""
@@ -99,6 +116,13 @@ class GeminiAdapter:
         }
         if self._response_schema is not None:
             config_kwargs["response_schema"] = self._response_schema
+        if self._max_output_tokens:
+            config_kwargs["max_output_tokens"] = self._max_output_tokens
+        thinking = llm_utils.build_thinking_config(
+            self._thinking_level, self._thinking_budget
+        )
+        if thinking is not None:
+            config_kwargs["thinking_config"] = thinking
 
         return self._client.models.generate_content(
             model=self._model,
@@ -166,7 +190,15 @@ def _configure_genai(response_schema: Any = None) -> GeminiAdapter:
     import google.genai as genai  # local import to avoid top-level side-effects during tests
 
     client = genai.Client(api_key=api_key)
-    return GeminiAdapter(client, settings.llm_model, settings.llm_temperature, response_schema=response_schema)
+    return GeminiAdapter(
+        client,
+        settings.llm_model,
+        settings.llm_temperature,
+        response_schema=response_schema,
+        thinking_level=settings.llm_thinking_level,
+        thinking_budget=settings.llm_thinking_budget,
+        max_output_tokens=settings.llm_max_output_tokens,
+    )
 
 
 # ── Prompt Builder ────────────────────────────────────────────────────────────
