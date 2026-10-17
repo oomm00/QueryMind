@@ -36,9 +36,7 @@ export function CheckBlock({ block, lessonId, blockIndex }) {
       aria-label="Check your understanding"
       className="rounded-panel border border-line bg-surface-raised p-4"
     >
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-        Check your understanding
-      </p>
+      <p className="text-sm font-semibold text-ink">Check your understanding</p>
       <p className="mt-2 text-[15px] font-medium text-ink">{question}</p>
 
       <div role="radiogroup" aria-label={question} className="mt-3 space-y-2">

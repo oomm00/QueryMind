@@ -170,9 +170,7 @@ function TopicNode({ courseId, topic, isCurrent, conceptId, currentLessonId, nee
                       >
                         <span className="min-w-0 flex-1 truncate">{lesson.title}</span>
                         {lesson.isPlaceholder && (
-                          <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted">
-                            not written
-                          </span>
+                          <span className="shrink-0 text-[10px] text-muted">Not written</span>
                         )}
                         {progress.completed[lesson.id] && (
                           <IconCheck size={12} className="shrink-0 text-success" />
@@ -212,9 +210,7 @@ export function CourseOutline({
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-0">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          {course.title}
-        </p>
+        <p className="text-sm font-semibold text-ink">{course.title}</p>
         <div className="mt-2 flex items-center justify-between text-xs">
           <span className="text-muted">Completion</span>
           <span className="font-medium tabular-nums text-ink">{Math.round(completion)}%</span>

@@ -25,9 +25,7 @@ function Cell({ label, value, tone = 'neutral', note }) {
         tone === 'offset' ? 'border-primary bg-primary-tint' : 'border-line bg-surface'
       )}
     >
-      <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted">
-        {label}
-      </span>
+      <span className="block text-[10px] font-semibold text-muted">{label}</span>
       <span className="block font-mono text-sm font-medium tabular-nums text-ink">
         {format(value) ?? String(value ?? '—')}
       </span>

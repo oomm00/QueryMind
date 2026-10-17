@@ -58,7 +58,7 @@ function Row({ label, value, hint }) {
 function Section({ title, children }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{title}</p>
+      <p className="text-xs font-semibold text-ink">{title}</p>
       <div className="mt-1.5">{children}</div>
     </div>
   )

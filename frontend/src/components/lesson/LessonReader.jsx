@@ -101,7 +101,7 @@ export function LessonReader({
 
       <header className="space-y-2">
         {crumb && (
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{crumb}</p>
+          <p className="text-[11px] font-medium text-muted">{crumb}</p>
         )}
         <h1 className="text-2xl font-semibold tracking-tight text-ink">{lesson.title}</h1>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
@@ -113,7 +113,7 @@ export function LessonReader({
 
       {!placeholder && lesson.objectives?.length > 0 && (
         <Panel className="max-w-[68ch] p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Objectives</p>
+          <p className="text-sm font-semibold text-ink">Objectives</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-ink">
             {lesson.objectives.map((objective) => (
               <li key={objective}>{objective}</li>
