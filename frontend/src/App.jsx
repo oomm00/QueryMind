@@ -4,7 +4,8 @@
  * Public:  /login
  * Default: /explore (redirect target after sign-in)
  * Built:   /dashboard, /history, /practice/{new,session,feedback},
- *          /learn/:courseId/:topicId/:lessonId
+ *          /learn/:courseId/:topicId/:lessonId,
+ *          /map/:courseId/:topicId (topic knowledge graph)
  * Stubs:   everything else renders <ComingSoon/>.
  *
  * Legacy paths (/setup, /question, /feedback) redirect to their new homes.
@@ -22,6 +23,7 @@ import HistoryPage from './pages/HistoryPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ComingSoon from './pages/ComingSoon'
 import LessonPage from './pages/LessonPage'
+import MapPage from './pages/MapPage'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import PublicRoute from './components/routing/PublicRoute'
 import AppShell from './AppShell'
@@ -141,7 +143,11 @@ export default function App() {
         />
         <Route
           path="/map/:courseId/:topicId"
-          element={soon('Knowledge graph', 'A visual map of how this topic connects.')}
+          element={
+            <Protected>
+              <MapPage />
+            </Protected>
+          }
         />
 
         {/* 404 */}

@@ -66,7 +66,13 @@ export function ConceptNode({ id, data, selected }) {
         dimmed && 'opacity-35'
       )}
     >
-      <Handle type="target" position={Position.Left} style={HANDLE_STYLE} isConnectable={false} />
+      <Handle
+        id="in"
+        type="target"
+        position={Position.Left}
+        style={HANDLE_STYLE}
+        isConnectable={false}
+      />
 
       <p className="flex items-center gap-1.5 text-[13px] font-medium leading-tight text-ink">
         <Icon size={14} className={cx('shrink-0', toneClass(status.tone))} />
@@ -74,7 +80,13 @@ export function ConceptNode({ id, data, selected }) {
       </p>
       <p className="text-[10px] leading-tight text-muted">{statusLine(mastery)}</p>
 
-      <Handle type="source" position={Position.Right} style={HANDLE_STYLE} isConnectable={false} />
+      <Handle
+        id="out"
+        type="source"
+        position={Position.Right}
+        style={HANDLE_STYLE}
+        isConnectable={false}
+      />
     </div>
   )
 }
