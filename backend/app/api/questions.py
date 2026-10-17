@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.timing import stage
 from app.db.session import get_db
 from app.models.models import Attempt, Question, User
 from app.schemas.schemas import (
@@ -128,47 +129,30 @@ def generate_questions(
 
     # Retrieve context once and reuse it for both generation and the
     # answerability check (so the check sees the exact material used).
-    context_chunks = retrieve_context(
-        topic=payload.topic,
-        subject=payload.subject,
-        bloom_level=bloom_level,
-        difficulty=difficulty,
-    )
-    # The frontend derives `subject` from the free-text topic (subject == topic),
-    # so an exact (subject, topic) filter can miss material filed under a
-    # different subject. Fall back to a topic-only search before giving up.
-    if not context_chunks:
-        logger.info(
-            "No exact (subject, topic) material for %s / %s; retrying topic-only",
-            payload.subject, payload.topic,
-        )
+    with stage("retrieve"):
         context_chunks = retrieve_context(
             topic=payload.topic,
-            subject=None,
+            subject=payload.subject,
             bloom_level=bloom_level,
             difficulty=difficulty,
         )
+        # The frontend derives `subject` from the free-text topic (subject == topic),
+        # so an exact (subject, topic) filter can miss material filed under a
+        # different subject. Fall back to a topic-only search before giving up.
+        if not context_chunks:
+            logger.info(
+                "No exact (subject, topic) material for %s / %s; retrying topic-only",
+                payload.subject, payload.topic,
+            )
+            context_chunks = retrieve_context(
+                topic=payload.topic,
+                subject=None,
+                bloom_level=bloom_level,
+                difficulty=difficulty,
+            )
     chunk_texts = [chunk["text"] for chunk in context_chunks]
 
-    generated = generate_question(
-        topic=payload.topic,
-        subject=payload.subject,
-        bloom_level=bloom_level,
-        difficulty=difficulty,
-        question_type=payload.question_type,
-        context_chunks=context_chunks,
-    )
-
-    validation = validate_question(
-        generated=generated.model_dump(),
-        subject=payload.subject,
-        topic=payload.topic,
-        source_chunks=chunk_texts,
-        db=db,
-    )
-
-    if not validation["passed"]:
-        # ── Single regeneration attempt with a corrective note ────────────────
+    with stage("generate"):
         generated = generate_question(
             topic=payload.topic,
             subject=payload.subject,
@@ -176,8 +160,9 @@ def generate_questions(
             difficulty=difficulty,
             question_type=payload.question_type,
             context_chunks=context_chunks,
-            extra_instruction=_correction_note(validation),
         )
+
+    with stage("validate"):
         validation = validate_question(
             generated=generated.model_dump(),
             subject=payload.subject,
@@ -185,6 +170,27 @@ def generate_questions(
             source_chunks=chunk_texts,
             db=db,
         )
+
+    if not validation["passed"]:
+        # ── Single regeneration attempt with a corrective note ────────────────
+        with stage("generate"):
+            generated = generate_question(
+                topic=payload.topic,
+                subject=payload.subject,
+                bloom_level=bloom_level,
+                difficulty=difficulty,
+                question_type=payload.question_type,
+                context_chunks=context_chunks,
+                extra_instruction=_correction_note(validation),
+            )
+        with stage("validate"):
+            validation = validate_question(
+                generated=generated.model_dump(),
+                subject=payload.subject,
+                topic=payload.topic,
+                source_chunks=chunk_texts,
+                db=db,
+            )
         if not validation["passed"]:
             raise ValidationError(
                 "Generated question failed pre-delivery validation after "
@@ -235,7 +241,8 @@ def submit_answer(
     if question is None:
         raise NotFoundError(f"Question {question_id} not found")
 
-    evaluation = evaluate_answer(question=question, student_answer=payload.answer)
+    with stage("evaluate"):
+        evaluation = evaluate_answer(question=question, student_answer=payload.answer)
 
     attempt = Attempt(
         user_id=current_user.id,
