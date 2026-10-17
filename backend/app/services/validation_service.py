@@ -16,12 +16,21 @@ generated question):
 Embeddings reuse ChromaDB's default embedding function
 (``all-MiniLM-L6-v2``, 384-d) — i.e. the exact same model/vector space the
 vector store uses — so no new embedding dependency is introduced.
+
+Performance
+-----------
+``validate_question`` embeds the new question **once** and shares that vector
+with both checks, and runs the duplicate and answerability checks **concurrently**
+(they are independent and both embedding-bound). The stored duplicate candidates
+are read on the caller's thread before the pool starts, so no DB session is
+touched from a worker thread.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional, Sequence
 
 import numpy as np
@@ -92,27 +101,54 @@ def _compute_keyword_overlap(text: str, context_chunks: list[str]) -> float:
 
 # ── Check 1: Duplicate detection ──────────────────────────────────────────────
 
+def _query_existing(
+    db: Session,
+    subject: str,
+    topic: str,
+) -> list[Question]:
+    """Stored questions for the same ``subject`` + ``topic`` (duplicate candidates)."""
+    return (
+        db.query(Question)
+        .filter(Question.subject == subject, Question.topic == topic)
+        .all()
+    )
+
+
 def check_duplicate(
     question_text: str,
     subject: str,
     topic: str,
     db: Session,
+    *,
+    question_vec: Optional[np.ndarray] = None,
+    existing: Optional[list[Question]] = None,
 ) -> dict:
     """Flag ``question_text`` as a duplicate of an existing question.
 
     Only questions stored for the same ``subject`` + ``topic`` are compared.
     Similarity is embedding cosine similarity (not exact string matching).
+
+    ``question_vec`` lets the caller pass in an already-computed embedding of
+    ``question_text`` (the orchestrator embeds the question once and shares it
+    with the answerability check), in which case only the stored questions are
+    embedded. ``existing`` lets the caller pass in pre-fetched rows so this
+    function performs no DB I/O — required when it is run on a worker thread,
+    since SQLAlchemy sessions are not thread-safe.
     """
-    existing: list[Question] = (
-        db.query(Question)
-        .filter(Question.subject == subject, Question.topic == topic)
-        .all()
-    )
+    if existing is None:
+        existing = _query_existing(db, subject, topic)
     if not existing:
         return {"is_duplicate": False, "similarity": 0.0}
 
-    vectors = embed_texts([question_text] + [q.question_text for q in existing])
-    new_vec, existing_vecs = vectors[:1], vectors[1:]
+    if question_vec is None:
+        vectors = embed_texts([question_text] + [q.question_text for q in existing])
+        new_vec, existing_vecs = vectors[:1], vectors[1:]
+    else:
+        # Question embedding already computed by the caller — reuse it and only
+        # embed the stored questions we compare against.
+        new_vec = np.asarray(question_vec, dtype="float32").reshape(1, -1)
+        vectors = embed_texts([q.question_text for q in existing])
+        existing_vecs = vectors[: len(existing)]
 
     sims = _cosine_similarities(new_vec[0], existing_vecs)
     best_idx = int(np.argmax(sims))
@@ -134,12 +170,21 @@ def check_duplicate(
 
 # ── Check 2: Answerability / grounding ────────────────────────────────────────
 
-def check_answerability(question: dict, source_chunks: list[str]) -> dict:
+def check_answerability(
+    question: dict,
+    source_chunks: list[str],
+    *,
+    question_vec: Optional[np.ndarray] = None,
+) -> dict:
     """Confirm the question's answer is grounded in the retrieved source chunks.
 
     Combines:
     1. Primary signal: embedding cosine similarity between the answer and chunks.
     2. Secondary signal: keyword overlap between the answer/question and context.
+
+    When there is no reference answer to ground on, the question text itself is
+    used; if the caller already embedded that question (``question_vec``) it is
+    reused rather than embedded a second time.
     """
     answer = ""
     if isinstance(question, dict):
@@ -151,8 +196,18 @@ def check_answerability(question: dict, source_chunks: list[str]) -> dict:
     if not answer.strip() or not chunk_texts:
         return {"is_answerable": False, "best_match_score": 0.0, "keyword_overlap": 0.0}
 
-    vectors = embed_texts([answer] + chunk_texts)
-    answer_vec, chunk_vecs = vectors[:1], vectors[1:]
+    # Did the answer fall back to the question text? If so we can reuse the
+    # caller's question embedding instead of embedding the same text again.
+    has_reference = bool(
+        (question.get("correct_answer") if isinstance(question, dict)
+         else getattr(question, "correct_answer", "")) or ""
+    )
+    if not has_reference and question_vec is not None:
+        answer_vec = np.asarray(question_vec, dtype="float32").reshape(1, -1)
+        chunk_vecs = embed_texts(chunk_texts)
+    else:
+        vectors = embed_texts([answer] + chunk_texts)
+        answer_vec, chunk_vecs = vectors[:1], vectors[1:]
 
     sims = _cosine_similarities(answer_vec[0], chunk_vecs)
     best_score = float(np.max(sims))
@@ -252,17 +307,44 @@ def validate_question(
     """
     payload = generated if isinstance(generated, dict) else generated.model_dump()
     bloom = requested_bloom or payload.get("bloom_level") or ""
+    question_text = payload["question"]
 
-    duplicate_check = check_duplicate(
-        question_text=payload["question"],
-        subject=subject,
-        topic=topic,
-        db=db,
-    )
-    answerability_check = check_answerability(
-        question=payload,
-        source_chunks=source_chunks,
-    )
+    # Fetch the duplicate candidates up front, on the CALLER's thread:
+    # SQLAlchemy sessions are not thread-safe, so the concurrent checks below
+    # must not touch the session themselves.
+    existing = _query_existing(db, subject, topic)
+
+    # Embed the new question exactly ONCE and share the vector with both checks.
+    # Only computed when a check actually needs it:
+    #   * duplicate check -> whenever there is stored history to compare against
+    #   * answerability   -> when there is no reference answer to ground on, so
+    #                        the check falls back to embedding the question text
+    reference = (payload.get("correct_answer") or "") if isinstance(payload, dict) else ""
+    question_vec: Optional[np.ndarray] = None
+    if existing or not reference.strip():
+        question_vec = embed_texts([question_text])[0]
+
+    # The two checks are independent → run them concurrently so their embedding
+    # work overlaps instead of running back-to-back.
+    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="qm-validate") as pool:
+        dup_future = pool.submit(
+            check_duplicate,
+            question_text,
+            subject,
+            topic,
+            db,
+            question_vec=question_vec,
+            existing=existing,
+        )
+        ans_future = pool.submit(
+            check_answerability,
+            payload,
+            source_chunks,
+            question_vec=question_vec,
+        )
+        duplicate_check = dup_future.result()
+        answerability_check = ans_future.result()
+
     cognitive_check = check_cognitive_alignment(
         question_text=payload["question"],
         requested_bloom=bloom,
