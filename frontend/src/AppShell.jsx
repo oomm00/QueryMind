@@ -107,12 +107,21 @@ function initialsOf(user) {
   return letters.toUpperCase()
 }
 
+/**
+ * One rail destination. When the rail is collapsed to icons the label is hidden
+ * from view, so the link carries it as both its accessible name and a native
+ * tooltip. A CSS tooltip would be positioned past the rail's right edge from
+ * inside the scrolling <nav>, which is what gave the rail a horizontal
+ * scrollbar (its 8 labels sit up to 89px outside a 72px rail).
+ */
 function RailItem({ item, collapsed, badge }) {
   const Icon = item.icon
 
-  const link = (
+  return (
     <NavLink
       to={item.to}
+      aria-label={collapsed ? item.label : undefined}
+      title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cx(
           'group flex h-10 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors',
@@ -132,13 +141,6 @@ function RailItem({ item, collapsed, badge }) {
         </span>
       )}
     </NavLink>
-  )
-
-  if (!collapsed) return link
-  return (
-    <Tooltip label={item.label} side="right">
-      {link}
-    </Tooltip>
   )
 }
 
@@ -261,6 +263,7 @@ function AppShell({ children }) {
   const goalMinutes = weekly.minutes
   const goalTarget = weekly.targetMinutes
   const goalPct = Math.min(100, (goalMinutes / goalTarget) * 100)
+  const goalLabel = `Weekly goal ${formatHours(goalMinutes)} of ${formatHours(goalTarget)}`
 
   return (
     <div className="min-h-screen bg-page text-ink" style={{ '--rail-w': collapsed ? '72px' : '232px' }}>
@@ -287,7 +290,7 @@ function AppShell({ children }) {
           )}
         </div>
 
-        <nav aria-label="Primary" className="qm-scroll flex-1 overflow-y-auto px-3 py-4">
+        <nav aria-label="Primary" className="qm-scroll flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
           {!collapsed && (
             <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
               {WORKSPACE_LABEL}
@@ -309,8 +312,18 @@ function AppShell({ children }) {
         <div className="shrink-0 border-t border-line p-3">
           {collapsed ? (
             <div className="flex justify-center py-1">
-              <Tooltip label={`Weekly goal ${formatHours(goalMinutes)} of ${formatHours(goalTarget)}`} side="right">
-                <ProgressRing value={goalPct} size={34} stroke={4} showValue={false} />
+              {/* A determinate weekly-goal ring, not a spinner — `indeterminate`
+                  is never set here, so it does not spin. Named for the pointer
+                  (tooltip) and for assistive tech (label -> the svg aria-label),
+                  which previously read the raw float "66.6…% complete". */}
+              <Tooltip label={goalLabel} side="right">
+                <ProgressRing
+                  value={goalPct}
+                  size={34}
+                  stroke={4}
+                  showValue={false}
+                  label={goalLabel}
+                />
               </Tooltip>
             </div>
           ) : (
