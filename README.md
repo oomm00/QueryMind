@@ -57,6 +57,9 @@ querymind/
 ├── docs/                   # Architecture notes & design docs
 │   └── architecture.md
 │
+├── demo_data/              # Sample course material for scripts/seed_demo.py
+├── scripts/                # Dev/ops helpers (seed_demo.py, …)
+│
 ├── docker-compose.yml      # Orchestrates backend + db + chroma
 ├── .env.example            # Template for environment variables
 ├── .gitignore
@@ -85,7 +88,15 @@ docker-compose up --build
 #   API Docs     → http://localhost:8000/docs
 #   Frontend     → http://localhost:5173  (run separately, see Option B)
 #   ChromaDB     → http://localhost:8001
+
+# 4. Seed demo documents (one command; needs the API up, run from the repo root)
+python scripts/seed_demo.py
 ```
+
+> **Demo data:** `scripts/seed_demo.py` registers a demo account and uploads every
+> file in `demo_data/` through the API, so question generation has material to
+> ground on immediately. Name new files `<Subject>__<Topic>.md`
+> (e.g. `OS__Deadlocks.md`).
 
 ### Option B — Manual / Local Development
 
@@ -141,14 +152,15 @@ All LLM settings live in `.env` (see `.env.example` for the full annotated list)
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | — | Google AI Studio key (required for generation) |
-| `LLM_MODEL` | `gemini-3.8-flash` | Primary model for question generation |
+| `LLM_MODEL` | `gemini-flash-lite-latest` | Primary model for question generation (a *lite* model — most free-tier quota) |
 | `LLM_EVAL_MODEL` | *(inherits `LLM_MODEL`)* | Model used by the answer-evaluation judge |
-| `LLM_FALLBACK_MODELS` | *(empty)* | Comma-separated models to try, **in order**, when the primary is rate-limited |
+| `LLM_FALLBACK_MODELS` | `gemini-3.5-flash-lite,gemini-3.1-flash-lite-preview` | Comma-separated models to try, **in order**, when the primary is rate-limited |
 | `LLM_THINKING_LEVEL` | `low` | Gemini 3 thinking level (`minimal`/`low`/`medium`/`high`; `off` disables) |
 | `LLM_THINKING_BUDGET` | *(unset)* | Gemini 2.5 thinking budget (tokens) |
 | `LLM_MAX_OUTPUT_TOKENS` | `2048` | Output cap; thinking tokens count toward it (`0` = uncapped) |
 | `LLM_TIMEOUT_SECONDS` | `45` | Hard per-call timeout |
 | `LLM_MAX_CONCURRENCY` | `3` | Max simultaneous Gemini calls per process |
+| `WARMUP_ON_STARTUP` | `true` | Pre-load embeddings/Chroma/schemas at startup so the first request is fast |
 
 ### Model fallback on quota errors
 
@@ -158,7 +170,7 @@ model is rate-limited keeps working:
 
 ```bash
 # Try the primary, then these two, in order
-LLM_FALLBACK_MODELS=gemini-3.7-flash,gemini-3.5-flash-lite
+LLM_FALLBACK_MODELS=gemini-3.5-flash-lite,gemini-3.1-flash-lite-preview
 ```
 
 Only quota/availability errors trigger the fallback — a `429` /
