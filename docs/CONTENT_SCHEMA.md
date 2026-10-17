@@ -1,128 +1,243 @@
 # Content Schema
 
-This document defines the data schema for the QueryMind course/content system.
+QueryMind is an **assessment and practice platform** with optional study material.
+Everything a student can practise or read comes from the content files described
+here; nothing is generated, invented or hard-coded in the app. See
+[PRODUCT_MODEL.md](./PRODUCT_MODEL.md) for the product rules that these shapes
+serve.
+
+Every content file is plain JSON under `frontend/src/content/<course-id>/` and is
+loaded by `frontend/src/content/os/index.js` (the content loader) at build time.
 
 ## Shapes
 
 ### course
+
+A course is declared in the loader (`COURSE` in `src/content/os/index.js`), not in
+a file of its own:
+
 ```typescript
 course = {
-  id: string,           // e.g. "os-intro"
-  title: string,        // e.g. "Operating Systems Introduction"
-  summary: string,      // 2-3 sentence overview
+  id: string,            // "os"
+  title: string,         // "Operating Systems"
+  summary: string,       // 2-3 sentences
   level: "intro" | "intermediate" | "advanced",
-  hours: number,        // estimated total time
-  prerequisites: string[],  // ["cs-foundations"]
-  topics: string[]      // ["processes-threads", "cpu-scheduling", ...]
+  topicIds: string[]     // ["memory-management", ...]
 }
 ```
+
+The Explore catalog uses its own slugs (for example `operating-systems`); the
+loader maps them onto the content course id, and both resolve.
 
 ### topic
-```typescript
-topic = {
-  id: string,           // e.g. "processes-threads"
-  title: string,        // e.g. "Processes and Threads"
-  concepts: string[]    // ["concept-process-state", "concept-thread-state", ...]
+
+Two on-disk shapes are supported and normalised into one topic graph.
+
+Flat topic — `src/content/os/<topic-id>.json`:
+
+```json
+{
+  "id": "processes-threads",
+  "title": "Processes and Threads",
+  "concepts": ["concept-process-state", "concept-thread-state"]
 }
 ```
 
-### concept
+Folder topic — `src/content/os/<topic-id>/topic.json`:
+
+```json
+{
+  "title": "Memory management",
+  "summary": "One line about the topic.",
+  "concepts": {
+    "concept-paging": {
+      "title": "Paging",
+      "summary": "One line about the concept.",
+      "prerequisiteIds": ["concept-address-translation"],
+      "prerequisiteLabels": { "concept-address-translation": "Address translation" },
+      "lessonIds": ["lesson-from-virtual-to-physical"],
+      "resources": [],
+      "questions": []
+    }
+  }
+}
+```
+
+| field | required | notes |
+| --- | --- | --- |
+| `title` | yes | Sentence case, as authored |
+| `summary` | no | Shown on the concept panel and in list views |
+| `prerequisiteIds` | no | Concept ids; must exist somewhere in the content set |
+| `prerequisiteLabels` | no | Link name per prerequisite id, so the graph edge can be labelled |
+| `lessonIds` | no | Lesson file stems (`lesson-from-virtual-to-physical`) or full ids |
+| `resources` | no | Optional study material, see below |
+| `questions` | no | The practice bank, see below |
+
+A topic may carry concepts with no lessons and no questions — an unwritten topic
+— and the app says so rather than inventing content.
+
+### concept (normalised, as the app sees it)
+
 ```typescript
 concept = {
-  id: string,           // e.g. "concept-address-translation"
-  title: string,        // e.g. "Address Translation"
-  summary: string,      // 2-3 sentence summary
-  prerequisiteIds: string[],  // ["concept-page-tables", ...]
-  lessons: string[]     // ["lesson-address-translation-1", ...]
+  id: string,
+  title: string,
+  summary: string,
+  prerequisiteIds: string[],
+  prerequisiteLabels: Record<string, string>,
+  lessonIds: string[],
+  topicId: string,
+  resources: Resource[],
+  questions: Question[],
+  // resolved for rendering:
+  prerequisites: { id: string, title: string, topicId: string, label: string | null }[],
+  lessons: { id: string, title: string, estMinutes: number, topicId: string, isPlaceholder: boolean }[]
 }
 ```
 
-### lesson
+`getCourse()` also reports per-topic `conceptCount`, `lessonCount`,
+`resourceCount` and `questionCount` so overview screens never have to load every
+concept to count things.
+
+### Resource (study material, optional)
+
+```typescript
+resource = {
+  title: string,        // "Operating Systems: Three Easy Pieces — Paging"
+  url: string,          // https only
+  type: "article" | "video" | "book" | "docs" | "interactive" | "notes",
+  provider: string,     // "OSTEP", "MIT OpenCourseWare", "MDN"
+  license: string,      // "CC BY-SA 4.0", "All rights reserved", "Public domain"
+  estMinutes: number,   // rough time to read/watch, > 0
+  why: string,          // one line: why this resource, for this concept
+  verifiedOn: string    // ISO date a human last opened the link
+}
+```
+
+Rules:
+
+- `url` must be `https://` — there are no http links and no placeholders.
+- At most **3** resources per concept. A concept is practised, not researched.
+- `why` explains the link's job; it is never "see also" or "for more
+  information".
+- `verifiedOn` records the last human check. `npm run check:links` writes a
+  report (`link-report.json`) but never edits content: only a human sets
+  `verifiedOn`.
+- A concept with no resources shows **"No study material added yet."** — that is
+  a valid state, not a gap to fill with a guessed URL.
+
+### Question (the practice bank)
+
+```typescript
+question = {
+  id: string,                                  // unique in the whole content set
+  type: "mcq" | "short",
+  bloom: "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create",
+  difficulty: "easy" | "medium" | "hard",
+  prompt: string,
+  // mcq only:
+  options?: string[],                          // exactly 4, distinct
+  correctIndex?: number,                       // 0..3, within options
+  // short only:
+  answerKey?: string,                          // the model answer
+  rubric?: { criterion: string, points: number }[],  // points must sum > 0
+  explanation: string,                         // why the answer is the answer
+  needsHumanCheck: boolean                     // true when unreviewed
+}
+```
+
+Rules:
+
+- `id` should be `<concept-id>-q1`, `-q2`, … and must be unique across the course.
+- An `mcq` has exactly four distinct options and a `correctIndex` in range.
+- A `short` question has an `answerKey` and a rubric whose points sum above zero.
+- `needsHumanCheck` is `true` for anything drafted by a model and not yet read by
+  a human. It is shown in the app so a student knows the question is unvetted.
+- Questions are answerable from the referenced content: no trivia, no questions
+  about the content's own wording.
+
+### lesson (study notes, optional)
+
 ```typescript
 lesson = {
-  id: string,           // e.g. "lesson-paging-walkthrough"
-  title: string,        // e.g. "Page-table walkthrough"
-  estMinutes: number,   // estimated minutes to read
+  id: string,           // "lesson-from-virtual-to-physical"
+  title: string,        // sentence case
+  estMinutes: number,
   source: "Official material" | "Your notes",
-  objectives: string[], // [ "Understand ...", "Be able to ..." ]
-  blocks: block[]
+  objectives: string[],
+  blocks: Block[]
 }
+```
 
-### block types
-block =
+Lessons are the written study notes. They are optional: a concept can be
+practised without any notes. The reader labels the workspace **Study notes**, the
+left rail labels the list **Outline**, and reviewing a lesson updates
+**completion only, never mastery**.
+
+### Block types
+
+```typescript
+type Block =
   | { kind: "heading"; text: string }
   | { kind: "paragraph"; text: string }
   | { kind: "bullets"; items: string[] }
   | { kind: "code"; label: string; language: string; text: string }
   | { kind: "callout"; tone: "tip" | "warning"; title: string; text: string }
-  | { kind: "diagram"; kind: "address-split"; data: any }
+  | { kind: "diagram"; kind: "address-split"; data: object }
   | { kind: "check"; question: string; options: string[]; correctIndex: number; explanation: string }
   | { kind: "note"; text: string }
 ```
 
-## File Organization
+An older lesson may carry its check as a top-level `check` object instead of a
+`check` block; the loader folds it into `blocks`. Authored checks stay valid, and
+the same question may also live in the concept's `questions[]` bank so it can be
+practised.
 
-- Content files live at `src/content/os/*.json` — one file per topic
-- Each file exports a default object matching the `topic` shape
-- File name convention: `{topicId}.json`, e.g. `processes-threads.json`
+## File organisation
 
-## Hooks (to be implemented)
+```
+frontend/src/content/os/
+  <topic-id>.json                  flat topic (concepts as a list of ids)
+  <topic-id>/topic.json            folder topic (concepts as a map of seeds)
+  <topic-id>/<lesson-stem>.json    one lesson per file
+```
 
-- `useCourse(id)` — fetches course metadata, returns course + topic list
-- `useLesson(courseId, topicId, lessonId)` — fetches a single lesson by ID
-- `useConcept(courseId, topicId, conceptId)` — fetches a single concept + its prerequisite graph
+- A lesson file's `id` is `lesson-<stem>`; a topic's `lessonIds` may use either
+  the stem or the full id.
+- Adding a lesson is adding a file: the loader globs the directory, so no import
+  list needs updating.
+- `topic.json` wins over a same-named flat topic file for the same topic id.
 
-## Operating Systems Content Topics
+## Validation
 
-The following topics are defined for the Operating Systems course:
+`npm run validate:content` (`frontend/scripts/validate-content.mjs`) walks every
+content file and fails on:
 
-1. **Processes and Threads** — `processes-threads`
-   - Concepts: process state, thread state, scheduling, synchronization
+- invalid JSON
+- a concept missing a required field, or not an object
+- an mcq without exactly four distinct options, or with `correctIndex` outside
+  `options`
+- a short question without an `answerKey`, or with a rubric whose points do not
+  sum above zero
+- a question id that is not unique
+- a `prerequisiteIds` entry that no concept defines
+- a resource `url` that is not `https://`, or more than 3 resources on a concept
+- banned drafting phrases: `wait,`, `let me recalculate`, `TODO`
 
-2. **CPU Scheduling** — `cpu-scheduling`
-   - Concepts: scheduling algorithms, waiting time, turnaround time
+`npm run check:links` is **not** part of the build. It fetches every resource URL
+with a timeout and writes a report; 403, 429 and 999 mean "check by hand", not
+broken.
 
-3. **Synchronization** — `synchronization`
-   - Concepts: locks, semaphores, monitors, race conditions
+`node scripts/import-content.mjs <file.json> <course-id>` validates a topic file
+written elsewhere (for example by ChatGPT), then copies it into
+`src/content/<course-id>/<topic-id>/`.
 
-4. **Deadlocks** — `deadlocks`
-   - Concepts: deadlock conditions, prevention, avoidance, recovery
+## Content guidelines
 
-5. **Memory Management** — `memory-management`
-   - Concepts: address translation, paging, segmentation, virtual memory,
-     demand paging, page replacement, working sets
-
-6. **Virtual Memory Lab** — `virtual-memory-lab`
-   - Concepts: page-table simulation, working set simulation
-
-7. **File Systems** — `file-systems`
-   - Concepts: file organization, directory structures, disk allocation
-
-## Technically Correct Content Guidelines
-
-- Content must be factually correct for an undergraduate OS course
-- If unsure about a fact, leave it out rather than guess
-- Each file must include a comment at the top with the date and:
-  `AI-drafted, needs review`
-- No lorem ipsum and no empty lessons
-- Every concept must have at least 1 lesson
-- Check questions must have 4 options with 1 correct answer
-
-## Example: Paging Concept (Full)
-
-The Paging concept file should include:
-- 3 lessons: "From virtual to physical addresses", "Page-table walkthrough", "Practice"
-- The 4 KiB worked example: virtual address 13,192 → page 3, offset 904, frame 5 → physical 21,384
-- Pseudocode block for page-table walkthrough
-- "keep the units straight" callout (tone: "tip")
-- Check question with 4 options and explanation
-- AI-drafted, needs review comment
-- Prerequisite: Address translation concept
-
-## Example: Address Translation Concept (Full)
-
-The Address translation concept file should include:
-- 1 lesson titled "Address translation"
-- Objectives, 2-3 paragraphs, 1 check question
-- AI-drafted, needs review comment
-- Prerequisite: none (or concept-page-tables if needed)
+- Content must be factually correct for an undergraduate OS course. If a fact is
+  uncertain, leave it out rather than guess.
+- No lorem ipsum, no empty lessons, no invented URLs, no placeholder text.
+- A model-drafted file carries a `"comment": "AI-drafted, needs review"` field
+  and its questions set `needsHumanCheck: true`.
+- Check questions have four options and one correct answer.
+- Units, addresses and worked numbers must be consistent across a topic.
