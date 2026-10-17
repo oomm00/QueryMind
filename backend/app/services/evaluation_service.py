@@ -143,7 +143,39 @@ RUBRIC — score each criterion from 0 (absent/wrong) to 10 (excellent):
 
 # ── Judge client ──────────────────────────────────────────────────────────────
 
-def _configure_judge_client() -> GeminiAdapter:
+def _evaluation_schema() -> Any:
+    """OpenAPI schema for the judge's structured output, or ``None`` if unavailable.
+
+    Returning ``None`` when ``google.genai`` is not installed lets the caller fall
+    back to the prompt-described JSON contract (with the JSON-retry wrapper) so
+    the service still works without structured-output support.
+    """
+    try:
+        from google.genai import types as genai_types  # local import keeps module import side-effect free
+    except ImportError:
+        return None
+    return genai_types.Schema(
+        type=genai_types.Type.OBJECT,
+        properties={
+            "scores": {
+                "type": genai_types.Type.OBJECT,
+                "properties": {
+                    "conceptual_correctness": {"type": genai_types.Type.NUMBER},
+                    "completeness": {"type": genai_types.Type.NUMBER},
+                    "technical_depth": {"type": genai_types.Type.NUMBER},
+                    "example_application": {"type": genai_types.Type.NUMBER},
+                    "clarity": {"type": genai_types.Type.NUMBER},
+                },
+            },
+            "feedback": {"type": genai_types.Type.STRING},
+            "missing_points": {"type": genai_types.Type.ARRAY, "items": {"type": genai_types.Type.STRING}},
+            "strengths": {"type": genai_types.Type.ARRAY, "items": {"type": genai_types.Type.STRING}},
+        },
+        required=["scores", "feedback"],
+    )
+
+
+def _configure_judge_client(response_schema: Any = None) -> GeminiAdapter:
     """Return a GeminiAdapter configured with a near-zero temperature for consistent scoring."""
     api_key = settings.gemini_api_key
     if not api_key:
@@ -155,7 +187,7 @@ def _configure_judge_client() -> GeminiAdapter:
     import google.genai as genai  # local import keeps module import side-effect free
 
     client = genai.Client(api_key=api_key)
-    return GeminiAdapter(client, settings.llm_model, settings.llm_eval_temperature)
+    return GeminiAdapter(client, settings.llm_model, settings.llm_eval_temperature, response_schema=response_schema)
 
 
 # ── Parsing & scoring ─────────────────────────────────────────────────────────
@@ -295,7 +327,10 @@ def evaluate_answer(
         raise ValidationError("student answer must not be empty")
 
     prompt = _build_prompt(question, student_answer)
-    client = llm_client if llm_client is not None else _configure_judge_client()
+    if llm_client is not None:
+        client = llm_client
+    else:
+        client = _configure_judge_client(_evaluation_schema())
 
     # `time.sleep` is threaded through so tests can patch it at module level.
     def _request(prompt_text: str) -> str:

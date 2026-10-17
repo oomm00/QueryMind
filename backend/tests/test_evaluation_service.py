@@ -194,6 +194,32 @@ def test_rubric_weights_sum_to_one():
     assert abs(sum(RUBRIC_WEIGHTS.values()) - 1.0) < 1e-9
 
 
+def test_evaluation_schema_describes_judge_shape():
+    """_evaluation_schema returns a Gemini Schema requiring scores + feedback."""
+    schema = evaluation_service._evaluation_schema()
+    if schema is None:  # google.genai not installed — fallback path is intentional
+        pytest.skip("google.genai is not available")
+
+    assert schema.type is not None
+    assert "scores" in schema.properties
+    assert "feedback" in schema.properties
+    assert set(schema.required or []) == {"scores", "feedback"}
+
+
+def test_injected_client_bypasses_real_judge_configure():
+    """With an injected client, _configure_judge_client must NOT be called."""
+    client = _mock_client(GOOD_JUDGE_JSON)
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(
+            evaluation_service,
+            "_configure_judge_client",
+            MagicMock(side_effect=AssertionError("must not build a real client")),
+        )
+        result = evaluate_answer(_question(), "An answer.", llm_client=client)
+
+    assert result["overall_score"] > 0
+
+
 # ── Endpoint tests (real in-memory DB) ────────────────────────────────────────
 
 @pytest.fixture

@@ -163,7 +163,7 @@ def test_submit_attempt_success_persists_jsonb_and_updates_mastery(
     monkeypatch.setattr(
         evaluation_service,
         "_configure_judge_client",
-        lambda: mock_llm,
+        lambda *args, **kwargs: mock_llm,
     )
 
     client = TestClient(app)
@@ -226,7 +226,7 @@ def _mock_judge(monkeypatch, scores, *, feedback="ok", missing=None, strengths=N
     mock_resp.text = json.dumps(judge_output)
     mock_llm.generate_content.return_value = mock_resp
     monkeypatch.setattr(
-        evaluation_service, "_configure_judge_client", lambda: mock_llm
+        evaluation_service, "_configure_judge_client", lambda *args, **kwargs: mock_llm
     )
 
 
