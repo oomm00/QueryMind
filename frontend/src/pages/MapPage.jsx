@@ -39,11 +39,11 @@ import { useTopic } from '../hooks/useTopic'
 import { getConceptMastery, useLessonProgress } from '../content/lessonProgress.js'
 import { NODE_HEIGHT, NODE_WIDTH, layoutGraph } from '../lib/graphLayout'
 import { sentenceCase } from '../lib/text'
+import { ConceptList } from '../components/map/ConceptList'
 import { ConceptNode } from '../components/map/ConceptNode'
 import { PrerequisiteEdge } from '../components/map/PrerequisiteEdge'
 import { SelectedConceptPanel } from '../components/map/SelectedConceptPanel'
 import { STATUS_LIST, statusFor, toneClass } from '../components/map/conceptStatus'
-import { Panel } from '../components/ui/Panel'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Button, buttonClasses } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -278,6 +278,16 @@ function TopicGraph({ courseId, topicId, topic }) {
       .filter((concept) => sentenceCase(concept.title).toLowerCase().includes(needle))
       .map((concept) => concept.id)
   }, [concepts, search])
+
+  // The list has no canvas to highlight a search hit on, so an active search
+  // dims the concepts it does not match instead — the same treatment the status
+  // filter already gets in both views.
+  const listDimmedIds = useMemo(() => {
+    if (!search.trim() || matches.length === 0) return dimmedIds
+    const next = new Set(dimmedIds)
+    for (const concept of concepts) if (!matches.includes(concept.id)) next.add(concept.id)
+    return next
+  }, [dimmedIds, search, matches, concepts])
 
   const positionOf = useCallback(
     (id) => {
@@ -556,16 +566,13 @@ function TopicGraph({ courseId, topicId, topic }) {
           </aside>
         </div>
       ) : (
-        /* The full list view — status, prerequisites and actions — is the next commit. */
-        <Panel className="p-4">
-          <ol className="space-y-1.5">
-            {concepts.map((concept) => (
-              <li key={concept.id} className="text-sm text-ink">
-                {sentenceCase(concept.title)}
-              </li>
-            ))}
-          </ol>
-        </Panel>
+        <ConceptList
+          courseId={courseId}
+          topicId={topicId}
+          concepts={concepts}
+          masteryById={masteryByConcept}
+          dimmedIds={listDimmedIds}
+        />
       )}
     </div>
   )

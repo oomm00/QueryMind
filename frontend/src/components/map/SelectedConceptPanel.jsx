@@ -13,12 +13,10 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { Panel } from '../ui/Panel'
 import { Badge } from '../ui/Badge'
-import { Button, buttonClasses } from '../ui/Button'
-import { IconArrowRight } from '../ui/Icons'
 import { getLessonMastery, useLessonProgress } from '../../content/lessonProgress.js'
-import { practiceLink } from '../../lib/practiceLink'
 import { sentenceCase } from '../../lib/text'
 import { badgeTone, statusFor, toneClass } from './conceptStatus'
+import { ConceptActions } from './ConceptActions'
 
 function formatWhen(iso) {
   if (!iso) return null
@@ -103,8 +101,6 @@ export function SelectedConceptPanel({
     : percent != null && percent < 60
       ? `${sentenceCase(concept.title)} is at ${percent}% — worth revising before you move on.`
       : null
-
-  const nextLesson = lessons.find((lesson) => !lesson.isPlaceholder) ?? null
 
   return (
     <Panel className={`p-4 ${className ?? ''}`}>
@@ -228,38 +224,7 @@ export function SelectedConceptPanel({
             </Section>
 
             <Section title="Next steps">
-              <div className="space-y-2">
-                {nextLesson ? (
-                  <Link
-                    to={`/learn/${courseId}/${topicId}/${nextLesson.id}`}
-                    className={buttonClasses({ size: 'sm', className: 'w-full' })}
-                  >
-                    Continue {sentenceCase(concept.title)} lesson
-                  </Link>
-                ) : (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      disabled
-                      icon={<IconArrowRight size={14} />}
-                    >
-                      Continue {sentenceCase(concept.title)} lesson
-                    </Button>
-                    <p className="text-[11px] leading-snug text-muted">
-                      This concept&apos;s lessons are not written yet.
-                    </p>
-                  </>
-                )}
-
-                <Link
-                  to={practiceLink({ topic: sentenceCase(concept.title), count: 5 })}
-                  className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'w-full' })}
-                >
-                  Start 5-question check
-                </Link>
-              </div>
+              <ConceptActions courseId={courseId} topicId={topicId} concept={concept} />
             </Section>
           </div>
 
