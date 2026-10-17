@@ -84,6 +84,10 @@ docker-compose.override.yml
 *.tmp
 *.bak
 
+# ─── Performance harness output ───────────────────────────
+# Raw A/B measurement dumps written by the local perf harnesses.
+perf_result_*.json
+
 # ─── SQLite & ChromaDB (local dev storage) ─────────────────
 *.db
 *.sqlite
