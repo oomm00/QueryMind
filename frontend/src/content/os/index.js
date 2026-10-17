@@ -7,7 +7,9 @@
  *
  *   <topic>.json          flat topic: { id, title, concepts: ["concept-x", ...] }
  *   <topic>/topic.json    full topic: { concepts: { "concept-x": { id, title,
- *                                              prerequisiteIds, lessonIds } } }
+ *                                              prerequisiteIds,
+ *                                              prerequisiteLabels: { id: label },
+ *                                              lessonIds } } }
  *   <topic>/<lesson>.json lesson:     { id, title, estMinutes, source,
  *                                              objectives, blocks }
  *
@@ -15,6 +17,10 @@
  * references in topic.json (file stems, "lesson-*" ids) are resolved to
  * canonical lesson ids. A lesson's check question may be a block or a
  * top-level `check` object; both are normalised to the block form.
+ *
+ * prerequisiteLabels names the *link* ("requires", "loads on fault"), not the
+ * concept, so the topic graph can label its edges; a link without a label is
+ * still drawn, just bare.
  */
 
 const modules = import.meta.glob('./**/*.json', { eager: true })
@@ -138,9 +144,10 @@ function lessonSummary(lesson) {
 }
 
 /**
- * A concept with its graph resolved: prerequisites as objects, lessons as
- * summaries. Both the topic and the concept endpoints return this shape, so a
- * consumer never has to resolve ids itself.
+ * A concept with its graph resolved: prerequisites as objects (each carrying
+ * the label of the link that points at this concept), lessons as summaries.
+ * Both the topic and the concept endpoints return this shape, so a consumer
+ * never has to resolve ids itself.
  */
 function conceptWithGraph(concept) {
   return {
@@ -148,7 +155,12 @@ function conceptWithGraph(concept) {
     prerequisites: concept.prerequisiteIds
       .map((id) => conceptsById.get(id))
       .filter(Boolean)
-      .map(({ id, title, topicId }) => ({ id, title, topicId })),
+      .map(({ id, title, topicId }) => ({
+        id,
+        title,
+        topicId,
+        label: concept.prerequisiteLabels?.[id] ?? null,
+      })),
     lessons: concept.lessonIds.map((id) => lessonSummary(lessonsById.get(id))),
   }
 }
@@ -183,6 +195,7 @@ for (const { topicId, data } of topicSources) {
       title: seed.title || titleFromSlug(id),
       summary: seed.summary || '',
       prerequisiteIds: seed.prerequisiteIds ?? [],
+      prerequisiteLabels: seed.prerequisiteLabels ?? {},
       lessonIds: [...new Set(resolved)],
       topicId,
     }
