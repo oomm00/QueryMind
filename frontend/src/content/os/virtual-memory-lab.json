@@ -1,0 +1,9 @@
+{
+  "id": "virtual-memory-lab",
+  "title": "Virtual Memory Lab",
+  "concepts": [
+    "concept-page-table-simulation",
+    "concept-working-set-simulation"
+  ],
+  "comment": "AI-drafted, needs review"
+}

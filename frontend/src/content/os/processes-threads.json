@@ -1,0 +1,10 @@
+{
+  "id": "processes-threads",
+  "title": "Processes and Threads",
+  "concepts": [
+    "concept-process-state",
+    "concept-thread-state",
+    "concept-scheduling"
+  ],
+  "comment": "AI-drafted, needs review"
+}

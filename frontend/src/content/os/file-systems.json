@@ -1,0 +1,10 @@
+{
+  "id": "file-systems",
+  "title": "File Systems",
+  "concepts": [
+    "concept-file-organization",
+    "concept-directory-structures",
+    "concept-disk-allocation"
+  ],
+  "comment": "AI-drafted, needs review"
+}
