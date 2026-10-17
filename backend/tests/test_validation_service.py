@@ -217,6 +217,30 @@ def test_validate_question_reports_duplicate_reason(monkeypatch):
     assert "Duplicate" in result["reason"]
 
 
+def test_validate_question_embeds_question_exactly_once(monkeypatch):
+    """The new question text must be embedded in ONE batch, shared by both checks."""
+    existing = _fake_question(uuid4(), "Some previously stored question text.")
+    db = _fake_db([existing])
+
+    calls: list[list[str]] = []
+
+    def _recording_embed(texts):
+        calls.append(list(texts))
+        # One vector per requested text keeps shapes valid for both checks.
+        return np.tile(np.array([[1.0, 0.0]], dtype="float32"), (len(texts), 1))
+
+    monkeypatch.setattr(validation_service, "embed_texts", _recording_embed)
+
+    question_text = _generated().question
+    validate_question(_generated(), "DBMS", "Transactions", ["A grounded chunk."], db)
+
+    batches_containing_question = [c for c in calls if question_text in c]
+    assert len(batches_containing_question) == 1
+    # That single batch must contain ONLY the question (existing questions are
+    # embedded separately, reusing the shared vector).
+    assert batches_containing_question[0] == [question_text]
+
+
 # ── Endpoint: POST /questions/generate ────────────────────────────────────────
 
 @pytest.fixture
