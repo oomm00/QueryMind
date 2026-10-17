@@ -13,6 +13,7 @@ export const DEFAULT_MOCK_SETTINGS = {
   profile: true,
   history: true,
   catalog: true,
+  content: true,
 }
 
 /**
@@ -22,7 +23,7 @@ export const DEFAULT_MOCK_SETTINGS = {
  * 2. Explicit per-endpoint flag VITE_MOCK_<DOMAIN> (e.g. VITE_MOCK_QUESTIONS)
  * 3. Default fallback setting
  *
- * @param {string} domain - Domain key ('auth' | 'questions' | 'attempts' | 'documents' | 'profile_goal' | 'next_params' | 'profile' | 'history')
+ * @param {string} domain - Domain key ('auth' | 'questions' | 'attempts' | 'documents' | 'profile_goal' | 'next_params' | 'profile' | 'history' | 'catalog' | 'content')
  * @returns {boolean}
  */
 export function isMocked(domain) {
