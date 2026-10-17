@@ -15,6 +15,10 @@ wheels/
 .installed.cfg
 lib/
 lib64/
+# The rules above are meant for Python; do not let them swallow the frontend's
+# own source folder. Re-include it explicitly.
+!frontend/src/lib/
+!frontend/src/lib/**
 MANIFEST
 
 # Virtual environments
