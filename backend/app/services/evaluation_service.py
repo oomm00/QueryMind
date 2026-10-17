@@ -341,12 +341,17 @@ def evaluate_answer(
     prompt = _build_prompt(question, student_answer)
     if llm_client is not None:
         client = llm_client
+        model_chain = None
     else:
         client = _configure_judge_client(_evaluation_schema())
+        # LLM_FALLBACK_MODELS: on a quota/503 error, retry against the next model.
+        model_chain = llm_utils.resolve_model_chain(settings.llm_eval_model)
 
     # `time.sleep` is threaded through so tests can patch it at module level.
     def _request(prompt_text: str) -> str:
-        return llm_utils.request_text(client, prompt_text, sleep=time.sleep)
+        return llm_utils.request_text(
+            client, prompt_text, sleep=time.sleep, models=model_chain
+        )
 
     try:
         return llm_utils.call_json_with_retry(
