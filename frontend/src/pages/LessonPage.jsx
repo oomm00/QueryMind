@@ -9,8 +9,10 @@
  *   right  topic intelligence — mastery, confidence, prerequisites, next action
  *
  * Both side panels are static sticky columns from lg upwards and drawers below
- * it. Below md the previous/next controls move into a sticky bottom bar. All
- * three columns share one element each, so panel state is never duplicated.
+ * it; the intelligence panel only starts expanded from xl, since three columns
+ * at 1024 squeeze the reader. Below md the previous/next controls move into a
+ * sticky bottom bar. All three columns share one element each, so panel state is
+ * never duplicated.
  */
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -35,6 +37,7 @@ import { IconExplore } from '../components/ui/Icons'
 export default function LessonPage() {
   const { courseId = 'os', topicId, lessonId } = useParams()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
+  const isWide = useMediaQuery('(min-width: 1280px)')
 
   const courseQuery = useCourse(courseId)
   const topicQuery = useTopic(topicId, courseId)
@@ -52,15 +55,21 @@ export default function LessonPage() {
 
   const conceptQuery = useConcept(concept?.id)
 
+  // Three columns from lg, but the intelligence panel only starts expanded from
+  // xl. Between 1024 and 1279 it would squeeze the reader under 400px, so it
+  // starts collapsed and stays one click away in the reader header.
   const [outlineOpen, setOutlineOpen] = useState(isDesktop)
-  const [intelOpen, setIntelOpen] = useState(isDesktop)
+  const [intelOpen, setIntelOpen] = useState(isWide)
 
-  // Columns are expanded on desktop and closed drawers on small screens. This
-  // also pulls the panels back to their default when the breakpoint is crossed.
+  // Pull a panel back to its default when its breakpoint is crossed; a manual
+  // toggle is respected until then.
   useEffect(() => {
     setOutlineOpen(isDesktop)
-    setIntelOpen(isDesktop)
   }, [isDesktop])
+
+  useEffect(() => {
+    setIntelOpen(isWide)
+  }, [isWide])
 
   const siblings = concept?.lessons ?? []
 
