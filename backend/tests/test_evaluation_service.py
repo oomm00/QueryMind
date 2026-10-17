@@ -220,6 +220,17 @@ def test_injected_client_bypasses_real_judge_configure():
     assert result["overall_score"] > 0
 
 
+def test_judge_client_uses_eval_model(monkeypatch):
+    """_configure_judge_client must build the adapter with LLM_EVAL_MODEL."""
+    pytest.importorskip("google.genai")
+    monkeypatch.setattr(evaluation_service.settings, "gemini_api_key", "test-key")
+    monkeypatch.setattr(evaluation_service.settings, "llm_model", "gemini-gen")
+    monkeypatch.setattr(evaluation_service.settings, "llm_eval_model", "gemini-judge")
+
+    adapter = evaluation_service._configure_judge_client()
+    assert adapter._model == "gemini-judge"
+
+
 # ── Endpoint tests (real in-memory DB) ────────────────────────────────────────
 
 @pytest.fixture

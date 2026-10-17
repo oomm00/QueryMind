@@ -187,7 +187,7 @@ def _configure_judge_client(response_schema: Any = None) -> GeminiAdapter:
     import google.genai as genai  # local import keeps module import side-effect free
 
     client = genai.Client(api_key=api_key)
-    return GeminiAdapter(client, settings.llm_model, settings.llm_eval_temperature, response_schema=response_schema)
+    return GeminiAdapter(client, settings.llm_eval_model, settings.llm_eval_temperature, response_schema=response_schema)
 
 
 # ── Parsing & scoring ─────────────────────────────────────────────────────────
