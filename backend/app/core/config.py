@@ -80,7 +80,15 @@ class Settings(BaseSettings):
     # Gemini 3-family model supports minimal/low/medium/high (the flash-lite
     # models default to minimal), so "medium" is safe across the shipped model
     # list; Gemini 2.5 models ignore levels and use thinking_budget instead.
-    llm_gen_thinking_level: str = "medium"
+    #
+    # Accepts either a single global level ("medium") or a per-Bloom-level map
+    # ("remember=low,understand=low,default=medium") — see
+    # generation_service.generation_thinking_level(). The shipped default is the
+    # measured A/B optimum: thinking=low is ~2x faster (5.63s vs 10.85s mean) and
+    # matches medium on remember/understand, but costs concreteness and
+    # single-concept quality on the concrete-scenario Apply+ levels, which keep
+    # medium.
+    llm_gen_thinking_level: str = "remember=low,understand=low,default=medium"
     # Generation output cap (env: LLM_GEN_MAX_OUTPUT_TOKENS). Thinking tokens
     # count toward max_output_tokens, so the shared 2048 evaluation cap starves
     # the JSON answer once thinking is medium/high — generation gets a roomier
@@ -162,6 +170,30 @@ class Settings(BaseSettings):
             except ValueError:
                 continue
         return parsed
+
+    def gen_thinking_level_for(self, bloom_level: Optional[str]) -> str:
+        """Gemini thinking level for generating a *bloom_level* question.
+
+        ``llm_gen_thinking_level`` is either a single global level (``"medium"``)
+        or a per-Bloom-level map (``"remember=low,understand=low,default=medium"``).
+        An unparsable or off value falls through to the Gemini model default.
+        """
+        raw = (self.llm_gen_thinking_level or "").strip()
+        if "=" not in raw:
+            return raw
+        for part in raw.split(","):
+            part = part.strip()
+            if not part or "=" not in part:
+                continue
+            key, _, value = part.partition("=")
+            if key.strip().lower() == (bloom_level or "").strip().lower():
+                return value.strip()
+        # No explicit row for this level -> the 'default' row, else the raw text.
+        for part in raw.split(","):
+            part = part.strip()
+            if part.lower().startswith("default="):
+                return part.partition("=")[2].strip()
+        return raw
 
     @property
     def fallback_models(self) -> List[str]:
