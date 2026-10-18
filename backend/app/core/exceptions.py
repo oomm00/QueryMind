@@ -100,6 +100,61 @@ class DuplicateQuestionError(ValidationError):
         super().__init__(detail)
 
 
+class LLMQuotaExhaustedError(QueryMindError):
+    """Raised when every usable LLM model is rate-limited / out of quota.
+
+    Carries a short, fixed message — the raw SDK/provider error text (quota
+    tables, request ids, 429 payloads) is logged server-side only and never
+    reaches the API response.
+    """
+
+    status_code = 503
+    code = "LLM_QUOTA_EXHAUSTED"
+
+    def __init__(
+        self,
+        detail: str = (
+            "The AI service is out of quota right now. Please try again in a few minutes."
+        ),
+    ) -> None:
+        super().__init__(detail)
+
+
+class LLMUnavailableError(QueryMindError):
+    """Raised when the LLM fails for a non-quota reason (timeouts, 5xx, ...).
+
+    Like :class:`LLMQuotaExhaustedError`, the detail is a fixed human message;
+    the underlying provider error is logged server-side only.
+    """
+
+    status_code = 503
+    code = "LLM_UNAVAILABLE"
+
+    def __init__(
+        self,
+        detail: str = (
+            "The AI service is temporarily unavailable. Please try again shortly."
+        ),
+    ) -> None:
+        super().__init__(detail)
+
+
+class LLMNotConfiguredError(QueryMindError):
+    """Raised when no LLM API key is configured (GEMINI_API_KEY is empty)."""
+
+    status_code = 503
+    code = "LLM_NOT_CONFIGURED"
+
+    def __init__(
+        self,
+        detail: str = (
+            "AI generation is not configured on this server. "
+            "Set GEMINI_API_KEY in the environment and try again."
+        ),
+    ) -> None:
+        super().__init__(detail)
+
+
 class ConflictError(QueryMindError):
     """Raised on uniqueness violations (e.g. duplicate email registration)."""
 

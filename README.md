@@ -177,8 +177,10 @@ Only quota/availability errors trigger the fallback — a `429` /
 `RESOURCE_EXHAUSTED`, or a `503` that persists after the built-in retries. Any
 other error (bad request, malformed output) fails immediately as before. Each
 attempt is logged (`LLM request served by … model`) so you can see which model
-answered. If **every** model is unavailable the API returns a clean
-`502 LLM_MODELS_EXHAUSTED` JSON error rather than a stack trace. Leaving the
+answered. If **every** model fails the API returns a clean, classified JSON
+error rather than a stack trace — `503 LLM_QUOTA_EXHAUSTED` when every failure
+was a rate limit, `503 LLM_UNAVAILABLE` otherwise (raw provider text is logged
+server-side only, never sent to the client). Leaving the
 variable empty keeps the original single-model behaviour.
 
 ---
