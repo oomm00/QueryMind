@@ -45,7 +45,7 @@ describe('toSessionQuestion', () => {
       concept,
       'lesson'
     )
-    expect(question.originLabel).toBe('Study notes check')
+    expect(question.originLabel).toBe('Written lesson check')
     expect(question.lessonId).toBe('lesson-one')
     expect(question.blockIndex).toBe(2)
   })

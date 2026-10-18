@@ -44,7 +44,7 @@ const SEGMENT_LABELS = {
   notes: 'My Notes',
   settings: 'Settings',
   course: 'Course',
-  learn: 'Study notes',
+  learn: 'Written lesson',
   map: 'Knowledge graph',
   practice: 'Practice',
   new: 'New',

@@ -18,7 +18,7 @@ import { IconArrowRight, IconTarget } from '../ui/Icons'
 import { useLessonProgress } from '../../content/lessonProgress.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useMastery } from '../../lib/masteryStore.js'
-import { practiceLink } from '../../lib/practiceLink'
+import { StartPracticeButton } from '../practice/StartPracticeButton.jsx'
 import { confidenceLine } from '../map/conceptStatus'
 import { sentenceCase } from '../../lib/text'
 
@@ -173,14 +173,15 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
         />
       </div>
 
-      <Link
-        to={practiceLink({ topic: topicId, concept: concept?.id, count: 5 })}
-        onClick={onNavigate}
-        className={buttonClasses({ size: 'sm', className: 'mt-4 w-full' })}
-      >
-        Practice this concept
-        <IconArrowRight size={15} />
-      </Link>
+      <StartPracticeButton
+        courseId={courseId}
+        scope="concept"
+        scopeId={concept?.id}
+        label="Practice this concept"
+        size="sm"
+        fullWidth
+        className="mt-4"
+      />
 
       <div className="mt-4 space-y-4">
         <Section title="Prerequisites">

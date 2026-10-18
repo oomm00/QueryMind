@@ -428,7 +428,7 @@ function TopicGraph({ courseId, topicId, topic }) {
     <div className="space-y-4">
       <PageHeader
         title={sentenceCase(topic.title)}
-        description={`${concepts.length} connected concepts. Follow the prerequisites, or open the study notes for this topic.`}
+        description={`${concepts.length} connected concepts. Follow the prerequisites, or open the written lesson for this topic.`}
         actions={
           outlineTo ? (
             <Link
@@ -436,11 +436,11 @@ function TopicGraph({ courseId, topicId, topic }) {
               className={buttonClasses({ variant: 'secondary', size: 'sm' })}
             >
               <IconArrowLeft size={15} />
-              Study notes
+              Written lesson
             </Link>
           ) : (
             <Button variant="secondary" size="sm" disabled icon={<IconArrowLeft size={15} />}>
-              Study notes
+              Written lesson
             </Button>
           )
         }

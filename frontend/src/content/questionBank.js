@@ -21,7 +21,7 @@ export const BANK_SOURCE_LABEL = 'Course bank'
 /** Where one question in the bank came from, in words. */
 export const ORIGIN_LABELS = {
   concept: 'Concept bank',
-  lesson: 'Study notes check',
+  lesson: 'Written lesson check',
 }
 
 export const QUESTION_TYPE_LABELS = {
