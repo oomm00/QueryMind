@@ -6,6 +6,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  clearAnswer,
   getSession,
   newSession,
   patchSession,
@@ -82,6 +83,14 @@ describe('writes to one session', () => {
       q1: { selected: 1 },
       q2: { text: 'hello' },
     })
+  })
+
+  it('clears one answer without touching the rest', () => {
+    recordAnswer(USER, 's1', 'q1', { selected: 1 })
+    recordAnswer(USER, 's1', 'q2', { text: 'hello' })
+    clearAnswer(USER, 's1', 'q1')
+
+    expect(getSession(USER, 's1').answers).toEqual({ q2: { text: 'hello' } })
   })
 
   it('toggles a flag on and off', () => {

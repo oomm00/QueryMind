@@ -18,6 +18,7 @@ import LoginPage from './pages/LoginPage'
 import SetupPage from './pages/SetupPage'
 import QuestionPage from './pages/QuestionPage'
 import FeedbackPage from './pages/FeedbackPage'
+import SessionPage from './pages/SessionPage'
 import DashboardPage from './pages/DashboardPage'
 import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
@@ -107,6 +108,14 @@ export default function App() {
           element={
             <Protected>
               <FeedbackPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice/:sessionId"
+          element={
+            <Protected>
+              <SessionPage />
             </Protected>
           }
         />

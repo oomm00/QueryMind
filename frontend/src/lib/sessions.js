@@ -157,6 +157,16 @@ export function recordSelfMark(userId, id, questionId, mark) {
   }))
 }
 
+/** Drop a question's answer entirely - the Clear answer action. */
+export function clearAnswer(userId, id, questionId) {
+  if (!questionId) return null
+  return patchSession(userId, id, (session) => {
+    const answers = { ...session.answers }
+    delete answers[questionId]
+    return { answers }
+  })
+}
+
 export function toggleFlag(userId, id, questionId) {
   if (!questionId) return null
   return patchSession(userId, id, (session) => ({
