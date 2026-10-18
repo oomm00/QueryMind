@@ -9,10 +9,15 @@
  * The stored shape is flat and keyed by content ids, so a roll-up can be taken
  * over any set of concepts without this module knowing the course tree:
  *
- *   { version: 1, concepts: { [conceptId]: { [bloom]: { value, count, updatedAt } } } }
+ *   { version: 1,
+ *     concepts: { [conceptId]: { [bloom]: { value, count, updatedAt } } },
+ *     applied:  { "sessionId:questionId": true } }
  *
- * A question answered twice in one session moves mastery once: the practice pages
- * pass `replace` when they are re-recording a result they already scored.
+ * A question answered twice moves mastery once. The caller passes the session
+ * and question it is scoring, and the write is remembered under
+ * `sessionId:questionId`: submitting the same session again, or re-marking a
+ * short answer, changes nothing. Answers that are not scored (an unanswered
+ * question, a short answer nobody marked yet) never reach here at all.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -21,6 +26,9 @@ import { addScore, estimatesFrom } from './mastery.js'
 const STORAGE_KEY_PREFIX = 'qm_progress_'
 const VERSION = 1
 const ANONYMOUS = 'anonymous'
+
+/** How many applied (session, question) keys to remember before pruning. */
+const APPLIED_LIMIT = 1000
 
 const canStore = typeof window !== 'undefined' && Boolean(window.localStorage)
 
@@ -31,7 +39,7 @@ function keyFor(userId) {
 }
 
 function emptyProgress() {
-  return { version: VERSION, concepts: {} }
+  return { version: VERSION, concepts: {}, applied: {} }
 }
 
 /** The stored progress for a user, or an empty one when there is nothing. */
@@ -44,6 +52,7 @@ export function readProgress(userId) {
     return {
       version: parsed.version ?? VERSION,
       concepts: parsed.concepts ?? {},
+      applied: parsed.applied ?? {},
     }
   } catch {
     return emptyProgress()
@@ -69,23 +78,50 @@ function emit(userId) {
   for (const listener of listeners) listener(key)
 }
 
+/** Keep the applied map bounded: the oldest keys fall off first. */
+function pruneApplied(applied) {
+  const keys = Object.keys(applied)
+  if (keys.length <= APPLIED_LIMIT) return applied
+  const trimmed = {}
+  for (const key of keys.slice(keys.length - APPLIED_LIMIT)) trimmed[key] = true
+  return trimmed
+}
+
 /**
  * Record one scored answer. Returns the new entry for that (concept, Bloom)
  * pair, or null when the answer had nothing to record.
  *
+ * When `sessionId` and `questionId` are both given the write is idempotent:
+ * scoring the same question in the same session again returns the entry it
+ * already has and leaves the store untouched.
+ *
  * @param {string} userId
- * @param {{conceptId?: string, bloom?: string, score?: number, when?: number}} answer
+ * @param {{conceptId?: string, bloom?: string, score?: number, when?: number,
+ *          sessionId?: string, questionId?: string}} answer
  */
-export function recordScore(userId, { conceptId, bloom, score, when } = {}) {
+export function recordScore(
+  userId,
+  { conceptId, bloom, score, when, sessionId, questionId } = {}
+) {
   if (!conceptId || !bloom) return null
   const progress = readProgress(userId)
+  const appliedKey = sessionId && questionId ? `${sessionId}:${questionId}` : null
+  if (appliedKey && progress.applied[appliedKey]) {
+    return progress.concepts[conceptId]?.[bloom] ?? null
+  }
+
   const concept = progress.concepts[conceptId] ?? {}
   const entry = addScore(concept[bloom], score, when ?? Date.now())
   if (!entry) return null
 
+  const applied = appliedKey
+    ? pruneApplied({ ...progress.applied, [appliedKey]: true })
+    : progress.applied
+
   const next = {
     version: VERSION,
     concepts: { ...progress.concepts, [conceptId]: { ...concept, [bloom]: entry } },
+    applied,
   }
   writeProgress(userId, next)
   emit(userId)

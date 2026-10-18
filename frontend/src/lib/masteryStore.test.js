@@ -29,6 +29,7 @@ describe('recordScore', () => {
     expect(stored()).toEqual({
       version: 1,
       concepts: { paging: { understand: entry } },
+      applied: {},
     })
   })
 
@@ -76,17 +77,65 @@ describe('recordScore', () => {
   })
 })
 
+describe('idempotency per (session, question)', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('moves mastery once however often the same question is scored', () => {
+    const answer = {
+      conceptId: 'paging',
+      bloom: 'understand',
+      score: 1,
+      sessionId: 'ses_1',
+      questionId: 'q1',
+    }
+    recordScore('test-user', answer)
+    recordScore('test-user', answer)
+    recordScore('test-user', { ...answer, score: 0 })
+
+    const entry = readProgress('test-user').concepts.paging.understand
+    expect(entry.count).toBe(1)
+    expect(entry.value).toBe(1)
+  })
+
+  it('still scores a different question in the same session', () => {
+    recordScore('test-user', {
+      conceptId: 'paging',
+      bloom: 'understand',
+      score: 1,
+      sessionId: 'ses_1',
+      questionId: 'q1',
+    })
+    recordScore('test-user', {
+      conceptId: 'paging',
+      bloom: 'understand',
+      score: 0,
+      sessionId: 'ses_1',
+      questionId: 'q2',
+    })
+
+    expect(readProgress('test-user').concepts.paging.understand.count).toBe(2)
+  })
+
+  it('applies every time when no session is given, as before', () => {
+    recordScore('test-user', { conceptId: 'paging', bloom: 'understand', score: 1 })
+    recordScore('test-user', { conceptId: 'paging', bloom: 'understand', score: 1 })
+    expect(readProgress('test-user').concepts.paging.understand.count).toBe(2)
+  })
+})
+
 describe('readProgress', () => {
   it('starts empty for a user with nothing stored', () => {
-    expect(readProgress('nobody')).toEqual({ version: 1, concepts: {} })
+    expect(readProgress('nobody')).toEqual({ version: 1, concepts: {}, applied: {} })
   })
 
   it('survives storage that is not the shape it wrote', () => {
     window.localStorage.setItem(KEY, '{not json')
-    expect(readProgress('test-user')).toEqual({ version: 1, concepts: {} })
+    expect(readProgress('test-user')).toEqual({ version: 1, concepts: {}, applied: {} })
 
     window.localStorage.setItem(KEY, JSON.stringify({ version: 1 }))
-    expect(readProgress('test-user')).toEqual({ version: 1, concepts: {} })
+    expect(readProgress('test-user')).toEqual({ version: 1, concepts: {}, applied: {} })
   })
 })
 
