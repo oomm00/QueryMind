@@ -18,7 +18,7 @@ import { usePracticeData } from '../../hooks/usePracticeData.js'
 import { usePracticeContext } from '../../hooks/usePracticeContext.js'
 import { buildSession, scopeQuestionCount, DEFAULT_SESSION_COUNT } from '../../lib/buildSession.js'
 import { newSession, saveSession } from '../../lib/sessions.js'
-import { enroll, isEnrolled } from '../../lib/enrollment.js'
+import { enroll, isEnrolled, useEnrollments } from '../../lib/enrollment.js'
 import { flashState } from '../routing/FlashHost.jsx'
 import { Button } from '../ui/Button.jsx'
 
@@ -41,7 +41,13 @@ export function StartPracticeButton({
 }) {
   const navigate = useNavigate()
   const { userId } = useAuth()
-  const { data: courses = [], isLoading } = usePracticeData([courseId])
+  // Mixed practice draws from every course the student is enrolled in; every
+  // other scope needs just the one course it belongs to.
+  const enrollments = useEnrollments(userId)
+  const enrolledIds = Object.keys(enrollments.courses ?? {})
+  const { data: courses = [], isLoading } = usePracticeData(
+    scope === 'mixed' ? enrolledIds : [courseId]
+  )
   const context = usePracticeContext(userId)
 
   const request = { courseId, scope, scopeId, level, count, questionIds }

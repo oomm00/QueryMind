@@ -21,6 +21,7 @@ import FeedbackPage from './pages/FeedbackPage'
 import SessionPage from './pages/SessionPage'
 import ResultsPage from './pages/ResultsPage'
 import MyCoursesPage from './pages/MyCoursesPage'
+import PracticeHomePage from './pages/PracticeHomePage'
 import DashboardPage from './pages/DashboardPage'
 import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
@@ -86,6 +87,14 @@ export default function App() {
           element={
             <Protected>
               <HistoryPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice"
+          element={
+            <Protected>
+              <PracticeHomePage />
             </Protected>
           }
         />
