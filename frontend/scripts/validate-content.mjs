@@ -38,7 +38,7 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = resolve(HERE, '..')
-const CONTENT_ROOT = join(PROJECT_ROOT, 'src', 'content')
+export const CONTENT_ROOT = join(PROJECT_ROOT, 'src', 'content')
 
 export const BANNED_PHRASES = ['wait,', 'let me recalculate', 'TODO']
 
@@ -89,6 +89,52 @@ function collectStrings(value, path, out) {
       collectStrings(child, path ? `${path}.${key}` : key, out)
     }
   }
+}
+
+/** Wording rules for one document, checked before anything structural. */
+export function bannedPhraseProblems(rel, data) {
+  const problems = []
+  const strings = []
+  collectStrings(data, '', strings)
+  for (const { path, text } of strings) {
+    for (const phrase of BANNED_PHRASES) {
+      if (text.toLowerCase().includes(phrase.toLowerCase())) {
+        problems.push(`${rel} (${path || 'root'}): contains banned phrase "${phrase}"`)
+      }
+    }
+  }
+  return problems
+}
+
+/**
+ * Parse and wording-scan every .json under a root.
+ * Returns { files, documents: [{ rel, data }], problems }.
+ */
+export function readDocuments(rootDir = CONTENT_ROOT) {
+  let files
+  try {
+    files = walkJson(rootDir).sort()
+  } catch (err) {
+    return { files: [], documents: [], problems: [`cannot read ${rootDir} — ${err.message}`] }
+  }
+
+  const documents = []
+  const problems = []
+
+  for (const file of files) {
+    const rel = relative(dirname(rootDir), file)
+    let data
+    try {
+      data = JSON.parse(readFileSync(file, 'utf8'))
+    } catch (err) {
+      problems.push(`${rel}: invalid JSON — ${err.message}`)
+      continue
+    }
+    problems.push(...bannedPhraseProblems(rel, data))
+    documents.push({ rel, data })
+  }
+
+  return { files, documents, problems }
 }
 
 /** The kind of document a parsed file is, by the keys it carries. */
@@ -377,41 +423,14 @@ export function validateDocuments(documents) {
 
 /** Read + validate a content root. Returns problems and counts; never throws. */
 export function validateContent(rootDir = CONTENT_ROOT) {
-  let files
-  try {
-    files = walkJson(rootDir).sort()
-  } catch (err) {
-    return { problems: [`cannot read ${rootDir} — ${err.message}`], counts: {}, files: [] }
-  }
+  const { files, documents, problems } = readDocuments(rootDir)
 
   if (files.length === 0) {
-    return { problems: [`no .json files found under ${rootDir}`], counts: {}, files: [] }
-  }
-
-  const documents = []
-  const problems = []
-
-  for (const file of files) {
-    const rel = relative(dirname(rootDir), file)
-    let data
-    try {
-      data = JSON.parse(readFileSync(file, 'utf8'))
-    } catch (err) {
-      problems.push(`${rel}: invalid JSON — ${err.message}`)
-      continue
+    return {
+      problems: problems.length > 0 ? problems : [`no .json files found under ${rootDir}`],
+      counts: {},
+      files,
     }
-
-    const strings = []
-    collectStrings(data, '', strings)
-    for (const { path, text } of strings) {
-      for (const phrase of BANNED_PHRASES) {
-        if (text.toLowerCase().includes(phrase.toLowerCase())) {
-          problems.push(`${rel} (${path || 'root'}): contains banned phrase "${phrase}"`)
-        }
-      }
-    }
-
-    documents.push({ rel, data })
   }
 
   const result = validateDocuments(documents)
