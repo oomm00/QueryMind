@@ -30,12 +30,15 @@ export const GENERATION_ERROR_MESSAGES = Object.freeze({
   LLM_QUOTA_EXHAUSTED: 'The AI is busy. Try again in a minute.',
   LLM_UNAVAILABLE: 'The AI is busy. Try again in a minute.',
   LLM_NOT_CONFIGURED: "AI question generation isn't set up on this server yet.",
+  NO_CONTEXT: 'No study material for that topic yet. Upload a document, then try again.',
+  TIMEOUT: 'That took too long. Check your connection and try again.',
 })
 
 /** The codes where another attempt could succeed. */
 export const RETRYABLE_GENERATION_CODES = Object.freeze([
   'LLM_QUOTA_EXHAUSTED',
   'LLM_UNAVAILABLE',
+  'TIMEOUT',
 ])
 
 /** What an unrecognised failure reads as. */

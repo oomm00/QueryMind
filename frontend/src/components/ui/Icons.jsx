@@ -277,3 +277,18 @@ export const IconBookmark = (p) => (
     <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
   </Svg>
 )
+
+export const IconUpload = (p) => (
+  <Svg {...p}>
+    <path d="M12 16V4" />
+    <path d="m7 9 5-5 5 5" />
+    <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+  </Svg>
+)
+
+export const IconSparkles = (p) => (
+  <Svg {...p}>
+    <path d="M12 3.5 13.7 8l4.5 1.7-4.5 1.7L12 15.9l-1.7-4.5L5.8 9.7 10.3 8z" />
+    <path d="M18.5 14.5 19.4 17l2.5.9-2.5.9-.9 2.5-.9-2.5-2.5-.9 2.5-.9z" />
+  </Svg>
+)

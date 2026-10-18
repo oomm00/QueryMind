@@ -4,7 +4,7 @@
  * Public:  /login
  * Default: /explore (redirect target after sign-in)
  * Built:   /dashboard, /explore, /courses, /practice, /practice/:sessionId,
- *          /practice/:sessionId/results, /history,
+ *          /practice/:sessionId/results, /history, /upload, /generate,
  *          /course/:id (overview, material, progress, about),
  *          /learn/:courseId/:topicId/:lessonId,
  *          /map/:courseId/:topicId (topic knowledge graph)
@@ -21,6 +21,8 @@ import PracticeHomePage from './pages/PracticeHomePage'
 import DashboardPage from './pages/DashboardPage'
 import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
+import UploadDocumentsPage from './pages/UploadDocumentsPage'
+import GenerateQuestionsPage from './pages/GenerateQuestionsPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ComingSoon from './pages/ComingSoon'
 import LessonPage from './pages/LessonPage'
@@ -83,6 +85,22 @@ export default function App() {
           element={
             <Protected>
               <HistoryPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/upload"
+          element={
+            <Protected>
+              <UploadDocumentsPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/generate"
+          element={
+            <Protected>
+              <GenerateQuestionsPage />
             </Protected>
           }
         />
