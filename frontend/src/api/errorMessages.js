@@ -27,10 +27,13 @@ import { ApiError } from './client.js'
 /** What each code reads as. These keys are the backend's contract, verbatim. */
 export const GENERATION_ERROR_MESSAGES = Object.freeze({
   DUPLICATE_QUESTION: 'That question was already asked. Try a different topic or Bloom level.',
+  BLOOM_ALIGNMENT_MISMATCH:
+    "The model could not ask that at the level you picked. Try another Bloom level.",
   LLM_QUOTA_EXHAUSTED: 'The AI is busy. Try again in a minute.',
   LLM_UNAVAILABLE: 'The AI is busy. Try again in a minute.',
   LLM_NOT_CONFIGURED: "AI question generation isn't set up on this server yet.",
   NO_CONTEXT: 'No study material for that topic yet. Upload a document, then try again.',
+  RATE_LIMIT_EXCEEDED: 'Too many requests in a row. Give it a moment, then try again.',
   TIMEOUT: 'That took too long. Check your connection and try again.',
 })
 
@@ -38,6 +41,7 @@ export const GENERATION_ERROR_MESSAGES = Object.freeze({
 export const RETRYABLE_GENERATION_CODES = Object.freeze([
   'LLM_QUOTA_EXHAUSTED',
   'LLM_UNAVAILABLE',
+  'RATE_LIMIT_EXCEEDED',
   'TIMEOUT',
 ])
 

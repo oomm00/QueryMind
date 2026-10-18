@@ -75,6 +75,24 @@ describe('the sentence for each code', () => {
     expect(isRetryableGenerationError(error)).toBe(true)
   })
 
+  it('BLOOM_ALIGNMENT_MISMATCH asks for another level, and is not retryable on its own', () => {
+    const error = backendFailure('BLOOM_ALIGNMENT_MISMATCH', { status: 422 })
+
+    expect(generationErrorMessage(error)).toBe(
+      'The model could not ask that at the level you picked. Try another Bloom level.',
+    )
+    expect(isRetryableGenerationError(error)).toBe(false)
+  })
+
+  it('RATE_LIMIT_EXCEEDED asks for a moment, and is retryable', () => {
+    const error = backendFailure('RATE_LIMIT_EXCEEDED', { status: 429 })
+
+    expect(generationErrorMessage(error)).toBe(
+      'Too many requests in a row. Give it a moment, then try again.',
+    )
+    expect(isRetryableGenerationError(error)).toBe(true)
+  })
+
   it('an unknown code falls back, and is not retryable', () => {
     const error = backendFailure('SOMETHING_NEW_FROM_THE_BACKEND', { status: 500 })
 
@@ -103,13 +121,17 @@ describe('the sentence for each code', () => {
   it('knows only the codes the endpoint can still answer with', () => {
     // NO_CONTEXT is raised by generation_service (NoContextError); TIMEOUT is
     // client-made when apiFetch's deadline fires — every other key verbatim
-    // matches a `code` the backend returns.
+    // matches a `code` the backend returns. A generation run asks for many
+    // questions, so two of the codes only ever arrive mid-run: a duplicate the
+    // run asks again at another Bloom, and a level the model could not hit.
     expect(Object.keys(GENERATION_ERROR_MESSAGES).sort()).toEqual([
+      'BLOOM_ALIGNMENT_MISMATCH',
       'DUPLICATE_QUESTION',
       'LLM_NOT_CONFIGURED',
       'LLM_QUOTA_EXHAUSTED',
       'LLM_UNAVAILABLE',
       'NO_CONTEXT',
+      'RATE_LIMIT_EXCEEDED',
       'TIMEOUT',
     ])
     expect(Object.keys(GENERATION_ERROR_MESSAGES)).not.toContain('LLM_CALL_FAILED')
@@ -117,6 +139,7 @@ describe('the sentence for each code', () => {
     expect([...RETRYABLE_GENERATION_CODES].sort()).toEqual([
       'LLM_QUOTA_EXHAUSTED',
       'LLM_UNAVAILABLE',
+      'RATE_LIMIT_EXCEEDED',
       'TIMEOUT',
     ])
   })
