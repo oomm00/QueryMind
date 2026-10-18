@@ -109,7 +109,7 @@ export default function DashboardPage() {
         <Button
           variant="secondary"
           icon={<IconPlus size={16} />}
-          onClick={() => navigate('/practice/new')}
+          onClick={() => navigate('/practice')}
         >
           Start practice
         </Button>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
         title="Dashboard"
         description={`Performance telemetry for ${user?.email || 'authenticated user'}.`}
         actions={
-          <Button icon={<IconPlus size={16} />} onClick={() => navigate('/practice/new')}>
+          <Button icon={<IconPlus size={16} />} onClick={() => navigate('/practice')}>
             Continue practice
           </Button>
         }

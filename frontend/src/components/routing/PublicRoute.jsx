@@ -1,6 +1,7 @@
 /**
  * PublicRoute Component
- * Prevents authenticated users from seeing the login/register page by redirecting to /setup.
+ * Prevents authenticated users from seeing the login/register page by sending
+ * them to the app's home, /explore.
  */
 
 import React from 'react'
@@ -16,7 +17,7 @@ export default function PublicRoute({ children }) {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/setup" replace />
+    return <Navigate to="/explore" replace />
   }
 
   return children

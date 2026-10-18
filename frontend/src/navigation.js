@@ -50,15 +50,12 @@ const SEGMENT_LABELS = {
   learn: 'Written lesson',
   map: 'Knowledge graph',
   practice: 'Practice',
-  new: 'New',
-  session: 'Session',
-  feedback: 'Feedback',
   history: 'History',
   login: 'Sign in',
 }
 
 /**
- * breadcrumbFor('/practice/new') -> [{label:'Workspace', to:'/dashboard'}, {label:'Practice', to:'/practice'}, {label:'New'}]
+ * breadcrumbFor('/practice') -> [{label:'Workspace', to:'/dashboard'}, {label:'Practice'}]
  * Every trail starts at "Workspace" so the top bar matches the Figma shell.
  */
 export function breadcrumbFor(pathname) {

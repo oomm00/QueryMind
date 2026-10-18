@@ -87,7 +87,7 @@ export default function HistoryPage() {
         title="History"
         description="Review your past study questions, answers, and scores."
         actions={
-          <Link to="/practice/new" className={buttonClasses({ variant: 'primary' })}>
+          <Link to="/practice" className={buttonClasses({ variant: 'primary' })}>
             <IconPlus size={16} />
             New session
           </Link>
@@ -109,7 +109,7 @@ export default function HistoryPage() {
             description="Start your first study session to build your history."
             action={
               <Link
-                to="/practice/new"
+                to="/practice"
                 className={buttonClasses({ variant: 'primary', size: 'sm' })}
               >
                 New session

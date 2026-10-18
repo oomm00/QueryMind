@@ -3,21 +3,17 @@
  *
  * Public:  /login
  * Default: /explore (redirect target after sign-in)
- * Built:   /dashboard, /history, /practice/{new,session,feedback},
- *          /course/:id (course details and the topic list),
+ * Built:   /dashboard, /explore, /courses, /practice, /practice/:sessionId,
+ *          /practice/:sessionId/results, /history,
+ *          /course/:id (overview, material, progress, about),
  *          /learn/:courseId/:topicId/:lessonId,
  *          /map/:courseId/:topicId (topic knowledge graph)
  * Stubs:   everything else renders <ComingSoon/>.
- *
- * Legacy paths (/setup, /question, /feedback) redirect to their new homes.
  */
 
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
-import SetupPage from './pages/SetupPage'
-import QuestionPage from './pages/QuestionPage'
-import FeedbackPage from './pages/FeedbackPage'
 import SessionPage from './pages/SessionPage'
 import ResultsPage from './pages/ResultsPage'
 import MyCoursesPage from './pages/MyCoursesPage'
@@ -99,30 +95,6 @@ export default function App() {
           }
         />
         <Route
-          path="/practice/new"
-          element={
-            <Protected>
-              <SetupPage />
-            </Protected>
-          }
-        />
-        <Route
-          path="/practice/session"
-          element={
-            <Protected>
-              <QuestionPage />
-            </Protected>
-          }
-        />
-        <Route
-          path="/practice/feedback"
-          element={
-            <Protected>
-              <FeedbackPage />
-            </Protected>
-          }
-        />
-        <Route
           path="/practice/:sessionId"
           element={
             <Protected>
@@ -139,11 +111,8 @@ export default function App() {
           }
         />
 
-        {/* Legacy path aliases */}
+        {/* Legacy path alias */}
         <Route path="/learning" element={<Navigate to="/courses" replace />} />
-        <Route path="/setup" element={<Navigate to="/practice/new" replace />} />
-        <Route path="/question" element={<Navigate to="/practice/session" replace />} />
-        <Route path="/feedback" element={<Navigate to="/practice/feedback" replace />} />
 
         {/* Wired but not yet built */}
         <Route

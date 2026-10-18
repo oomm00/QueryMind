@@ -69,19 +69,6 @@ export const concept = {
   lessons: [],
 }
 
-/** A session exactly as the SessionProvider keeps it in sessionStorage. */
-export function session(questions, extra = {}) {
-  return {
-    setup: { topic: 'fixture-topic' },
-    questions,
-    currentIdx: 0,
-    userAnswer: '',
-    answers: {},
-    startedAt: Date.now(),
-    ...extra,
-  }
-}
-
 /** A minimal topic of two concepts, for the bank and mini-map tests. */
 export const topic = {
   id: 'fixture-topic',
