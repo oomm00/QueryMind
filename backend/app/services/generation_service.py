@@ -96,11 +96,16 @@ BLOOM_LEVEL_SPECS: dict[str, dict[str, str]] = {
     "analyze": {
         "definition": (
             "Break the concept into parts and examine how they relate - compare, "
-            "contrast, distinguish causes from effects."
+            "contrast, distinguish causes from effects. ONE analytical task per "
+            "question: never bundle a compare sub-task together with a separate "
+            "explain, summarize, or evaluate sub-task (e.g. 'compare X and Y, "
+            "and then explain why Z' is two tasks). The colon clause that "
+            "sharpens the single task is fine."
         ),
         "good": (
-            "'Compare strict 2PL with rigorous 2PL in the scenario above: which "
-            "condition causes each blocked transaction's outcome, and why?'"
+            "'Differentiate strict 2PL from rigorous 2PL in the scenario above: "
+            "for each blocked transaction, name which protocol's rule produces "
+            "its outcome.' (one differentiation task)"
         ),
         "bad": "'List the lock modes used in 2PL.' (flat enumeration is remember-level)",
     },
