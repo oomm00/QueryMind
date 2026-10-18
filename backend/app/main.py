@@ -36,6 +36,12 @@ async def lifespan(app: FastAPI):
     structured-output schemas — so the first request is not ~8s slower than the
     rest. ``warm_up()`` is best-effort and never raises.
     """
+    if not settings.gemini_api_key.strip():
+        logger.error(
+            "GEMINI_API_KEY is not set — /health reports llm_configured=false and "
+            "question generation / answer evaluation will return 503 "
+            "LLM_NOT_CONFIGURED. Copy .env.example to .env and set GEMINI_API_KEY."
+        )
     if settings.warmup_on_startup:
         timings = warm_up()
         if timings:
@@ -130,7 +136,12 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["Health"])
     async def health():
-        return {"status": "healthy"}
+        # llm_configured reflects whether an API key is present so a deploy can
+        # be probed without triggering a paid LLM call.
+        return {
+            "status": "healthy",
+            "llm_configured": bool(settings.gemini_api_key.strip()),
+        }
 
     return app
 
