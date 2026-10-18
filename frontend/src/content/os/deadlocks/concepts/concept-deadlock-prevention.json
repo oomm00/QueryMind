@@ -1,0 +1,131 @@
+{
+  "id": "concept-deadlock-prevention",
+  "subject": "operating-systems",
+  "title": "Deadlock prevention and avoidance",
+  "summary": "Deadlock prevention structurally breaks a necessary condition; avoidance grants requests only when the resulting state remains safe.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-deadlock-prevention-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a safe state mean in the Banker-style model?",
+      "options": [
+        "There is an order in which every process can obtain its remaining needs and finish",
+        "No process holds any resource",
+        "Every process runs simultaneously",
+        "The system has no locks"
+      ],
+      "correctIndex": 0,
+      "answerKey": "A safe sequence exists that lets all processes complete with available resources and releases.",
+      "rubric": [],
+      "explanation": "A safe state may still contain allocated resources.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-prevention-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Which policy breaks circular wait?",
+      "options": [
+        "Impose a global order on resource acquisition",
+        "Allow arbitrary lock order",
+        "Disable all scheduling",
+        "Increase every process priority"
+      ],
+      "correctIndex": 0,
+      "answerKey": "If resources are acquired in a consistent order, a cycle in acquisition dependencies cannot form.",
+      "rubric": [],
+      "explanation": "The order must be followed consistently.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-prevention-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A system refuses a request because granting it would leave no safe sequence. Which approach is this?",
+      "options": [
+        "Deadlock avoidance",
+        "FCFS scheduling",
+        "Paging",
+        "Spooling"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Avoidance evaluates the state after the tentative allocation and denies unsafe requests.",
+      "rubric": [],
+      "explanation": "It differs from prevention, which constrains behavior in advance.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-prevention-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "What is a cost of requiring a process to request all resources before it starts?",
+      "options": [
+        "It can reduce utilization and force resources to be held unnecessarily",
+        "It guarantees maximum concurrency",
+        "It removes all waiting",
+        "It makes resources shareable"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Resources may sit idle while held, reducing utilization and increasing waiting.",
+      "rubric": [],
+      "explanation": "The policy breaks hold and wait but has a performance cost.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-prevention-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Compare deadlock prevention, avoidance, and detection/recovery.",
+      "answerKey": "Prevention imposes rules that make at least one necessary condition impossible. Avoidance examines each request and grants it only if the state remains safe. Detection allows allocation, periodically finds deadlocks, and recovery terminates or preempts work to break them.",
+      "rubric": [
+        {
+          "criterion": "Explains prevention",
+          "points": 2
+        },
+        {
+          "criterion": "Explains avoidance",
+          "points": 2
+        },
+        {
+          "criterion": "Explains detection/recovery",
+          "points": 3
+        }
+      ],
+      "explanation": "The strategies differ in when they spend complexity and what assumptions they make.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-prevention-q6",
+      "type": "short",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "A service uses two locks. Propose a lock-ordering rule and explain the failure if one code path violates it.",
+      "answerKey": "Assign a total order, such as L1 before L2, and require every path to acquire locks in ascending order and release in reverse order. If one path takes L2 then waits for L1 while another holds L1 and waits for L2, a circular wait and deadlock can result.",
+      "rubric": [
+        {
+          "criterion": "States a consistent total order",
+          "points": 3
+        },
+        {
+          "criterion": "Applies it to both locks",
+          "points": 2
+        },
+        {
+          "criterion": "Explains violating cycle",
+          "points": 4
+        }
+      ],
+      "explanation": "Ordering is effective only when all acquisition paths obey it.",
+      "needsHumanCheck": false
+    }
+  ]
+}

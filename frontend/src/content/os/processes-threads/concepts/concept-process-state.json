@@ -1,0 +1,131 @@
+{
+  "id": "concept-process-state",
+  "subject": "operating-systems",
+  "title": "Process states and transitions",
+  "summary": "A process is a protected execution context whose state changes as it is admitted, scheduled, blocked, and completed.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-process-state-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which state means a process is eligible to run but is waiting for a CPU?",
+      "options": [
+        "New",
+        "Ready",
+        "Blocked",
+        "Terminated"
+      ],
+      "correctIndex": 1,
+      "answerKey": "The ready state contains processes that can run when a CPU is assigned.",
+      "rubric": [],
+      "explanation": "A blocked process is waiting for an event, not merely CPU time.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-process-state-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "A running process requests disk I/O. What normally happens next?",
+      "options": [
+        "It moves to blocked/waiting",
+        "It moves directly to terminated",
+        "It remains running while the disk operates",
+        "It becomes new"
+      ],
+      "correctIndex": 0,
+      "answerKey": "The process blocks until the I/O completion event occurs.",
+      "rubric": [],
+      "explanation": "Blocking lets another ready process use the CPU while the request is serviced.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-process-state-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A timer interrupt fires for a preemptive scheduler. Which transition is most typical?",
+      "options": [
+        "Running to ready",
+        "Ready to blocked",
+        "New to terminated",
+        "Blocked to new"
+      ],
+      "correctIndex": 0,
+      "answerKey": "The preempted process returns to the ready queue.",
+      "rubric": [],
+      "explanation": "It may later be selected again; it has not finished or requested I/O.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-process-state-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can a blocked process not be selected immediately by the CPU scheduler?",
+      "options": [
+        "It lacks a valid address space",
+        "It is waiting for an external event or resource",
+        "It has already used all memory",
+        "It is always lower priority"
+      ],
+      "correctIndex": 1,
+      "answerKey": "A blocked process cannot make progress until its awaited event or resource is available.",
+      "rubric": [],
+      "explanation": "Priority does not define whether a process is blocked.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-process-state-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Explain the difference between a ready process and a blocked process.",
+      "answerKey": "A ready process has everything needed except CPU time and can be scheduled immediately; a blocked process is waiting for an event such as I/O completion or a lock release and is not eligible to run until that event occurs.",
+      "rubric": [
+        {
+          "criterion": "Defines ready accurately",
+          "points": 3
+        },
+        {
+          "criterion": "Defines blocked accurately",
+          "points": 3
+        },
+        {
+          "criterion": "Contrasts scheduling eligibility",
+          "points": 2
+        }
+      ],
+      "explanation": "The key distinction is CPU availability versus waiting for an event.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-process-state-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Describe one possible lifecycle for a process that reads a file and then exits.",
+      "answerKey": "It is created/new, admitted to ready, dispatched to running, blocks while waiting for the file read, returns to ready when I/O completes, runs again, and enters terminated after exit.",
+      "rubric": [
+        {
+          "criterion": "Includes creation and ready",
+          "points": 2
+        },
+        {
+          "criterion": "Includes running and I/O blocking",
+          "points": 4
+        },
+        {
+          "criterion": "Includes wake-up and termination",
+          "points": 4
+        }
+      ],
+      "explanation": "Exact state names vary slightly by OS, but the I/O wait must not be confused with ready.",
+      "needsHumanCheck": false
+    }
+  ]
+}

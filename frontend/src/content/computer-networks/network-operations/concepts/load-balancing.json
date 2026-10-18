@@ -1,0 +1,82 @@
+{
+  "id": "load-balancing",
+  "title": "Load balancing",
+  "subject": "computer-networks",
+  "summary": "Understand load balancing in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "load-balancing-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What is a health check used for by a load balancer?",
+      "explanation": "The correct answer is Removing unhealthy backends from rotation.",
+      "needsHumanCheck": false,
+      "options": [
+        "Removing unhealthy backends from rotation",
+        "Encrypting requests",
+        "Creating DNS zones",
+        "Compacting logs"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "load-balancing-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What is a health check used for by a load balancer?",
+      "explanation": "The correct answer is Removing unhealthy backends from rotation.",
+      "needsHumanCheck": false,
+      "options": [
+        "Removing unhealthy backends from rotation",
+        "Encrypting requests",
+        "Creating DNS zones",
+        "Compacting logs"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "load-balancing-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Name one benefit of load balancing.",
+      "explanation": "It distributes load and can improve availability by avoiding failed instances.",
+      "needsHumanCheck": true,
+      "answerKey": "It distributes load and can improve availability by avoiding failed instances.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "load-balancing-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Name one benefit of load balancing.",
+      "explanation": "It distributes load and can improve availability by avoiding failed instances.",
+      "needsHumanCheck": true,
+      "answerKey": "It distributes load and can improve availability by avoiding failed instances.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

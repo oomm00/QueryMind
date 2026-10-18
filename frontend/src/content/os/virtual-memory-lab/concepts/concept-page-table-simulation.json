@@ -1,0 +1,131 @@
+{
+  "id": "concept-page-table-simulation",
+  "subject": "operating-systems",
+  "title": "Page-table translation simulation",
+  "summary": "A page table maps virtual page numbers to physical frames while preserving the page offset and enforcing permissions.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-page-table-simulation-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "With 4 KiB pages, how many bits are in the page offset?",
+      "options": [
+        "10",
+        "12",
+        "16",
+        "20"
+      ],
+      "correctIndex": 1,
+      "answerKey": "4 KiB is 2^12 bytes, so the offset has 12 bits.",
+      "rubric": [],
+      "explanation": "The remaining virtual-address bits form the virtual page number.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-page-table-simulation-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "When translating a virtual address, which part is unchanged by paging?",
+      "options": [
+        "The virtual page number",
+        "The page offset",
+        "The process ID",
+        "The page-table base address"
+      ],
+      "correctIndex": 1,
+      "answerKey": "The offset within a page is copied into the physical address.",
+      "rubric": [],
+      "explanation": "The virtual page number is replaced by a physical frame number.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-page-table-simulation-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A 1 KiB page maps virtual page 3 to frame 7. What physical address corresponds to virtual address 3,250?",
+      "options": [
+        "3,250",
+        "7,346",
+        "7,250",
+        "10,250"
+      ],
+      "correctIndex": 1,
+      "answerKey": "3,250 = 3×1,024 + 178; frame 7 starts at 7,168, so the physical address is 7,346.",
+      "rubric": [],
+      "explanation": "The page offset is 178, and 7×1,024 + 178 = 7,346.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-page-table-simulation-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "What should a page-table entry contain to reject access to an unmapped page?",
+      "options": [
+        "A valid/present bit set to not-present",
+        "Only the page offset",
+        "A directory name",
+        "The CPU quantum"
+      ],
+      "correctIndex": 0,
+      "answerKey": "A not-present/invalid entry causes a page fault or access failure rather than a valid translation.",
+      "rubric": [],
+      "explanation": "Permission bits additionally control read/write/execute access.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-page-table-simulation-q5",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Translate virtual address 0x2345 with 4 KiB pages when virtual page 2 maps to frame 9.",
+      "answerKey": "With 4 KiB pages, the offset is the low 12 bits: 0x345 (837). The virtual page is 0x2, so the physical address is 9×0x1000 + 0x345 = 0x9345.",
+      "rubric": [
+        {
+          "criterion": "Splits page and offset",
+          "points": 3
+        },
+        {
+          "criterion": "Uses mapped frame",
+          "points": 2
+        },
+        {
+          "criterion": "Computes physical address",
+          "points": 3
+        }
+      ],
+      "explanation": "The offset remains 0x345; only the page number changes to the frame number.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-page-table-simulation-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Explain what a TLB changes and what it does not change during address translation.",
+      "answerKey": "A TLB caches recent virtual-page-to-frame translations and can avoid a page-table memory walk on a hit. It does not change the logical mapping rules, page offset, protection checks, or the need to handle a miss/page fault.",
+      "rubric": [
+        {
+          "criterion": "Explains cached translation speedup",
+          "points": 3
+        },
+        {
+          "criterion": "States what remains unchanged",
+          "points": 4
+        },
+        {
+          "criterion": "Mentions miss/fault distinction",
+          "points": 2
+        }
+      ],
+      "explanation": "A TLB miss is not necessarily a page fault; the page-table entry may still be present.",
+      "needsHumanCheck": false
+    }
+  ]
+}

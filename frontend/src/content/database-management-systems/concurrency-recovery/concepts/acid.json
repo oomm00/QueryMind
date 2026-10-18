@@ -1,0 +1,82 @@
+{
+  "id": "acid",
+  "title": "ACID properties",
+  "subject": "database-management-systems",
+  "summary": "Understand acid properties in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "acid-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which ACID property prevents concurrent transactions from observing partial work?",
+      "explanation": "The correct answer is Isolation.",
+      "needsHumanCheck": false,
+      "options": [
+        "Isolation",
+        "Durability",
+        "Availability",
+        "Partitioning"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "acid-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which ACID property prevents concurrent transactions from observing partial work?",
+      "explanation": "The correct answer is Isolation.",
+      "needsHumanCheck": false,
+      "options": [
+        "Isolation",
+        "Durability",
+        "Availability",
+        "Partitioning"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "acid-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "How are ACID properties enforced?",
+      "explanation": "With concurrency control, constraints, logging and recovery mechanisms.",
+      "needsHumanCheck": true,
+      "answerKey": "With concurrency control, constraints, logging and recovery mechanisms.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "acid-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "How are ACID properties enforced?",
+      "explanation": "With concurrency control, constraints, logging and recovery mechanisms.",
+      "needsHumanCheck": true,
+      "answerKey": "With concurrency control, constraints, logging and recovery mechanisms.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

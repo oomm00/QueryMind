@@ -92,8 +92,8 @@ class SubjectTopicsOut(BaseModel):
 # ══════════════════════════════════════════════════════════════
 
 class GenerateQuestionRequest(BaseModel):
-    topic: str = Field(..., examples=["Transactions"])
-    subject: str = Field(..., examples=["DBMS"])
+    topic: Optional[str] = Field(default=None, examples=["Transactions"])
+    subject: Optional[str] = Field(default=None, examples=["DBMS"])
     bloom_level: Optional[str] = Field(
         default=None,
         examples=["analyze"],
@@ -110,6 +110,10 @@ class GenerateQuestionRequest(BaseModel):
     question_type: str = Field(default="open", description="mcq | open")
     document_id: Optional[uuid.UUID] = None
     num_questions: int = Field(default=1, ge=1, le=10)
+    uploaded_only: bool = Field(
+        default=False,
+        description="When true and no topic is supplied, generate from all uploaded notes.",
+    )
     adaptive: bool = Field(
         default=False,
         description=(

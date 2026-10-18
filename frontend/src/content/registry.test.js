@@ -174,7 +174,7 @@ describe('the real library', () => {
     expect(concepts.length).toBeGreaterThan(0)
 
     for (const concept of concepts) {
-      expect(concept.subject).toBe('operating-systems')
+      expect(concept.subject).toBeTruthy()
       expect(concept.topicId).toBeTruthy()
       expect(concept.topicTitle).toBeTruthy()
     }
@@ -182,15 +182,22 @@ describe('the real library', () => {
 
   it('shows the loader’s own getConcept through the library index', () => {
     const first = allConcepts()[0]
-    expect(getConcept(first.id)).toMatchObject({ id: first.id, subject: 'operating-systems' })
+    expect(getConcept(first.id)).toMatchObject({ id: first.id, subject: first.subject })
     expect(registry.getConcept('no-such-concept')).toBeNull()
   })
 
-  it('knows the one subject and its topics', () => {
+  it('knows every shipped subject and its topics', () => {
     expect(subjects()).toContain('operating-systems')
+    expect(subjects()).toEqual(
+      expect.arrayContaining([
+        'computer-networks',
+        'database-management-systems',
+        'system-design',
+      ])
+    )
     expect(subjectLabel('operating-systems')).toBe('Operating Systems')
     expect(topicsOfSubject('operating-systems').length).toBeGreaterThan(0)
-    expect(coursesContaining(allConcepts()[0].id)).toEqual(['os'])
+    expect(coursesContaining(allConcepts()[0].id).length).toBeGreaterThan(0)
   })
 
   it('builds a knowledge node per concept, with the stored estimate attached', () => {

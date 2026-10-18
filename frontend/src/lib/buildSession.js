@@ -54,7 +54,7 @@ export const PRACTICE_LEVELS = [
 export const DEFAULT_SESSION_COUNT = 6
 
 /** The session lengths the practice board offers. */
-export const SESSION_COUNT_CHOICES = [5, 10, 15]
+export const SESSION_COUNT_CHOICES = [5, 10]
 
 /** The length the practice board opens on. */
 export const BOARD_DEFAULT_COUNT = 5

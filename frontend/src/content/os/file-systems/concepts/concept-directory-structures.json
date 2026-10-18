@@ -1,0 +1,131 @@
+{
+  "id": "concept-directory-structures",
+  "subject": "operating-systems",
+  "title": "Directories and naming",
+  "summary": "Directories map names to file-system objects and provide the namespace used for path resolution.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-directory-structures-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What is the main role of a directory?",
+      "options": [
+        "Map names to file objects or identifiers",
+        "Store CPU registers",
+        "Schedule threads",
+        "Translate virtual addresses"
+      ],
+      "correctIndex": 0,
+      "answerKey": "A directory provides name-to-object mappings in the file-system namespace.",
+      "rubric": [],
+      "explanation": "Directory data may itself be stored as a file-system object.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-directory-structures-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What does an absolute path normally begin from?",
+      "options": [
+        "The process current directory",
+        "The file-system root or another global namespace root",
+        "The last open file descriptor",
+        "A CPU cache line"
+      ],
+      "correctIndex": 1,
+      "answerKey": "An absolute path is resolved from the namespace root rather than the caller current directory.",
+      "rubric": [],
+      "explanation": "The syntax for roots varies across systems.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-directory-structures-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A process changes its current directory to /var/log and opens notes.txt with a relative path. Which object is used to resolve the name?",
+      "options": [
+        "The process current working directory",
+        "The boot loader",
+        "The page replacement queue",
+        "The CPU scheduler"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Relative paths are resolved from the process current working directory.",
+      "rubric": [],
+      "explanation": "An explicit directory handle can also be used by APIs that support it.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-directory-structures-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can hard links be restricted for directories?",
+      "options": [
+        "Unrestricted directory links could create namespace cycles and complicate traversal",
+        "Directories cannot contain names",
+        "Hard links encrypt contents",
+        "The restriction improves CPU arithmetic"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Directory cycles would complicate tree assumptions, deletion, and traversal algorithms.",
+      "rubric": [],
+      "explanation": "File-system implementations may support controlled directory links such as symbolic links.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-directory-structures-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Compare a hard link and a symbolic link.",
+      "answerKey": "A hard link is another directory name for the same underlying file object, so it usually shares inode/object identity and data. A symbolic link is a separate object containing a path to resolve, which can dangle when the target name disappears.",
+      "rubric": [
+        {
+          "criterion": "Explains hard link identity",
+          "points": 3
+        },
+        {
+          "criterion": "Explains symbolic-link path",
+          "points": 3
+        },
+        {
+          "criterion": "Mentions dangling/namespace consequence",
+          "points": 2
+        }
+      ],
+      "explanation": "Terminology differs, but the identity-versus-path distinction is central.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-directory-structures-q6",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "hard",
+      "prompt": "Describe the major steps in resolving /a/b/c from the root.",
+      "answerKey": "Start at the root, look up a in the root directory, verify traversal permissions and obtain its directory object, then look up b and repeat; finally resolve c and check the requested operation permissions and object type.",
+      "rubric": [
+        {
+          "criterion": "Starts at root",
+          "points": 2
+        },
+        {
+          "criterion": "Traverses each component",
+          "points": 4
+        },
+        {
+          "criterion": "Mentions permissions/final lookup",
+          "points": 3
+        }
+      ],
+      "explanation": "Path resolution may also follow mount points or symbolic links, depending on policy.",
+      "needsHumanCheck": false
+    }
+  ]
+}

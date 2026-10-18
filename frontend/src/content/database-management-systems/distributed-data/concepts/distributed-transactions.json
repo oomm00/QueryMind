@@ -1,0 +1,82 @@
+{
+  "id": "distributed-transactions",
+  "title": "Distributed transactions",
+  "subject": "database-management-systems",
+  "summary": "Understand distributed transactions in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "distributed-transactions-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does two-phase commit coordinate?",
+      "explanation": "The correct answer is A distributed commit decision across participants.",
+      "needsHumanCheck": false,
+      "options": [
+        "A distributed commit decision across participants",
+        "A DNS lookup",
+        "A cache eviction",
+        "A schema migration only"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "distributed-transactions-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does two-phase commit coordinate?",
+      "explanation": "The correct answer is A distributed commit decision across participants.",
+      "needsHumanCheck": false,
+      "options": [
+        "A distributed commit decision across participants",
+        "A DNS lookup",
+        "A cache eviction",
+        "A schema migration only"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "distributed-transactions-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why is two-phase commit expensive?",
+      "explanation": "Participants must coordinate and can remain blocked while the coordinator is unavailable.",
+      "needsHumanCheck": true,
+      "answerKey": "Participants must coordinate and can remain blocked while the coordinator is unavailable.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "distributed-transactions-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why is two-phase commit expensive?",
+      "explanation": "Participants must coordinate and can remain blocked while the coordinator is unavailable.",
+      "needsHumanCheck": true,
+      "answerKey": "Participants must coordinate and can remain blocked while the coordinator is unavailable.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

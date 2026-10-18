@@ -1,0 +1,131 @@
+{
+  "id": "concept-deadlock-conditions",
+  "subject": "operating-systems",
+  "title": "Deadlock conditions",
+  "summary": "Deadlock is a permanent waiting cycle in which each involved process holds resources needed by another.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-deadlock-conditions-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which is one of the four Coffman conditions for deadlock?",
+      "options": [
+        "Mutual exclusion",
+        "Infinite CPU speed",
+        "Shared executable code",
+        "Precomputed page tables"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Mutual exclusion is one Coffman condition.",
+      "rubric": [],
+      "explanation": "The four are mutual exclusion, hold and wait; no preemption, and circular wait.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-conditions-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What does hold and wait mean?",
+      "options": [
+        "A process holds at least one resource while waiting for another",
+        "A process waits without holding anything",
+        "A process releases all resources before waiting",
+        "A CPU holds a process"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Hold and wait combines retained resources with a request for additional resources.",
+      "rubric": [],
+      "explanation": "Breaking this condition is one prevention strategy.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-conditions-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A waits for a lock held by B, and B waits for a lock held by A. What graph structure is present?",
+      "options": [
+        "A cycle in the wait-for graph",
+        "A tree with one root",
+        "A page table walk",
+        "A FIFO queue"
+      ],
+      "correctIndex": 0,
+      "answerKey": "A cycle in a wait-for graph indicates circular waiting among processes.",
+      "rubric": [],
+      "explanation": "For single-instance resources, a cycle is sufficient for deadlock.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-conditions-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why does a cycle not always prove deadlock in a general resource-allocation graph?",
+      "options": [
+        "Multiple resource instances can make a cycle resolvable by another available instance",
+        "Cycles are impossible in graphs",
+        "Processes never wait for resources",
+        "The graph contains no process nodes"
+      ],
+      "correctIndex": 0,
+      "answerKey": "With multiple instances, a cycle may exist while a process can still obtain another instance and release resources.",
+      "rubric": [],
+      "explanation": "The single-instance and multiple-instance cases differ.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-conditions-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "List the four Coffman conditions and explain why all are needed for a deadlock to be possible.",
+      "answerKey": "The conditions are mutual exclusion, hold and wait; no preemption, and circular wait. If any one is absent, at least one necessary part of the permanent waiting cycle is broken, so deadlock cannot arise under that model.",
+      "rubric": [
+        {
+          "criterion": "Lists all four",
+          "points": 4
+        },
+        {
+          "criterion": "Explains necessity",
+          "points": 3
+        },
+        {
+          "criterion": "Uses resource-waiting reasoning",
+          "points": 2
+        }
+      ],
+      "explanation": "These are necessary conditions, not a statement that their presence guarantees deadlock.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-deadlock-conditions-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Differentiate deadlock from starvation and livelock.",
+      "answerKey": "Deadlock is a cycle of blocked participants that make no progress. Starvation is indefinite postponement of one participant while others may progress. Livelock participants remain active and change state but repeatedly fail to make useful progress.",
+      "rubric": [
+        {
+          "criterion": "Defines deadlock",
+          "points": 3
+        },
+        {
+          "criterion": "Defines starvation",
+          "points": 2
+        },
+        {
+          "criterion": "Defines livelock",
+          "points": 2
+        }
+      ],
+      "explanation": "The progress and activity distinctions are important.",
+      "needsHumanCheck": false
+    }
+  ]
+}

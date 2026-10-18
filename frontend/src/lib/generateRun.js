@@ -114,9 +114,32 @@ export function generatedToSessionQuestion(raw, meta = {}) {
 
   let correctIndex = Number.isInteger(raw?.correctIndex) ? raw.correctIndex : undefined
   if (correctIndex === undefined && options.length > 0 && typeof answer === 'string') {
-    const found = options.findIndex(
-      (option) => String(option).trim().toLowerCase() === answer.trim().toLowerCase()
+    const cleanAnswer = answer.trim().toLowerCase()
+    // 1. Direct match
+    let found = options.findIndex(
+      (option) => String(option).trim().toLowerCase() === cleanAnswer
     )
+    // 2. Match without "A) ", "B. ", etc. prefixes
+    if (found < 0) {
+      const strippedAnswer = cleanAnswer.replace(/^[a-d][\).\s-]+\s*/i, '')
+      found = options.findIndex((option) => {
+        const cleanOption = String(option).trim().toLowerCase()
+        const strippedOption = cleanOption.replace(/^[a-d][\).\s-]+\s*/i, '')
+        return (
+          cleanOption === cleanAnswer ||
+          strippedOption === strippedAnswer ||
+          cleanOption.startsWith(cleanAnswer) ||
+          cleanAnswer.startsWith(cleanOption)
+        )
+      })
+    }
+    // 3. Match by leading single letter (e.g. answer is "B" or "B)")
+    if (found < 0 && /^[a-d]\b/i.test(cleanAnswer)) {
+      const letterIndex = cleanAnswer.charCodeAt(0) - 97 // 'a' -> 0, 'b' -> 1
+      if (letterIndex >= 0 && letterIndex < options.length) {
+        found = letterIndex
+      }
+    }
     if (found >= 0) correctIndex = found
   }
 
@@ -158,6 +181,7 @@ export function generatedToSessionQuestion(raw, meta = {}) {
  * @param {string} request.difficulty
  * @param {string[]} request.blooms - the chips the student kept, in order
  * @param {number} request.count
+ * @param {boolean} request.uploaded_only
  * @param {AbortSignal} [request.signal] - Cancel
  * @param {(progress: object) => void} [request.onProgress]
  * @returns {Promise<{questions: Array, skipped: number, noContext: boolean,
@@ -170,6 +194,7 @@ export async function runGeneration({
   difficulty = 'medium',
   blooms = [],
   count = 0,
+  uploaded_only = false,
   signal,
   onProgress,
 } = {}) {
@@ -208,7 +233,14 @@ export async function runGeneration({
 
   const ask = async (bloom) => {
     const result = await generate(
-      { topic, subject, bloom_level: bloom, difficulty, count: 1 },
+      {
+        topic,
+        subject,
+        bloom_level: bloom,
+        difficulty,
+        count: 1,
+        uploaded_only,
+      },
       { signal }
     )
     return result?.questions?.[0] ?? null

@@ -1,0 +1,82 @@
+{
+  "id": "http",
+  "title": "HTTP semantics",
+  "subject": "computer-networks",
+  "summary": "Understand http semantics in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "http-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which HTTP method is conventionally idempotent for replacing a resource?",
+      "explanation": "The correct answer is PUT.",
+      "needsHumanCheck": false,
+      "options": [
+        "PUT",
+        "POST",
+        "CONNECT",
+        "PATCH"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "http-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which HTTP method is conventionally idempotent for replacing a resource?",
+      "explanation": "The correct answer is PUT.",
+      "needsHumanCheck": false,
+      "options": [
+        "PUT",
+        "POST",
+        "CONNECT",
+        "PATCH"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "http-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What does an HTTP status 404 indicate?",
+      "explanation": "The server cannot find the requested resource.",
+      "needsHumanCheck": true,
+      "answerKey": "The server cannot find the requested resource.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "http-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What does an HTTP status 404 indicate?",
+      "explanation": "The server cannot find the requested resource.",
+      "needsHumanCheck": true,
+      "answerKey": "The server cannot find the requested resource.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

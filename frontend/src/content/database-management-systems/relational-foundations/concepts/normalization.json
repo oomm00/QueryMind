@@ -1,0 +1,82 @@
+{
+  "id": "normalization",
+  "title": "Normalization",
+  "subject": "database-management-systems",
+  "summary": "Understand normalization in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "normalization-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which normal form removes partial dependency on part of a composite key?",
+      "explanation": "The correct answer is Second normal form.",
+      "needsHumanCheck": false,
+      "options": [
+        "Second normal form",
+        "First normal form",
+        "Third normal form",
+        "BCNF"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "normalization-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which normal form removes partial dependency on part of a composite key?",
+      "explanation": "The correct answer is Second normal form.",
+      "needsHumanCheck": false,
+      "options": [
+        "Second normal form",
+        "First normal form",
+        "Third normal form",
+        "BCNF"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "normalization-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why normalize a schema?",
+      "explanation": "To reduce update anomalies and redundant stored facts.",
+      "needsHumanCheck": true,
+      "answerKey": "To reduce update anomalies and redundant stored facts.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "normalization-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why normalize a schema?",
+      "explanation": "To reduce update anomalies and redundant stored facts.",
+      "needsHumanCheck": true,
+      "answerKey": "To reduce update anomalies and redundant stored facts.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "id": "udp-and-quic",
+  "title": "UDP and QUIC",
+  "subject": "computer-networks",
+  "summary": "Understand udp and quic in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "udp-and-quic-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which statement about UDP is true?",
+      "explanation": "The correct answer is It provides datagrams without built-in delivery guarantees.",
+      "needsHumanCheck": false,
+      "options": [
+        "It provides datagrams without built-in delivery guarantees",
+        "It performs a three-way handshake",
+        "It guarantees ordering",
+        "It encrypts every payload"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "udp-and-quic-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which statement about UDP is true?",
+      "explanation": "The correct answer is It provides datagrams without built-in delivery guarantees.",
+      "needsHumanCheck": false,
+      "options": [
+        "It provides datagrams without built-in delivery guarantees",
+        "It performs a three-way handshake",
+        "It guarantees ordering",
+        "It encrypts every payload"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "udp-and-quic-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why can QUIC avoid head-of-line blocking between streams?",
+      "explanation": "Loss in one stream does not prevent independent streams from delivering available data.",
+      "needsHumanCheck": true,
+      "answerKey": "Loss in one stream does not prevent independent streams from delivering available data.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "udp-and-quic-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why can QUIC avoid head-of-line blocking between streams?",
+      "explanation": "Loss in one stream does not prevent independent streams from delivering available data.",
+      "needsHumanCheck": true,
+      "answerKey": "Loss in one stream does not prevent independent streams from delivering available data.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -5,13 +5,13 @@
 
 export const DEFAULT_MOCK_SETTINGS = {
   auth: false,
-  questions: true,
-  attempts: true,
-  documents: true,
+  questions: false,
+  attempts: false,
+  documents: false,
   profile_goal: true,
   next_params: true,
-  profile: true,
-  history: true,
+  profile: false,
+  history: false,
   catalog: true,
   content: true,
 }

@@ -25,6 +25,7 @@ import {
   getDraft,
   getSession,
   holdDraft,
+  patchSession,
   recordAnswer,
   recordSelfMark,
   releaseDraft,
@@ -205,24 +206,44 @@ export default function SessionPage() {
     }
 
     setSubmitting(true)
-    try {
-      // Score what can be scored now, once each: the store remembers the
-      // (session, question) pair, so submitting twice cannot count an answer
-      // twice. An mcq is right or wrong here; a question the model wrote is
-      // marked by the model, through the attempt endpoint.
-      for (const question of questions) {
-        const answer = session.answers?.[question.question_id]
+    // Score MCQs immediately. Written AI-generated answers are deliberately
+    // graded after navigation so a slow judge never blocks the results page.
+    const pending = []
+    for (const question of questions) {
+      const answer = session.answers?.[question.question_id]
 
-        if (question.origin === 'generated' && question.type !== 'mcq') {
-          // A mark already on the session is the one it was given. Asking again
-          // would only spend a call to replace a result the student has seen.
-          if (session.selfMarks?.[question.question_id]) continue
-          const grade = await gradeGeneratedAnswer(question, answer?.text, userId)
-          if (grade == null) continue
-          // The mark is kept on the session, not only in the mastery store: it
-          // is what the results page shows back, and it is the same mark
-          // `scoreOf` reads, so the question counts in the session's score the
-          // moment it has one.
+      if (question.origin === 'generated' && question.type !== 'mcq') {
+        if (!session.selfMarks?.[question.question_id] && answer?.text) {
+          pending.push({ question, answer })
+        }
+        continue
+      }
+
+      if (question.type !== 'mcq') continue
+      const score = scoreOf(question, answer, null)
+      if (score == null) continue
+      recordScore(userId, {
+        conceptId: question.conceptId,
+        bloom: question.bloom_level,
+        score,
+        sessionId,
+        questionId: question.question_id,
+      })
+    }
+
+    submitSession(userId, sessionId)
+    patchSession(userId, sessionId, {
+      evaluationStatus: pending.length > 0 ? 'pending' : 'complete',
+    })
+    setSubmitting(false)
+    setConfirmOpen(false)
+    navigate(`/practice/${sessionId}/results`)
+
+    if (pending.length > 0) {
+      void Promise.all(
+        pending.map(async ({ question, answer }) => {
+          const grade = await gradeGeneratedAnswer(question, answer.text, userId)
+          if (grade == null) return
           recordSelfMark(userId, sessionId, question.question_id, {
             score: grade.score,
             markedBy: 'model',
@@ -235,25 +256,10 @@ export default function SessionPage() {
             sessionId,
             questionId: question.question_id,
           })
-          continue
-        }
-
-        if (question.type !== 'mcq') continue
-        const score = scoreOf(question, answer, null)
-        if (score == null) continue
-        recordScore(userId, {
-          conceptId: question.conceptId,
-          bloom: question.bloom_level,
-          score,
-          sessionId,
-          questionId: question.question_id,
         })
-      }
-      submitSession(userId, sessionId)
-      setConfirmOpen(false)
-      navigate(`/practice/${sessionId}/results`)
-    } finally {
-      setSubmitting(false)
+      ).finally(() => {
+        patchSession(userId, sessionId, { evaluationStatus: 'complete' })
+      })
     }
   }
 

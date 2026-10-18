@@ -1,0 +1,12 @@
+{
+  "id": "distributed-data",
+  "title": "Distributed Data",
+  "subject": "database-management-systems",
+  "summary": "Core distributed data concepts.",
+  "conceptIds": [
+    "replication",
+    "partitioning",
+    "consensus",
+    "distributed-transactions"
+  ]
+}

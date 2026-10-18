@@ -1,0 +1,82 @@
+{
+  "id": "congestion-control",
+  "title": "Congestion control",
+  "subject": "computer-networks",
+  "summary": "Understand congestion control in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "congestion-control-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "TCP congestion control primarily protects what resource?",
+      "explanation": "The correct answer is The network path capacity.",
+      "needsHumanCheck": false,
+      "options": [
+        "The network path capacity",
+        "A DNS zone",
+        "A MAC table",
+        "A disk queue"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "congestion-control-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "TCP congestion control primarily protects what resource?",
+      "explanation": "The correct answer is The network path capacity.",
+      "needsHumanCheck": false,
+      "options": [
+        "The network path capacity",
+        "A DNS zone",
+        "A MAC table",
+        "A disk queue"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "congestion-control-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is a congestion window?",
+      "explanation": "The sender limit on unacknowledged data based on perceived network congestion.",
+      "needsHumanCheck": true,
+      "answerKey": "The sender limit on unacknowledged data based on perceived network congestion.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "congestion-control-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is a congestion window?",
+      "explanation": "The sender limit on unacknowledged data based on perceived network congestion.",
+      "needsHumanCheck": true,
+      "answerKey": "The sender limit on unacknowledged data based on perceived network congestion.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

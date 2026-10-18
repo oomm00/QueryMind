@@ -1,0 +1,82 @@
+{
+  "id": "object-storage",
+  "title": "Object storage",
+  "subject": "system-design",
+  "summary": "Understand object storage in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "object-storage-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which workload suits object storage?",
+      "explanation": "The correct answer is Large immutable blobs.",
+      "needsHumanCheck": false,
+      "options": [
+        "Large immutable blobs",
+        "Cross-row serializable updates",
+        "Lock manager state",
+        "CPU registers"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "object-storage-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which workload suits object storage?",
+      "explanation": "The correct answer is Large immutable blobs.",
+      "needsHumanCheck": false,
+      "options": [
+        "Large immutable blobs",
+        "Cross-row serializable updates",
+        "Lock manager state",
+        "CPU registers"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "object-storage-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why is object storage durable for backups?",
+      "explanation": "It stores replicated objects with durability mechanisms independent of one compute node.",
+      "needsHumanCheck": true,
+      "answerKey": "It stores replicated objects with durability mechanisms independent of one compute node.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "object-storage-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why is object storage durable for backups?",
+      "explanation": "It stores replicated objects with durability mechanisms independent of one compute node.",
+      "needsHumanCheck": true,
+      "answerKey": "It stores replicated objects with durability mechanisms independent of one compute node.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

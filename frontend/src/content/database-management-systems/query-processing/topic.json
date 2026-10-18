@@ -1,0 +1,12 @@
+{
+  "id": "query-processing",
+  "title": "Query Processing",
+  "subject": "database-management-systems",
+  "summary": "Core query processing concepts.",
+  "conceptIds": [
+    "sql-joins",
+    "query-plans",
+    "indexes",
+    "transactions"
+  ]
+}
