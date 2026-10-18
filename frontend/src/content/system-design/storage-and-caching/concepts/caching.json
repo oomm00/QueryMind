@@ -1,0 +1,82 @@
+{
+  "id": "caching",
+  "title": "Caching",
+  "subject": "system-design",
+  "summary": "Understand caching in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "caching-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What is a cache hit?",
+      "explanation": "The correct answer is The requested value is found in the cache.",
+      "needsHumanCheck": false,
+      "options": [
+        "The requested value is found in the cache",
+        "The origin is down",
+        "A write is rejected",
+        "A shard is split"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "caching-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What is a cache hit?",
+      "explanation": "The correct answer is The requested value is found in the cache.",
+      "needsHumanCheck": false,
+      "options": [
+        "The requested value is found in the cache",
+        "The origin is down",
+        "A write is rejected",
+        "A shard is split"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "caching-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What causes cache stampedes?",
+      "explanation": "Many clients miss or expire the same item and simultaneously overload the origin.",
+      "needsHumanCheck": true,
+      "answerKey": "Many clients miss or expire the same item and simultaneously overload the origin.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "caching-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What causes cache stampedes?",
+      "explanation": "Many clients miss or expire the same item and simultaneously overload the origin.",
+      "needsHumanCheck": true,
+      "answerKey": "Many clients miss or expire the same item and simultaneously overload the origin.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

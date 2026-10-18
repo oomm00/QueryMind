@@ -1,0 +1,12 @@
+{
+  "id": "distributed-systems",
+  "title": "Distributed Systems",
+  "subject": "system-design",
+  "summary": "Core distributed systems concepts.",
+  "conceptIds": [
+    "replication-consistency",
+    "queues-streams",
+    "idempotency",
+    "service-discovery"
+  ]
+}

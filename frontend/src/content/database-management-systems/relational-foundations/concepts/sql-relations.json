@@ -1,0 +1,82 @@
+{
+  "id": "sql-relations",
+  "title": "SQL relations",
+  "subject": "database-management-systems",
+  "summary": "Understand sql relations in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "sql-relations-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which SQL clause filters rows before grouping?",
+      "explanation": "The correct answer is WHERE.",
+      "needsHumanCheck": false,
+      "options": [
+        "WHERE",
+        "HAVING",
+        "ORDER BY",
+        "UNION"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "sql-relations-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which SQL clause filters rows before grouping?",
+      "explanation": "The correct answer is WHERE.",
+      "needsHumanCheck": false,
+      "options": [
+        "WHERE",
+        "HAVING",
+        "ORDER BY",
+        "UNION"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "sql-relations-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is projection in relational algebra?",
+      "explanation": "Selecting particular attributes (columns) from a relation.",
+      "needsHumanCheck": true,
+      "answerKey": "Selecting particular attributes (columns) from a relation.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "sql-relations-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is projection in relational algebra?",
+      "explanation": "Selecting particular attributes (columns) from a relation.",
+      "needsHumanCheck": true,
+      "answerKey": "Selecting particular attributes (columns) from a relation.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

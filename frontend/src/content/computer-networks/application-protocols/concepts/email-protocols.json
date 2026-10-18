@@ -1,0 +1,82 @@
+{
+  "id": "email-protocols",
+  "title": "Email protocols",
+  "subject": "computer-networks",
+  "summary": "Understand email protocols in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "email-protocols-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which protocol is commonly used to retrieve mail while keeping it on the server?",
+      "explanation": "The correct answer is IMAP.",
+      "needsHumanCheck": false,
+      "options": [
+        "IMAP",
+        "SMTP",
+        "ARP",
+        "BGP"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "email-protocols-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which protocol is commonly used to retrieve mail while keeping it on the server?",
+      "explanation": "The correct answer is IMAP.",
+      "needsHumanCheck": false,
+      "options": [
+        "IMAP",
+        "SMTP",
+        "ARP",
+        "BGP"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "email-protocols-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is SMTP used for?",
+      "explanation": "Transferring email between clients and mail servers or between mail servers.",
+      "needsHumanCheck": true,
+      "answerKey": "Transferring email between clients and mail servers or between mail servers.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "email-protocols-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is SMTP used for?",
+      "explanation": "Transferring email between clients and mail servers or between mail servers.",
+      "needsHumanCheck": true,
+      "answerKey": "Transferring email between clients and mail servers or between mail servers.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

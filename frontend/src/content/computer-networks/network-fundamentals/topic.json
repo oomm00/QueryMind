@@ -1,0 +1,12 @@
+{
+  "id": "network-fundamentals",
+  "title": "Network Fundamentals",
+  "subject": "computer-networks",
+  "summary": "Core network fundamentals concepts.",
+  "conceptIds": [
+    "osi-model",
+    "ip-addressing",
+    "ethernet-switching",
+    "routing-basics"
+  ]
+}

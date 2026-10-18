@@ -1,0 +1,82 @@
+{
+  "id": "ip-addressing",
+  "title": "IP addressing and subnetting",
+  "subject": "computer-networks",
+  "summary": "Understand ip addressing and subnetting in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "ip-addressing-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which prefix provides 256 IPv4 addresses?",
+      "explanation": "The correct answer is /24.",
+      "needsHumanCheck": false,
+      "options": [
+        "/24",
+        "/25",
+        "/26",
+        "/30"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "ip-addressing-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which prefix provides 256 IPv4 addresses?",
+      "explanation": "The correct answer is /24.",
+      "needsHumanCheck": false,
+      "options": [
+        "/24",
+        "/25",
+        "/26",
+        "/30"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "ip-addressing-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why is subnetting useful?",
+      "explanation": "It divides an address block into smaller routed or administrative networks.",
+      "needsHumanCheck": true,
+      "answerKey": "It divides an address block into smaller routed or administrative networks.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "ip-addressing-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why is subnetting useful?",
+      "explanation": "It divides an address block into smaller routed or administrative networks.",
+      "needsHumanCheck": true,
+      "answerKey": "It divides an address block into smaller routed or administrative networks.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
+import json
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 from collections import OrderedDict
 from typing import Any, Optional
 
@@ -188,7 +191,7 @@ def _query_collection(
     query_text: str,
     source_type: str,
     subject: Optional[str],
-    topic: str,
+    topic: Optional[str],
     n_results: int = 5,
 ) -> list[dict]:
     """Execute metadata-filtered similarity query on a Chroma collection.
@@ -197,21 +200,14 @@ def _query_collection(
     fallback when the caller has no reliable subject — e.g. the frontend derives
     ``subject`` from the free-text topic).
     """
+    filters = [{"source_type": source_type}]
     if subject is not None:
-        where_filter: dict[str, Any] = {
-            "$and": [
-                {"source_type": source_type},
-                {"subject": subject},
-                {"topic": topic},
-            ]
-        }
-    else:
-        where_filter = {
-            "$and": [
-                {"source_type": source_type},
-                {"topic": topic},
-            ]
-        }
+        filters.append({"subject": subject})
+    if topic is not None:
+        filters.append({"topic": topic})
+    where_filter: dict[str, Any] = (
+        filters[0] if len(filters) == 1 else {"$and": filters}
+    )
 
     try:
         results = collection.query(
@@ -251,7 +247,7 @@ def _query_collection(
 
 
 def retrieve_context(
-    topic: str,
+    topic: Optional[str],
     subject: Optional[str] = None,
     bloom_level: str = "understand",
     difficulty: str = "medium",
@@ -259,6 +255,7 @@ def retrieve_context(
     top_k: int = 5,
     client: Optional[ClientAPI] = None,
     collection: Optional[Collection] = None,
+    public_only: bool = False,
 ) -> list[dict]:
     """Retrieve grounded context chunks with Two-Tier college priority and public fallback.
 
@@ -284,9 +281,13 @@ def retrieve_context(
     # the earlier long generic phrase, so build the default query from just those
     # two fields when the caller does not supply one. A topic-only search omits
     # the (absent) subject.
-    search_query = query_text or (f"{subject} {topic}" if subject else topic)
+    search_query = query_text or (
+        topic
+        if topic and (not subject or subject.lower() == "general")
+        else f"{subject} {topic}" if subject and topic else topic or "uploaded study notes"
+    )
 
-    cache_key = (subject, topic, search_query)
+    cache_key = (subject, topic, f"{'public' if public_only else 'tiered'}:{search_query}")
 
     # Early cache lookup — before touching Chroma. A hit must NOT pay for client
     # construction / collection resolution, which is the dominant per-request
@@ -316,6 +317,7 @@ def retrieve_context(
         subject=subject,
         topic=topic,
         top_k=top_k,
+        public_only=public_only,
     )
 
     if not injected:
@@ -328,10 +330,31 @@ def _retrieve_uncached(
     collection: Collection,
     search_query: str,
     subject: Optional[str],
-    topic: str,
+    topic: Optional[str],
     top_k: int,
+    public_only: bool = False,
 ) -> list[dict]:
     """Two-tier retrieval (no caching) — the body behind :func:`retrieve_context`."""
+    if public_only:
+        public_chunks = _query_collection(
+            collection=collection,
+            query_text=search_query,
+            source_type="public",
+            subject=subject,
+            topic=topic,
+            n_results=top_k,
+        )
+        if not public_chunks:
+            public_chunks = _retrieve_web_context(search_query)
+        if public_chunks:
+            logger.info(
+                "Retrieved %d public chunks for internet-backed generation of %s / %s",
+                len(public_chunks),
+                subject,
+                topic,
+            )
+        return public_chunks
+
     # Tier 1: College material
     college_chunks = _query_collection(
         collection=collection,
@@ -405,3 +428,30 @@ def _retrieve_uncached(
 
     logger.warning("No study material found in either tier for %s / %s", subject, topic)
     return []
+
+
+def _retrieve_web_context(query: str) -> list[dict]:
+    """Use Wikipedia's public API when the public local corpus has no match."""
+    term = str(query or "").strip()
+    if not term:
+        return []
+    headers = {"User-Agent": "QueryMind/1.0 educational question generator"}
+    try:
+        request = Request(
+            f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(term)}",
+            headers=headers,
+        )
+        with urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        extract = str(payload.get("extract") or "").strip()
+        if not extract:
+            return []
+        return [{
+            "text": extract,
+            "source_type": "public",
+            "score": 1.0,
+            "source_doc": f"Wikipedia: {payload.get('title') or term}",
+        }]
+    except (OSError, ValueError, KeyError) as exc:
+        logger.info("Wikipedia lookup unavailable for %r: %s", term, exc)
+        return []

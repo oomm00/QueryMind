@@ -1,0 +1,82 @@
+{
+  "id": "content-delivery",
+  "title": "Content delivery networks",
+  "subject": "computer-networks",
+  "summary": "Understand content delivery networks in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "content-delivery-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "A CDN primarily reduces latency by doing what?",
+      "explanation": "The correct answer is Serving cached content near users.",
+      "needsHumanCheck": false,
+      "options": [
+        "Serving cached content near users",
+        "Increasing database normalization",
+        "Replacing TLS",
+        "Disabling routing"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "content-delivery-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "A CDN primarily reduces latency by doing what?",
+      "explanation": "The correct answer is Serving cached content near users.",
+      "needsHumanCheck": false,
+      "options": [
+        "Serving cached content near users",
+        "Increasing database normalization",
+        "Replacing TLS",
+        "Disabling routing"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "content-delivery-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "When should a CDN invalidate cached content?",
+      "explanation": "When the origin changes data that must no longer be served stale.",
+      "needsHumanCheck": true,
+      "answerKey": "When the origin changes data that must no longer be served stale.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "content-delivery-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "When should a CDN invalidate cached content?",
+      "explanation": "When the origin changes data that must no longer be served stale.",
+      "needsHumanCheck": true,
+      "answerKey": "When the origin changes data that must no longer be served stale.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

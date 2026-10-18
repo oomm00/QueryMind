@@ -1,0 +1,82 @@
+{
+  "id": "capacity-estimation",
+  "title": "Capacity estimation",
+  "subject": "system-design",
+  "summary": "Understand capacity estimation in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "capacity-estimation-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "If each request is 2 KB and traffic is 1000 requests/s, what payload rate is required?",
+      "explanation": "The correct answer is 2 MB/s.",
+      "needsHumanCheck": false,
+      "options": [
+        "2 MB/s",
+        "200 KB/s",
+        "20 MB/s",
+        "2 GB/s"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "capacity-estimation-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "If each request is 2 KB and traffic is 1000 requests/s, what payload rate is required?",
+      "explanation": "The correct answer is 2 MB/s.",
+      "needsHumanCheck": false,
+      "options": [
+        "2 MB/s",
+        "200 KB/s",
+        "20 MB/s",
+        "2 GB/s"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "capacity-estimation-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What inputs drive a capacity estimate?",
+      "explanation": "Traffic volume, object sizes, read/write mix, growth and peak factors.",
+      "needsHumanCheck": true,
+      "answerKey": "Traffic volume, object sizes, read/write mix, growth and peak factors.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "capacity-estimation-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What inputs drive a capacity estimate?",
+      "explanation": "Traffic volume, object sizes, read/write mix, growth and peak factors.",
+      "needsHumanCheck": true,
+      "answerKey": "Traffic volume, object sizes, read/write mix, growth and peak factors.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

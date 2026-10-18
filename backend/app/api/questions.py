@@ -144,50 +144,54 @@ def generate_questions(
     # learner's mastery profile pick the target level.
     bloom_level = payload.bloom_level
     difficulty = payload.difficulty
+    generation_topic = (payload.topic or "").strip() or "Uploaded notes"
+    generation_subject = (payload.subject or "").strip() or "General"
     adaptive_reason: str | None = None
     if payload.adaptive:
         recommendation = recommend_next(
-            current_user.id, payload.subject, payload.topic, db
+            current_user.id, generation_subject, generation_topic, db
         )
         bloom_level = recommendation["bloom_level"]
         difficulty = recommendation["difficulty"]
         adaptive_reason = explain_recommendation(
-            current_user.id, payload.subject, payload.topic, db
+            current_user.id, generation_subject, generation_topic, db
         )
         logger.info(
             "Adaptive selection for user=%s %s/%s -> %s/%s",
-            current_user.id, payload.subject, payload.topic, bloom_level, difficulty,
+            current_user.id, generation_subject, generation_topic, bloom_level, difficulty,
         )
 
     # Retrieve context once and reuse it for both generation and the
     # answerability check (so the check sees the exact material used).
     with stage("retrieve"):
         context_chunks = retrieve_context(
-            topic=payload.topic,
-            subject=payload.subject,
+            topic=None if payload.uploaded_only and not payload.topic else generation_topic,
+            subject=None if payload.uploaded_only and not payload.topic else generation_subject,
             bloom_level=bloom_level,
             difficulty=difficulty,
+            public_only=not payload.uploaded_only,
         )
         # The frontend derives `subject` from the free-text topic (subject == topic),
         # so an exact (subject, topic) filter can miss material filed under a
         # different subject. Fall back to a topic-only search before giving up.
-        if not context_chunks:
+        if not context_chunks and not (payload.uploaded_only and not payload.topic):
             logger.info(
                 "No exact (subject, topic) material for %s / %s; retrying topic-only",
-                payload.subject, payload.topic,
+                generation_subject, generation_topic,
             )
             context_chunks = retrieve_context(
-                topic=payload.topic,
+                topic=generation_topic,
                 subject=None,
                 bloom_level=bloom_level,
                 difficulty=difficulty,
+                public_only=True,
             )
     chunk_texts = [chunk["text"] for chunk in context_chunks]
 
     with stage("generate"):
         generated = generate_question(
-            topic=payload.topic,
-            subject=payload.subject,
+            topic=generation_topic,
+            subject=generation_subject,
             bloom_level=bloom_level,
             difficulty=difficulty,
             question_type=payload.question_type,
@@ -208,8 +212,8 @@ def generate_questions(
     with stage("validate"):
         validation = validate_question(
             generated=generated.model_dump(),
-            subject=payload.subject,
-            topic=payload.topic,
+            subject=generation_subject,
+            topic=generation_topic,
             source_chunks=chunk_texts,
             db=db,
             requested_bloom=bloom_level,
@@ -220,8 +224,8 @@ def generate_questions(
         # ── Single regeneration attempt with a corrective note ────────────────
         with stage("generate"):
             generated = generate_question(
-                topic=payload.topic,
-                subject=payload.subject,
+                topic=generation_topic,
+                subject=generation_subject,
                 bloom_level=bloom_level,
                 difficulty=difficulty,
                 question_type=payload.question_type,
@@ -231,8 +235,8 @@ def generate_questions(
         with stage("validate"):
             validation = validate_question(
                 generated=generated.model_dump(),
-                subject=payload.subject,
-                topic=payload.topic,
+                subject=generation_subject,
+                topic=generation_topic,
                 source_chunks=chunk_texts,
                 db=db,
                 requested_bloom=bloom_level,
@@ -269,8 +273,8 @@ def generate_questions(
     persisted = _persist_question(
         db=db,
         generated=generated,
-        subject=payload.subject,
-        topic=payload.topic,
+        subject=generation_subject,
+        topic=generation_topic,
         question_type=payload.question_type,
     )
 

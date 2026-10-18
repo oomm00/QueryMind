@@ -1,0 +1,82 @@
+{
+  "id": "data-modeling",
+  "title": "Data modeling",
+  "subject": "system-design",
+  "summary": "Understand data modeling in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "data-modeling-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What should a data model preserve?",
+      "explanation": "The correct answer is Access patterns and invariants.",
+      "needsHumanCheck": false,
+      "options": [
+        "Access patterns and invariants",
+        "Only class inheritance",
+        "A single server address",
+        "Random field names"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "data-modeling-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What should a data model preserve?",
+      "explanation": "The correct answer is Access patterns and invariants.",
+      "needsHumanCheck": false,
+      "options": [
+        "Access patterns and invariants",
+        "Only class inheritance",
+        "A single server address",
+        "Random field names"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "data-modeling-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why model aggregates in a service?",
+      "explanation": "To define consistency boundaries and efficient read/write operations.",
+      "needsHumanCheck": true,
+      "answerKey": "To define consistency boundaries and efficient read/write operations.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "data-modeling-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why model aggregates in a service?",
+      "explanation": "To define consistency boundaries and efficient read/write operations.",
+      "needsHumanCheck": true,
+      "answerKey": "To define consistency boundaries and efficient read/write operations.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -37,14 +37,13 @@ export const GENERAL_SUBJECT = 'general'
 
 /**
  * How many questions one run asks for. The chips are the quick picks; the form
- * also takes any whole number between MIN_GENERATE_COUNT and MAX_GENERATE_COUNT,
- * because "how many" is the student's call and not a preset's.
+ * also takes any whole number up to the ten-question maximum.
  */
-export const GENERATE_COUNT_CHOICES = [6, 10, 15]
+export const GENERATE_COUNT_CHOICES = [6, 10]
 
 /** The run lengths the form accepts outside the quick picks. */
 export const MIN_GENERATE_COUNT = 1
-export const MAX_GENERATE_COUNT = 20
+export const MAX_GENERATE_COUNT = 10
 
 /**
  * A count brought inside the range a run can actually ask for. Returns null when

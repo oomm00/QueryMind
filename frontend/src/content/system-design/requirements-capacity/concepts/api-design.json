@@ -1,0 +1,82 @@
+{
+  "id": "api-design",
+  "title": "API design",
+  "subject": "system-design",
+  "summary": "Understand api design in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "api-design-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which property makes retrying a request safe from duplicate effects?",
+      "explanation": "The correct answer is Idempotency.",
+      "needsHumanCheck": false,
+      "options": [
+        "Idempotency",
+        "Compression",
+        "Sharding",
+        "Fan-out"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "api-design-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which property makes retrying a request safe from duplicate effects?",
+      "explanation": "The correct answer is Idempotency.",
+      "needsHumanCheck": false,
+      "options": [
+        "Idempotency",
+        "Compression",
+        "Sharding",
+        "Fan-out"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "api-design-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What should an API error response communicate?",
+      "explanation": "A stable status or code and enough context for a caller to handle it.",
+      "needsHumanCheck": true,
+      "answerKey": "A stable status or code and enough context for a caller to handle it.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "api-design-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What should an API error response communicate?",
+      "explanation": "A stable status or code and enough context for a caller to handle it.",
+      "needsHumanCheck": true,
+      "answerKey": "A stable status or code and enough context for a caller to handle it.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

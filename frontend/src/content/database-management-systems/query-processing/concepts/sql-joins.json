@@ -1,0 +1,82 @@
+{
+  "id": "sql-joins",
+  "title": "SQL joins",
+  "subject": "database-management-systems",
+  "summary": "Understand sql joins in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "sql-joins-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "An inner join returns rows when what condition holds?",
+      "explanation": "The correct answer is The join predicate matches.",
+      "needsHumanCheck": false,
+      "options": [
+        "The join predicate matches",
+        "Either table is empty",
+        "The rows have identical physical locations",
+        "The query has no index"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "sql-joins-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "An inner join returns rows when what condition holds?",
+      "explanation": "The correct answer is The join predicate matches.",
+      "needsHumanCheck": false,
+      "options": [
+        "The join predicate matches",
+        "Either table is empty",
+        "The rows have identical physical locations",
+        "The query has no index"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "sql-joins-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "When is a left join useful?",
+      "explanation": "When all left rows should remain even without a matching right row.",
+      "needsHumanCheck": true,
+      "answerKey": "When all left rows should remain even without a matching right row.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "sql-joins-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "When is a left join useful?",
+      "explanation": "When all left rows should remain even without a matching right row.",
+      "needsHumanCheck": true,
+      "answerKey": "When all left rows should remain even without a matching right row.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

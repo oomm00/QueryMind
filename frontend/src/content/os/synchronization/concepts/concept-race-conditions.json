@@ -1,0 +1,131 @@
+{
+  "id": "concept-race-conditions",
+  "subject": "operating-systems",
+  "title": "Race conditions and ordering",
+  "summary": "A race condition occurs when correctness depends on an uncontrolled relative ordering of concurrent operations.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-race-conditions-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "When is a data race possible?",
+      "options": [
+        "Conflicting accesses to shared data overlap without required synchronization",
+        "Two constants have the same value",
+        "A process reads its own local variable",
+        "A disk is formatted"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Unsynchronized conflicting accesses can interleave unpredictably.",
+      "rubric": [],
+      "explanation": "Read-only sharing is not a data race.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-race-conditions-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What makes a check-then-act sequence unsafe?",
+      "options": [
+        "The checked condition can change before the action uses it",
+        "It contains an if statement",
+        "It executes in user mode",
+        "It uses a local variable"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Another thread can modify the state between the check and the action.",
+      "rubric": [],
+      "explanation": "The pair must be atomic or protected by an appropriate synchronization discipline.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-race-conditions-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A thread checks queue-not-empty, is preempted, and another thread removes the final item. What bug can follow?",
+      "options": [
+        "The first thread may remove from an empty queue",
+        "The queue gains an item",
+        "The CPU changes page size",
+        "The process becomes a file"
+      ],
+      "correctIndex": 0,
+      "answerKey": "The predicate was stale when the first thread performed the removal.",
+      "rubric": [],
+      "explanation": "A lock or condition-variable protocol must protect and recheck the predicate.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-race-conditions-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why is printing a shared variable sometimes misleading during a race investigation?",
+      "options": [
+        "The print itself can change timing and hide or expose the race",
+        "Printing makes the variable constant",
+        "Output is always atomic with all memory accesses",
+        "It proves the program is correct"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Instrumentation perturbs scheduling and may alter the observed interleaving.",
+      "rubric": [],
+      "explanation": "Repeatable output is not proof of absence of a race.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-race-conditions-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Explain the difference between mutual exclusion and ordering synchronization.",
+      "answerKey": "Mutual exclusion prevents conflicting critical sections from overlapping. Ordering synchronization establishes that one event happens before another, such as a consumer waiting until a producer publishes data; a program may need both.",
+      "rubric": [
+        {
+          "criterion": "Defines mutual exclusion",
+          "points": 3
+        },
+        {
+          "criterion": "Defines ordering",
+          "points": 3
+        },
+        {
+          "criterion": "Gives a meaningful contrast",
+          "points": 2
+        }
+      ],
+      "explanation": "A lock alone does not necessarily express that a particular event has occurred.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-race-conditions-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Give a correct strategy for protecting a shared counter and explain why it works.",
+      "answerKey": "Guard the read-modify-write increment with a mutex, or use an atomic increment operation with the required memory semantics. The operation then cannot interleave with another conflicting increment, preserving the counter update invariant.",
+      "rubric": [
+        {
+          "criterion": "Chooses a valid synchronization method",
+          "points": 3
+        },
+        {
+          "criterion": "Explains read-modify-write risk",
+          "points": 3
+        },
+        {
+          "criterion": "Connects method to invariant",
+          "points": 2
+        }
+      ],
+      "explanation": "Simply declaring a variable volatile does not generally make increment atomic.",
+      "needsHumanCheck": false
+    }
+  ]
+}

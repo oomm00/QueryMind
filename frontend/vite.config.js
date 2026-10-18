@@ -15,11 +15,12 @@ export default defineConfig({
       },
     },
   },
-  // The tests run in jsdom; the content pipeline's own tests are plain Node.
+  // The tests run in jsdom. Content-tool tests are kept separate because they
+  // import Node-only modules and are run by their own script.
   test: {
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.js'],
-    include: ['src/**/*.test.{js,jsx}', 'scripts/**/*.test.js'],
+    include: ['src/**/*.test.{js,jsx}'],
     restoreMocks: true,
   },
 })

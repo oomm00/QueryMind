@@ -1,0 +1,12 @@
+{
+  "id": "concurrency-recovery",
+  "title": "Concurrency and Recovery",
+  "subject": "database-management-systems",
+  "summary": "Core concurrency and recovery concepts.",
+  "conceptIds": [
+    "acid",
+    "isolation-levels",
+    "locking",
+    "logging-recovery"
+  ]
+}

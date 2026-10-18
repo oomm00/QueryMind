@@ -1,0 +1,131 @@
+{
+  "id": "concept-waiting-time",
+  "subject": "operating-systems",
+  "title": "Scheduling metrics and trade-offs",
+  "summary": "Scheduling metrics quantify responsiveness, completion efficiency, and fairness rather than identifying one universally optimal policy.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-waiting-time-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Turnaround time is measured from which two events?",
+      "options": [
+        "First I/O to last I/O",
+        "Arrival/submission to completion",
+        "First dispatch to first preemption",
+        "Creation of a file to deletion"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Turnaround time is completion time minus arrival time.",
+      "rubric": [],
+      "explanation": "It includes both waiting and execution time.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-waiting-time-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What does response time measure for an interactive request?",
+      "options": [
+        "Time until its first CPU service/response",
+        "Total disk capacity used",
+        "Time until all jobs finish",
+        "Number of context switches only"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Response time measures how long until the task first receives service or produces an initial response.",
+      "rubric": [],
+      "explanation": "It differs from turnaround, which waits for completion.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-waiting-time-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A job arrives at 2 ms and starts at 7 ms. What is its waiting time before first execution?",
+      "options": [
+        "2 ms",
+        "5 ms",
+        "7 ms",
+        "9 ms"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Waiting before its first execution is 7 - 2 = 5 ms.",
+      "rubric": [],
+      "explanation": "Additional preempted ready-queue time may be counted in total waiting depending on the metric definition.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-waiting-time-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can maximizing throughput hurt interactive response time?",
+      "options": [
+        "Throughput and response time are identical",
+        "Batching long jobs can keep the processor busy while delaying short interactive jobs",
+        "Interactive jobs cannot be scheduled preemptively",
+        "Throughput measures memory only"
+      ],
+      "correctIndex": 1,
+      "answerKey": "A policy optimized for completed jobs per unit time may delay first service for interactive work.",
+      "rubric": [],
+      "explanation": "Schedulers balance multiple objectives.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-waiting-time-q5",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Define waiting time, turnaround time, and response time.",
+      "answerKey": "Waiting time is time spent in the ready queue; turnaround time is completion minus arrival; response time is first service/response minus arrival.",
+      "rubric": [
+        {
+          "criterion": "Defines waiting time",
+          "points": 2
+        },
+        {
+          "criterion": "Defines turnaround",
+          "points": 2
+        },
+        {
+          "criterion": "Defines response",
+          "points": 2
+        }
+      ],
+      "explanation": "State the event boundaries explicitly.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-waiting-time-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Explain one trade-off between a small and a large round-robin quantum.",
+      "answerKey": "A small quantum improves responsiveness and fairness but causes more context-switch overhead. A large quantum reduces switching overhead and improves CPU efficiency for bursts, but can make interactive tasks wait longer and approach FCFS behavior.",
+      "rubric": [
+        {
+          "criterion": "Explains small-quantum effect",
+          "points": 3
+        },
+        {
+          "criterion": "Explains large-quantum effect",
+          "points": 3
+        },
+        {
+          "criterion": "Connects both to trade-offs",
+          "points": 2
+        }
+      ],
+      "explanation": "The best quantum depends on workload and switch cost.",
+      "needsHumanCheck": false
+    }
+  ]
+}

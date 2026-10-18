@@ -23,8 +23,8 @@ from sqlalchemy import (
     Uuid as UUID,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base import Base
 
@@ -76,7 +76,7 @@ class Document(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="pending"
     )  # pending | processing | ready | failed
-    chunk_count: Mapped[int | None] = mapped_column(Integer)  # chunks embedded into ChromaDB
+    chunk_count: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -93,16 +93,14 @@ class Question(Base):
     )
     document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id"))
     topic: Mapped[str] = mapped_column(String(512), nullable=False)
-    subject: Mapped[str | None] = mapped_column(String(255))  # e.g. "DBMS"
+    subject: Mapped[str | None] = mapped_column(String(255))
     bloom_level: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # remember | understand | apply | analyze | evaluate | create
     difficulty: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # easy | medium | hard
-    question_type: Mapped[str] = mapped_column(
-        String(50), default="descriptive"
-    )  # mcq | short_answer | descriptive | coding
+    question_type: Mapped[str] = mapped_column(String(50), default="descriptive")
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
     options: Mapped[list[str] | None] = mapped_column(
         JSONB().with_variant(JSON, "sqlite"), nullable=True
@@ -120,15 +118,12 @@ class Question(Base):
     attempts: Mapped[list["Attempt"]] = relationship("Attempt", back_populates="question")
 
 
+
 # ── Attempt ───────────────────────────────────────────────────────────────────
 
 class Attempt(Base):
     __tablename__ = "attempts"
-    __table_args__ = (
-        # Per-user history / mastery reads filter on user_id and sort by
-        # created_at, so a composite index serves both without a sort.
-        Index("ix_attempts_user_created", "user_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_attempts_user_created", "user_id", "created_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -140,8 +135,8 @@ class Attempt(Base):
     feedback: Mapped[str | None] = mapped_column(Text)
     criteria_scores: Mapped[dict | None] = mapped_column(
         JSONB().with_variant(JSON, "sqlite"), nullable=True
-    )  # flexible per-criterion scores as JSONB
-    evaluation_data: Mapped[str | None] = mapped_column(Text)    # full rubric JSON (scores, missing_points, strengths)
+    )
+    evaluation_data: Mapped[str | None] = mapped_column(Text)
     time_taken_seconds: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -156,7 +151,6 @@ class KnowledgeProfile(Base):
     __table_args__ = (
         Index("ix_knowledge_profile_user_topic_bloom", "user_id", "topic", "bloom_level"),
     )
-
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -177,15 +171,9 @@ class KnowledgeProfile(Base):
     user: Mapped["User"] = relationship("User", back_populates="knowledge_profiles")
 
 
-# ── MasteryRecord ─────────────────────────────────────────────────────────────
-# One row per (user, subject, topic). Drives adaptive question selection
-# (pipeline Stage 10 & 11). Distinct from KnowledgeProfile above (which is a
-# per-user, single-row JSON blob).
-
 class MasteryRecord(Base):
     __tablename__ = "mastery_records"
     __table_args__ = (
-        # Composite key + index on (user_id, subject, topic): one record each.
         UniqueConstraint(
             "user_id", "subject", "topic", name="uq_mastery_user_subject_topic"
         ),
@@ -199,9 +187,8 @@ class MasteryRecord(Base):
     )
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     topic: Mapped[str] = mapped_column(String(512), nullable=False)
-    mastery_score: Mapped[float] = mapped_column(Float, default=0.0)   # 0.0 – 1.0 (EMA)
+    mastery_score: Mapped[float] = mapped_column(Float, default=0.0)
     attempts_count: Mapped[int] = mapped_column(Integer, default=0)
-    # Per-Bloom-level mastery, JSON map e.g. {"remember": 0.8, "apply": 0.4}
     bloom_breakdown: Mapped[str | None] = mapped_column(Text)
     last_updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

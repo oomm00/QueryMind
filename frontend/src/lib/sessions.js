@@ -134,6 +134,7 @@ export function newSession({
     answers: {},
     flagged: [],
     selfMarks: {},
+    evaluationStatus: 'complete',
     note,
   }
 }

@@ -1,0 +1,82 @@
+{
+  "id": "logging-recovery",
+  "title": "Logging and recovery",
+  "subject": "database-management-systems",
+  "summary": "Understand logging and recovery in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "logging-recovery-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What is write-ahead logging?",
+      "explanation": "The correct answer is Log a change before writing its data page.",
+      "needsHumanCheck": false,
+      "options": [
+        "Log a change before writing its data page",
+        "Write data before logging",
+        "Disable checkpoints",
+        "Replicate only reads"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "logging-recovery-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What is write-ahead logging?",
+      "explanation": "The correct answer is Log a change before writing its data page.",
+      "needsHumanCheck": false,
+      "options": [
+        "Log a change before writing its data page",
+        "Write data before logging",
+        "Disable checkpoints",
+        "Replicate only reads"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "logging-recovery-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What does a redo record support?",
+      "explanation": "Reapplying a logged committed change after a crash.",
+      "needsHumanCheck": true,
+      "answerKey": "Reapplying a logged committed change after a crash.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "logging-recovery-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What does a redo record support?",
+      "explanation": "Reapplying a logged committed change after a crash.",
+      "needsHumanCheck": true,
+      "answerKey": "Reapplying a logged committed change after a crash.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

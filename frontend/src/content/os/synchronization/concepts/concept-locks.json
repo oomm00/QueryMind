@@ -1,0 +1,131 @@
+{
+  "id": "concept-locks",
+  "subject": "operating-systems",
+  "title": "Mutexes and critical sections",
+  "summary": "Locks provide mutual exclusion around critical sections that access shared state.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-locks-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What property does a mutex primarily provide?",
+      "options": [
+        "Mutual exclusion",
+        "Permanent storage",
+        "Address translation",
+        "CPU frequency scaling"
+      ],
+      "correctIndex": 0,
+      "answerKey": "A mutex allows at most one owner in the protected critical section.",
+      "rubric": [],
+      "explanation": "It does not by itself guarantee fairness or prevent all deadlocks.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-locks-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Why should a lock be released in a cleanup path after a protected operation?",
+      "options": [
+        "To avoid leaving other threads permanently blocked",
+        "To increase the lock count forever",
+        "To make the critical section longer",
+        "To disable preemption globally"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Failure to release a lock can cause other threads to wait indefinitely.",
+      "rubric": [],
+      "explanation": "Structured cleanup helps on normal and exceptional paths.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-locks-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Two threads increment a shared counter without a lock. Which result is possible?",
+      "options": [
+        "The final count is less than two increments because updates can be lost",
+        "The counter always doubles",
+        "The CPU creates a second counter automatically",
+        "The operation becomes atomic by declaration"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Read-modify-write operations can interleave and lose one update.",
+      "rubric": [],
+      "explanation": "A lock or atomic increment is needed for the intended guarantee.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-locks-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "What is a key danger of holding a lock while performing slow disk I/O?",
+      "options": [
+        "It makes disk I/O impossible",
+        "It enlarges the critical section and blocks unrelated threads unnecessarily",
+        "It guarantees deadlock in every case",
+        "It removes the need for permissions"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Slow work under a lock reduces concurrency and may cause avoidable contention.",
+      "rubric": [],
+      "explanation": "The exact safety impact depends on what data the lock protects.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-locks-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Define a critical section and state the invariant a mutex should enforce.",
+      "answerKey": "A critical section is code that accesses shared state and must not overlap with conflicting accesses. A mutex invariant is that at most one thread owns the lock and executes the protected section at a time.",
+      "rubric": [
+        {
+          "criterion": "Defines critical section",
+          "points": 3
+        },
+        {
+          "criterion": "States mutual exclusion",
+          "points": 3
+        },
+        {
+          "criterion": "Relates it to conflicting shared access",
+          "points": 2
+        }
+      ],
+      "explanation": "Mutual exclusion protects an invariant; it is not merely a performance hint.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-locks-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Give two ways to reduce lock contention without removing correctness.",
+      "answerKey": "Keep critical sections short, move slow or independent work outside the lock, use finer-grained locks when safe, batch updates, or use suitable atomic/data-structure techniques. Any choice must preserve the shared-state invariant.",
+      "rubric": [
+        {
+          "criterion": "Gives two valid techniques",
+          "points": 4
+        },
+        {
+          "criterion": "Explains why contention falls",
+          "points": 2
+        },
+        {
+          "criterion": "Preserves correctness caveat",
+          "points": 2
+        }
+      ],
+      "explanation": "Do not recommend releasing a lock while shared state is in an inconsistent intermediate state.",
+      "needsHumanCheck": false
+    }
+  ]
+}

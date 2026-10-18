@@ -1,0 +1,82 @@
+{
+  "id": "replication",
+  "title": "Replication",
+  "subject": "database-management-systems",
+  "summary": "Understand replication in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "replication-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What is synchronous replication?",
+      "explanation": "The correct answer is A write waits for configured replicas to acknowledge.",
+      "needsHumanCheck": false,
+      "options": [
+        "A write waits for configured replicas to acknowledge",
+        "Reads never leave the primary",
+        "Data is never copied",
+        "Only logs are replicated"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "replication-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What is synchronous replication?",
+      "explanation": "The correct answer is A write waits for configured replicas to acknowledge.",
+      "needsHumanCheck": false,
+      "options": [
+        "A write waits for configured replicas to acknowledge",
+        "Reads never leave the primary",
+        "Data is never copied",
+        "Only logs are replicated"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "replication-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What trade-off does replication introduce?",
+      "explanation": "It can improve availability and reads but adds coordination and staleness complexity.",
+      "needsHumanCheck": true,
+      "answerKey": "It can improve availability and reads but adds coordination and staleness complexity.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "replication-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What trade-off does replication introduce?",
+      "explanation": "It can improve availability and reads but adds coordination and staleness complexity.",
+      "needsHumanCheck": true,
+      "answerKey": "It can improve availability and reads but adds coordination and staleness complexity.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "resilience-operations",
+  "title": "Resilience and Operations",
+  "subject": "system-design",
+  "summary": "Core resilience and operations concepts.",
+  "conceptIds": [
+    "failure-isolation",
+    "rate-limiting",
+    "service-observability",
+    "disaster-recovery"
+  ]
+}

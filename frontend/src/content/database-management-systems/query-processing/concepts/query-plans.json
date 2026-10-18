@@ -1,0 +1,82 @@
+{
+  "id": "query-plans",
+  "title": "Query plans",
+  "subject": "database-management-systems",
+  "summary": "Understand query plans in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "query-plans-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a query optimizer choose?",
+      "explanation": "The correct answer is An execution plan.",
+      "needsHumanCheck": false,
+      "options": [
+        "An execution plan",
+        "A primary key value",
+        "A backup snapshot",
+        "A user password"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "query-plans-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does a query optimizer choose?",
+      "explanation": "The correct answer is An execution plan.",
+      "needsHumanCheck": false,
+      "options": [
+        "An execution plan",
+        "A primary key value",
+        "A backup snapshot",
+        "A user password"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "query-plans-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why can a lower-cost query plan be faster?",
+      "explanation": "It estimates less I/O or computation, though the estimate can be wrong.",
+      "needsHumanCheck": true,
+      "answerKey": "It estimates less I/O or computation, though the estimate can be wrong.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "query-plans-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why can a lower-cost query plan be faster?",
+      "explanation": "It estimates less I/O or computation, though the estimate can be wrong.",
+      "needsHumanCheck": true,
+      "answerKey": "It estimates less I/O or computation, though the estimate can be wrong.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

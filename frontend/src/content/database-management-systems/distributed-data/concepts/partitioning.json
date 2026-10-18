@@ -1,0 +1,82 @@
+{
+  "id": "partitioning",
+  "title": "Partitioning",
+  "subject": "database-management-systems",
+  "summary": "Understand partitioning in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "partitioning-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Hash partitioning is often useful for what?",
+      "explanation": "The correct answer is Evenly distributing keyed rows.",
+      "needsHumanCheck": false,
+      "options": [
+        "Evenly distributing keyed rows",
+        "Preserving sorted ranges",
+        "Encrypting columns",
+        "Removing all joins"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "partitioning-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Hash partitioning is often useful for what?",
+      "explanation": "The correct answer is Evenly distributing keyed rows.",
+      "needsHumanCheck": false,
+      "options": [
+        "Evenly distributing keyed rows",
+        "Preserving sorted ranges",
+        "Encrypting columns",
+        "Removing all joins"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "partitioning-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is a partition key?",
+      "explanation": "The value or expression used to assign a row to a partition.",
+      "needsHumanCheck": true,
+      "answerKey": "The value or expression used to assign a row to a partition.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "partitioning-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is a partition key?",
+      "explanation": "The value or expression used to assign a row to a partition.",
+      "needsHumanCheck": true,
+      "answerKey": "The value or expression used to assign a row to a partition.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

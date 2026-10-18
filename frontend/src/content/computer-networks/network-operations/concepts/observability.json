@@ -1,0 +1,82 @@
+{
+  "id": "observability",
+  "title": "Network observability",
+  "subject": "computer-networks",
+  "summary": "Understand network observability in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "observability-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which tool records per-request timing across network hops?",
+      "explanation": "A distributed trace follows one request and records timing across components.",
+      "needsHumanCheck": false,
+      "options": [
+        "A distributed trace",
+        "A DNS record",
+        "A MAC table",
+        "A checksum"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "observability-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which signal is best for spotting packet loss over time?",
+      "explanation": "A time-series metric can track packet loss and reveal trends or incidents.",
+      "needsHumanCheck": false,
+      "options": [
+        "A time-series metric",
+        "A TLS certificate",
+        "An SQL index",
+        "A user cookie"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "observability-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What makes an alert actionable?",
+      "explanation": "A clear threshold tied to user impact and a known response.",
+      "needsHumanCheck": true,
+      "answerKey": "A clear threshold tied to user impact and a known response.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "observability-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What makes an alert actionable?",
+      "explanation": "A clear threshold tied to user impact and a known response.",
+      "needsHumanCheck": true,
+      "answerKey": "A clear threshold tied to user impact and a known response.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

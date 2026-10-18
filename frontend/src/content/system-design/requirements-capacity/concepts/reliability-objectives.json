@@ -1,0 +1,82 @@
+{
+  "id": "reliability-objectives",
+  "title": "Reliability objectives",
+  "subject": "system-design",
+  "summary": "Understand reliability objectives in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "reliability-objectives-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which metric states the fraction of time a service is available?",
+      "explanation": "The correct answer is Availability.",
+      "needsHumanCheck": false,
+      "options": [
+        "Availability",
+        "Throughput",
+        "Payload size",
+        "Cache hit ratio"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "reliability-objectives-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which metric states the fraction of time a service is available?",
+      "explanation": "The correct answer is Availability.",
+      "needsHumanCheck": false,
+      "options": [
+        "Availability",
+        "Throughput",
+        "Payload size",
+        "Cache hit ratio"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "reliability-objectives-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is an SLO?",
+      "explanation": "A target level for a service indicator, such as 99.9% successful requests.",
+      "needsHumanCheck": true,
+      "answerKey": "A target level for a service indicator, such as 99.9% successful requests.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "reliability-objectives-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is an SLO?",
+      "explanation": "A target level for a service indicator, such as 99.9% successful requests.",
+      "needsHumanCheck": true,
+      "answerKey": "A target level for a service indicator, such as 99.9% successful requests.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "id": "indexes",
+  "title": "Indexes",
+  "subject": "database-management-systems",
+  "summary": "Understand indexes in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "indexes-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What is a common cost of adding an index?",
+      "explanation": "The correct answer is Extra storage and write maintenance.",
+      "needsHumanCheck": false,
+      "options": [
+        "Extra storage and write maintenance",
+        "Loss of all constraints",
+        "No reads can use it",
+        "Automatic denormalization"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "indexes-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What is a common cost of adding an index?",
+      "explanation": "The correct answer is Extra storage and write maintenance.",
+      "needsHumanCheck": false,
+      "options": [
+        "Extra storage and write maintenance",
+        "Loss of all constraints",
+        "No reads can use it",
+        "Automatic denormalization"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "indexes-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why might an index not help a query?",
+      "explanation": "If selectivity is low or the predicate is not usable by that index.",
+      "needsHumanCheck": true,
+      "answerKey": "If selectivity is low or the predicate is not usable by that index.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "indexes-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why might an index not help a query?",
+      "explanation": "If selectivity is low or the predicate is not usable by that index.",
+      "needsHumanCheck": true,
+      "answerKey": "If selectivity is low or the predicate is not usable by that index.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}
