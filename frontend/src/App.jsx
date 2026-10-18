@@ -25,7 +25,11 @@ import NotFoundPage from './pages/NotFoundPage'
 import ComingSoon from './pages/ComingSoon'
 import LessonPage from './pages/LessonPage'
 import MapPage from './pages/MapPage'
-import CoursePage from './pages/CoursePage'
+import CoursePage from './pages/course/CoursePage'
+import CoursePracticeTab from './pages/course/CoursePracticeTab'
+import CourseMaterialTab from './pages/course/CourseMaterialTab'
+import CourseProgressTab from './pages/course/CourseProgressTab'
+import CourseAboutTab from './pages/course/CourseAboutTab'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import PublicRoute from './components/routing/PublicRoute'
 import AppShell from './AppShell'
@@ -138,7 +142,12 @@ export default function App() {
               <CoursePage />
             </Protected>
           }
-        />
+        >
+          <Route index element={<CoursePracticeTab />} />
+          <Route path="material" element={<CourseMaterialTab />} />
+          <Route path="progress" element={<CourseProgressTab />} />
+          <Route path="about" element={<CourseAboutTab />} />
+        </Route>
         <Route
           path="/learn/:courseId/:topicId/:lessonId"
           element={

@@ -15,6 +15,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import { CommandPalette } from './components/CommandPalette'
+import { FlashHost } from './components/routing/FlashHost.jsx'
 import { useTheme } from './hooks/useTheme'
 import { useRailStats } from './hooks/useRailStats'
 import { NAV_ITEMS, MOBILE_TABS, MOBILE_MORE_ITEMS, WORKSPACE_LABEL, breadcrumbFor } from './navigation'
@@ -532,6 +533,7 @@ function AppShell({ children }) {
       )}
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <FlashHost />
     </div>
   )
 }
