@@ -1,7 +1,0 @@
-results page
-
-ResultsPage at /practice/:sessionId/results: scoreSession header (marks earned/available, percent or null + unscored note), by-Bloom earned/available table, review list with All/Wrong/Unanswered/Flagged filter, per-item your answer/correct answer/explanation/Bloom chip/marks, short-answer answer key + rubric self-marking with recordSelfMark + recordScore when each criterion is checked, buttons Retry (scope retry + questionIds), Back to course, Practice next topic. Route added in App.jsx.
-
-Short answers show "Not marked yet" until the student has marked them, excluded from score with a visible note. MCQs were scored at submit (SessionPage already records them); short answers record score each time a rubric criterion is checked or unchecked.
-
-Self-marking UI: each rubric criterion is a checkbox with label (criterion description) and points; selecting/deselecting immediately records the new score and updates mastery via recordScore. Score = (points earned / points available) for that question.
