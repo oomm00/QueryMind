@@ -11,6 +11,9 @@ Covered here:
    exact (subject, topic) filter yields no material — the frontend's adapter
    derives ``subject`` from the free-text ``topic`` (subject == topic), which
    would otherwise never match material filed under a real subject.
+3. ``GET /documents`` and ``GET /documents/topics`` expose exactly the fields
+   the Upload page reads (its document table and its subject/topic
+   suggestions); behavioural coverage lives in ``tests/test_documents_api.py``.
 
 Related contract fixes are covered next to their feature tests:
 - file-only multipart upload -> ``tests/test_ingestion_service.py``
@@ -21,6 +24,7 @@ Related contract fixes are covered next to their feature tests:
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -34,7 +38,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.main import create_app
 from app.models.base import Base
-from app.models.models import Question, User
+from app.models.models import Document, Question, User
 from app.schemas.schemas import GeneratedQuestion
 
 import app.models.models  # noqa: F401 — register models on Base.metadata
@@ -191,3 +195,37 @@ def test_generate_does_not_fall_back_when_material_found(authed_client, monkeypa
     assert resp.status_code == 200
     assert len(calls) == 1
     assert calls[0]["subject"] == "Concurrency"
+
+
+def test_document_read_endpoints_expose_the_upload_page_contract(authed_client, db_session):
+    """The Upload page reads these exact keys; renaming any of them breaks it."""
+    client, user = authed_client
+
+    row = Document(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        filename="deadlocks.md",
+        subject="OS",
+        topic="Deadlocks",
+        source_type="college",
+        status="ready",
+        chunk_count=5,
+    )
+    row.created_at = datetime(2026, 1, 1, 12, 0, 0)
+    db_session.add(row)
+    db_session.commit()
+
+    docs = client.get("/documents")
+    assert docs.status_code == 200
+    entry = docs.json()[0]
+    assert set(entry) == {
+        "document_id", "filename", "subject", "topic", "source_type",
+        "course", "status", "chunk_count", "created_at",
+    }
+    assert entry["document_id"] == str(row.id)
+    assert entry["filename"] == "deadlocks.md"
+    assert entry["chunk_count"] == 5
+
+    topics = client.get("/documents/topics")
+    assert topics.status_code == 200
+    assert topics.json() == [{"subject": "OS", "topics": ["Deadlocks"]}]
