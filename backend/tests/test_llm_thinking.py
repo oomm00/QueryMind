@@ -122,13 +122,19 @@ def test_configure_genai_wires_thinking_settings(monkeypatch):
     from app.services import generation_service as gs
 
     monkeypatch.setattr(gs.settings, "gemini_api_key", "test-key")
-    monkeypatch.setattr(gs.settings, "llm_thinking_level", "minimal")
+    monkeypatch.setattr(gs.settings, "llm_thinking_level", "low")
+    monkeypatch.setattr(gs.settings, "llm_gen_thinking_level", "medium")
     monkeypatch.setattr(gs.settings, "llm_max_output_tokens", 333)
     monkeypatch.setattr(genai, "Client", lambda *a, **k: MagicMock())
 
+    # Generation defaults to its own (higher) thinking level...
     adapter = gs._configure_genai(response_schema=None)
-    assert adapter._thinking_level == "minimal"
+    assert adapter._thinking_level == "medium"
     assert adapter._max_output_tokens == 333
+
+    # ...while a validation/judgement caller can pin the low evaluation level.
+    adapter = gs._configure_genai(thinking_level="low")
+    assert adapter._thinking_level == "low"
 
 
 def test_configure_judge_client_wires_thinking_settings(monkeypatch):

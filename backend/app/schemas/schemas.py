@@ -150,6 +150,11 @@ class GeneratedQuestion(BaseModel):
     # adaptive=true; defaults keep the non-adaptive response shape intact.
     adaptive: bool = False
     adaptive_reason: Optional[str] = None      # why this level was chosen
+    # Thin-context guard (Apply+ only): set when the retrieved material is too
+    # thin to reliably ground a concrete-scenario question — the caller should
+    # surface it instead of trusting a generic question. None everywhere else,
+    # so old payloads and response contracts are unchanged.
+    context_warning: Optional[str] = None
 
     def model_post_init(self, __context: Any) -> None:
         if not self.question_text and self.question:

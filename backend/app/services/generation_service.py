@@ -20,6 +20,7 @@ Test mocks can simply be a ``MagicMock`` with ``generate_content`` configured.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from functools import lru_cache
 from typing import Any, Optional
@@ -50,6 +51,172 @@ BLOOM_VERBS: dict[str, list[str]] = {
 
 VALID_BLOOM_LEVELS = set(BLOOM_VERBS.keys())
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+
+# ── Per-Level Bloom Spec (prompt + deterministic stem check) ──────────────────
+#: Canonical low -> high ordering; |index difference| == distance in levels.
+BLOOM_ORDER: list[str] = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+
+#: Levels whose questions must hinge on a concrete scenario / numbers / a case.
+APPLY_PLUS_LEVELS = {"apply", "analyze", "evaluate", "create"}
+
+#: Minimum retrieved-context size (chars) for an Apply+ question to be grounded.
+THIN_CONTEXT_MIN_CHARS = 250
+
+#: Structured per-level spec used by the generation prompt: what the cognitive
+#: operation is, one good and one bad example (style only — examples never
+#: carry content that could leak into a generated question).
+BLOOM_LEVEL_SPECS: dict[str, dict[str, str]] = {
+    "remember": {
+        "definition": (
+            "Recall or recognize facts, terminology, or definitions exactly as "
+            "learned - retrieval without transformation."
+        ),
+        "good": "'State the three ACID properties of a transaction.' (asks for the known list verbatim)",
+        "bad": "'Explain why atomicity matters in a banking workload.' (that demands understanding, not recall)",
+    },
+    "understand": {
+        "definition": (
+            "Explain an idea in your own words - paraphrase, summarize, classify, "
+            "or illustrate its meaning."
+        ),
+        "good": "'Explain, in your own words, how two-phase locking guarantees serializability.'",
+        "bad": "'Define two-phase locking.' (a bare definition is remember-level)",
+    },
+    "apply": {
+        "definition": (
+            "Use the concept to solve a problem in a concrete, specific situation - "
+            "work something out, do not just talk about it."
+        ),
+        "good": (
+            "'Apply the two-phase locking rule to this 3-schedule example: which "
+            "schedules are conflict-serializable? Show the precedence-graph step.'"
+        ),
+        "bad": "'Explain how two-phase locking works.' (a generic explanation is understand-level)",
+    },
+    "analyze": {
+        "definition": (
+            "Break the concept into parts and examine how they relate - compare, "
+            "contrast, distinguish causes from effects."
+        ),
+        "good": (
+            "'Compare strict 2PL with rigorous 2PL in the scenario above: which "
+            "condition causes each blocked transaction's outcome, and why?'"
+        ),
+        "bad": "'List the lock modes used in 2PL.' (flat enumeration is remember-level)",
+    },
+    "evaluate": {
+        "definition": (
+            "Make and defend a judgement - critique, assess, or argue for/against "
+            "something against explicit criteria."
+        ),
+        "good": (
+            "'Judge whether READ COMMITTED is adequate for the order system described "
+            "above: justify your verdict against the anomaly risks shown in the material.'"
+        ),
+        "bad": "'Describe what READ COMMITTED isolation does.' (restating behaviour is understand-level)",
+    },
+    "create": {
+        "definition": (
+            "Synthesize the studied elements into something new - a plan, model, "
+            "design, or solution that did not exist before."
+        ),
+        "good": (
+            "'Design a deadlock-recovery policy for the resource-allocation graph "
+            "above: propose the rollback rule and justify how it preserves the "
+            "studied invariants.'"
+        ),
+        "bad": "'Summarize the techniques for handling deadlocks.' (recombining known facts is understand-level)",
+    },
+}
+
+
+def _forbidden_stems_for(level: str) -> list[str]:
+    """Lower-level verbs that must not open a *level* question.
+
+    Union of the allowed verbs of every strictly lower level, minus the verbs
+    this level legitimately owns (e.g. ``outline`` belongs to both remember and
+    understand, so it is not forbidden at understand).
+    """
+    allowed_here = set(BLOOM_VERBS.get(level, []))
+    if level not in BLOOM_ORDER:
+        return []
+    forbidden: list[str] = []
+    for lower in BLOOM_ORDER[: BLOOM_ORDER.index(level)]:
+        for verb in BLOOM_VERBS.get(lower, []):
+            if verb not in allowed_here and verb not in forbidden:
+                forbidden.append(verb)
+    return forbidden
+
+
+#: Per-level forbidden stems (lower-level verbs) - deterministic, single source
+#: of truth shared by the generation prompt, the validation stem check, and
+#: scripts/bloom_audit.py.
+BLOOM_FORBIDDEN_VERBS: dict[str, list[str]] = {
+    lvl: _forbidden_stems_for(lvl) for lvl in BLOOM_ORDER
+}
+
+
+def _verb_regex(verb: str) -> "re.Pattern[str]":
+    """Word-boundary regex for *verb* plus common inflections.
+
+    ``use`` matches use/uses/used/using (via the drop-e gerund), ``list`` matches
+    list/lists/listed/listing, ``assess`` matches assess/assesses/assessed/
+    harmless extras like ``assesss`` never occur in text.
+    """
+    v = re.escape(verb)
+    if verb.endswith("e"):
+        gerund = re.escape(verb[:-1]) + r"ing"
+        endings = rf"{v}s|{v}es|{v}d|{gerund}"
+    else:
+        endings = rf"{v}s|{v}es|{v}ed|{v}ing"
+    return re.compile(rf"\b(?:{v}|{endings})\b")
+
+
+def extract_stem(question_text: str) -> str:
+    """First alphabetic word of the question, lowercased ('' when empty)."""
+    words = re.findall(r"[A-Za-z]+", (question_text or "").strip())
+    return words[0].lower() if words else ""
+
+
+def check_stem(question_text: str, bloom_level: str) -> dict:
+    """Deterministic stem compliance for *bloom_level* (Step 3b).
+
+    A question is compliant when its opening (first ~6 words) contains a stem
+    from the level's own verb list AND its stem zone (first 3 words) contains no
+    forbidden lower-level verb. The narrower forbidden zone keeps legitimate
+    Apply+ phrasings like "Using the schedule above, ..." passing while still
+    rejecting openings such as "Define ...", "Explain ...", "What is ..." at
+    higher levels.
+
+    Returns a dict with ``stem``, ``allowed_hit``, ``forbidden_hit`` and
+    ``is_compliant`` (True when there is no constraint to check either).
+    """
+    if bloom_level not in BLOOM_VERBS:
+        return {
+            "stem": extract_stem(question_text),
+            "allowed_hit": None,
+            "forbidden_hit": None,
+            "is_compliant": True,
+            "opening": "",
+        }
+    words = [w.lower() for w in re.findall(r"[A-Za-z]+", (question_text or ""))]
+    allowed = BLOOM_VERBS.get(bloom_level, [])
+    forbidden = BLOOM_FORBIDDEN_VERBS.get(bloom_level, [])
+    opening = " ".join(words[:6])
+    stem_zone = " ".join(words[:3])
+    allowed_hit = next(
+        (v for v in allowed if _verb_regex(v).search(opening)), None
+    )
+    forbidden_hit = next(
+        (v for v in forbidden if _verb_regex(v).search(stem_zone)), None
+    )
+    return {
+        "stem": words[0] if words else "",
+        "allowed_hit": allowed_hit,
+        "forbidden_hit": forbidden_hit,
+        "is_compliant": allowed_hit is not None and forbidden_hit is None,
+        "opening": opening,
+    }
 
 # Transient-error retry / backoff configuration now lives in app.services.llm_utils
 # (shared with the answer-evaluation service). LLM_MAX_RETRIES is re-exported above.
@@ -182,8 +349,16 @@ def _generation_schema() -> Any:
     )
 
 
-def _configure_genai(response_schema: Any = None) -> GeminiAdapter:
-    """Configure and return a ``GeminiAdapter`` backed by a real google.genai client."""
+def _configure_genai(
+    response_schema: Any = None,
+    thinking_level: Optional[str] = None,
+) -> GeminiAdapter:
+    """Configure and return a ``GeminiAdapter`` backed by a real google.genai client.
+
+    ``thinking_level`` defaults to the generation-specific setting
+    (``LLM_GEN_THINKING_LEVEL``, medium) — small validation/judgement callers can
+    pass the lower evaluation level to keep latency down.
+    """
     api_key = settings.gemini_api_key
     if not api_key:
         raise LLMNotConfiguredError()
@@ -195,7 +370,7 @@ def _configure_genai(response_schema: Any = None) -> GeminiAdapter:
         settings.llm_model,
         settings.llm_temperature,
         response_schema=response_schema,
-        thinking_level=settings.llm_thinking_level,
+        thinking_level=thinking_level or settings.llm_gen_thinking_level,
         thinking_budget=settings.llm_thinking_budget,
         max_output_tokens=settings.llm_max_output_tokens,
     )
@@ -211,9 +386,25 @@ def _build_prompt(
     question_type: str,
     context_chunks: list[dict],
 ) -> str:
-    """Construct the full generation prompt with retrieved context and Bloom verb anchoring."""
-    verbs = BLOOM_VERBS.get(bloom_level, ["explain"])
-    verb_hint = ", ".join(verbs[:4])
+    """Construct the full generation prompt with retrieved context and Bloom verb anchoring.
+
+    The Bloom section is a structured per-level spec (Step 3a): cognitive
+    operation definition, required opening stems, forbidden lower-level stems,
+    one good + one bad example, and the Apply+ concrete-scenario rule.
+    """
+    spec = BLOOM_LEVEL_SPECS.get(bloom_level, {})
+    allowed_stems = BLOOM_VERBS.get(bloom_level, ["explain"])
+    allowed_hint = ", ".join(allowed_stems)
+    forbidden_stems = BLOOM_FORBIDDEN_VERBS.get(bloom_level, [])
+    forbidden_hint = ", ".join(forbidden_stems) if forbidden_stems else "(none at this level)"
+    concrete_rule = ""
+    if bloom_level in APPLY_PLUS_LEVELS:
+        concrete_rule = (
+            "CONCRETE SCENARIO RULE: the question must hinge on a concrete scenario, "
+            "specific numbers, or a small case drawn from the SOURCE MATERIAL above "
+            "(e.g. a given schedule, dataset, code snippet, or measured case) — "
+            "never a bare 'explain/describe X' phrasing.\n"
+        )
 
     if not context_chunks:
         context_section = "(No specific source material retrieved — use general academic knowledge.)"
@@ -260,7 +451,11 @@ def _build_prompt(
     prompt = f"""You are an expert academic question designer. Your task is to generate a {difficulty.upper()} difficulty exam question on the topic of "{topic}" (subject: {subject}).
 
 COGNITIVE LEVEL: Bloom's Taxonomy — {bloom_level.upper()}
-Required cognitive verbs to use in the question: {verb_hint}
+Cognitive operation: {spec.get("definition", "")}
+REQUIRED OPENING: begin the question with ONE of these stems/verbs: {allowed_hint}.
+FORBIDDEN OPENING: never begin a {bloom_level} question with these lower-level verbs: {forbidden_hint}.
+{concrete_rule}Good example (style only — never copy its content): {spec.get("good", "")}
+Bad example (wrong cognitive level — never produce this): {spec.get("bad", "")}
 
 QUESTION TYPE: {q_type_instruction}
 
@@ -269,7 +464,7 @@ SOURCE MATERIAL (base your question on this content):
 
 INSTRUCTIONS:
 1. The question MUST be directly answerable from the source material above.
-2. Use the Bloom's verb "{verbs[0]}" or similar in the question phrasing.
+2. Start the question with one of the required stems/verbs above — a deterministic stem check rejects any question that opens with a forbidden lower-level verb.
 3. The difficulty level is {difficulty}: {difficulty_hint}.
 4. The explanation must cite the source material reasoning.
 5. source_chunks / source_chunk_ids must list the [Source N: filename] doc names you used.
@@ -425,6 +620,21 @@ def generate_question(
         len(context_chunks), subject, topic, bloom_level, difficulty,
     )
 
+    # ── Thin-context guard for Apply+ levels (Step 3e) ───────────────────────
+    # Apply+ questions must hinge on a concrete case from the material; when the
+    # retrieved context is very thin, say so in `context_warning` (and log it)
+    # instead of silently shipping a generic question.
+    context_chars = sum(len(str(c.get("text", ""))) for c in context_chunks)
+    context_warning: Optional[str] = None
+    if bloom_level in APPLY_PLUS_LEVELS and context_chars < THIN_CONTEXT_MIN_CHARS:
+        context_warning = (
+            f"Retrieved context for {subject} / {topic} is thin "
+            f"({context_chars} characters < {THIN_CONTEXT_MIN_CHARS} needed) for a "
+            f"{bloom_level} question — the question may not be grounded in a concrete "
+            "scenario. Upload more detailed material for reliable Apply+ questions."
+        )
+        logger.warning("THIN_CONTEXT %s", context_warning)
+
     # ── Step 2: Build prompt ──────────────────────────────────────────────────
     prompt = _build_prompt(
         topic=topic,
@@ -457,11 +667,17 @@ def generate_question(
             client, prompt_text, sleep=time.sleep, models=model_chain
         )
 
+    def _parse(raw: dict) -> GeneratedQuestion:
+        generated = _validate_and_parse(raw, question_type, topic=topic)
+        if context_warning and not generated.context_warning:
+            generated.context_warning = context_warning
+        return generated
+
     try:
         return llm_utils.call_json_with_retry(
             request_fn=_request,
             prompt=prompt,
-            parse_fn=lambda raw: _validate_and_parse(raw, question_type, topic=topic),
+            parse_fn=_parse,
         )
     except ValidationError as second_err:
         logger.error("Second LLM attempt also failed: %s", second_err)
