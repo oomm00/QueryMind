@@ -100,6 +100,27 @@ class DuplicateQuestionError(ValidationError):
         super().__init__(detail)
 
 
+class BloomAlignmentError(ValidationError):
+    """Raised when the generated question's ACTUAL Bloom level diverges from the
+    requested one after the single corrective regeneration.
+
+    A distinct code ("BLOOM_ALIGNMENT_MISMATCH") so clients can tell a cognitive-
+    level mismatch (pick another level or retry) from generic validation failures.
+    """
+
+    status_code = 422
+    code = "BLOOM_ALIGNMENT_MISMATCH"
+
+    def __init__(
+        self,
+        detail: str = (
+            "The generated question did not match the requested Bloom level. "
+            "Try a different Bloom level."
+        ),
+    ) -> None:
+        super().__init__(detail)
+
+
 class LLMQuotaExhaustedError(QueryMindError):
     """Raised when every usable LLM model is rate-limited / out of quota.
 

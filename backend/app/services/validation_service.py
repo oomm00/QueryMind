@@ -36,6 +36,7 @@ from typing import Any, Optional, Sequence
 import numpy as np
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.models import Question
 
 logger = logging.getLogger("querymind.validation")
@@ -228,50 +229,147 @@ def check_answerability(
 
 # ── Check 3: Cognitive alignment check ────────────────────────────────────────
 
+def check_stem_alignment(question_text: str, requested_bloom: str) -> dict:
+    """Deterministic stem check (Step 3b).
+
+    The question must open with a stem from the requested level's verb list and
+    never with a forbidden lower-level verb. Delegates to
+    :func:`generation_service.check_stem` — the single source of truth shared
+    with the generation prompt and scripts/bloom_audit.py — and shapes the
+    result like the other checks so it travels in the combined verdict.
+    """
+    from app.services.generation_service import VALID_BLOOM_LEVELS, check_stem
+
+    requested = (requested_bloom or "").lower().strip()
+    if requested not in VALID_BLOOM_LEVELS:
+        return {
+            "is_compliant": True,
+            "stem": None,
+            "allowed_hit": None,
+            "forbidden_hit": None,
+            "violations": [],
+            "reason": "No constraint specified",
+        }
+
+    result = check_stem(question_text, requested)
+    violations: list[str] = []
+    if result["forbidden_hit"]:
+        violations.append(
+            f"opening uses forbidden lower-level verb '{result['forbidden_hit']}'"
+        )
+    if not result["allowed_hit"]:
+        violations.append(
+            f"question does not open with a required {requested} stem "
+            f"(first word: '{result['stem']}')"
+        )
+    return {
+        "is_compliant": not violations,
+        "stem": result["stem"],
+        "allowed_hit": result["allowed_hit"],
+        "forbidden_hit": result["forbidden_hit"],
+        "violations": violations,
+        "reason": "Opening stem is valid" if not violations else "; ".join(violations),
+    }
+
+
 def check_cognitive_alignment(
     question_text: str,
     requested_bloom: str,
     llm_client: Optional[Any] = None,
 ) -> dict:
-    """Lightweight check verifying the generated question's phrasing matches requested Bloom level."""
-    from app.services.generation_service import BLOOM_VERBS, VALID_BLOOM_LEVELS
+    """Cognitive-alignment gate (Step 3c): classify the question's ACTUAL Bloom
+    level with an LLM judge and compare it against the requested level using the
+    configured per-level tolerance (``settings.bloom_alignment_tolerance``,
+    shipped default: 1 step for remember/understand, 0 for apply and above).
+
+    The verdict (actual level, distance, tolerance) travels in the combined
+    validation result so a corrective regeneration gets the specific mismatch as
+    ``extra_instruction``. When no level is requested, no judge is configured,
+    or the judge itself fails (quota, malformed verdict), the gate is skipped
+    (``evaluated`` False, ``is_aligned`` True) — a judge hiccup must never fail
+    an otherwise-valid generated question.
+    """
+    from app.services.generation_service import BLOOM_ORDER, VALID_BLOOM_LEVELS
 
     requested = (requested_bloom or "").lower().strip()
-    if not requested or requested not in VALID_BLOOM_LEVELS:
-        return {"is_aligned": True, "detected_level": requested or "unknown", "reason": "No constraint specified"}
+    if requested not in VALID_BLOOM_LEVELS:
+        return {
+            "is_aligned": True,
+            "evaluated": False,
+            "detected_level": requested or "unknown",
+            "requested_level": requested,
+            "distance": None,
+            "tolerance": 0,
+            "reason": "No constraint specified",
+        }
+    if llm_client is None:
+        return {
+            "is_aligned": True,
+            "evaluated": False,
+            "detected_level": None,
+            "requested_level": requested,
+            "distance": None,
+            "tolerance": settings.tolerance_for(requested),
+            "reason": "Alignment judge not configured — gate skipped",
+        }
 
-    # Heuristic verification of cognitive verbs in the question phrasing
-    target_verbs = BLOOM_VERBS.get(requested, [])
-    has_target_verb = any(re.search(rf"\b{re.escape(v)}\b", question_text.lower()) for v in target_verbs)
+    from app.services import llm_utils
 
-    # If lightweight LLM client is provided, query it for alignment verdict
-    if llm_client is not None:
-        prompt = (
-            f"You are an academic assessment validator. Determine whether the following question "
-            f"is phrased to assess the Bloom's Taxonomy cognitive level '{requested.upper()}'.\n\n"
-            f"Question:\n{question_text}\n\n"
-            f"Return ONLY a JSON object:\n"
-            f'{{"is_aligned": true/false, "detected_level": "{requested}", "reason": "concise explanation"}}'
+    def _parse(raw: dict) -> str:
+        actual = str(raw.get("actual_level", "")).strip().lower()
+        if actual not in VALID_BLOOM_LEVELS:
+            raise ValueError(f"unknown actual_level {actual!r}")
+        return actual
+
+    prompt = (
+        "Classify the ACTUAL Bloom's Taxonomy level that the exam question below "
+        "demands of a student.\n\n"
+        "Levels (low to high):\n"
+        "- remember: recall facts, terms, definitions\n"
+        "- understand: explain or paraphrase in own words\n"
+        "- apply: use the concept in a concrete, specific situation\n"
+        "- analyze: break into parts, compare, distinguish causes from effects\n"
+        "- evaluate: judge or critique against criteria\n"
+        "- create: design or synthesize something new\n\n"
+        f"Question:\n{question_text}\n\n"
+        "Return ONLY a raw JSON object:\n"
+        '{"actual_level": "<one of: remember|understand|apply|analyze|evaluate|create>"}'
+    )
+    try:
+        actual = llm_utils.call_json_with_retry(
+            lambda p: llm_utils.request_text(
+                llm_client,
+                p,
+                models=llm_utils.resolve_model_chain(settings.llm_model),
+            ),
+            prompt,
+            _parse,
         )
-        try:
-            from app.services import llm_utils
+    except Exception as exc:
+        logger.warning("Cognitive alignment judge failed — gate skipped: %s", exc)
+        return {
+            "is_aligned": True,
+            "evaluated": False,
+            "detected_level": None,
+            "requested_level": requested,
+            "distance": None,
+            "tolerance": settings.tolerance_for(requested),
+            "reason": f"alignment judge failed ({type(exc).__name__}) — gate skipped",
+        }
 
-            resp = llm_utils.request_text(llm_client, prompt)
-            parsed = llm_utils.extract_json(resp)
-            if isinstance(parsed, dict) and "is_aligned" in parsed:
-                return {
-                    "is_aligned": bool(parsed.get("is_aligned")),
-                    "detected_level": str(parsed.get("detected_level", requested)),
-                    "reason": str(parsed.get("reason", "")),
-                }
-        except Exception as exc:
-            logger.warning("Cognitive alignment check via LLM encountered an issue: %s", exc)
-
-    is_aligned = has_target_verb or len(question_text.split()) >= 4
+    distance = abs(BLOOM_ORDER.index(actual) - BLOOM_ORDER.index(requested))
+    tolerance = settings.tolerance_for(requested)
     return {
-        "is_aligned": is_aligned,
-        "detected_level": requested,
-        "reason": "Phrased with cognitive action verbs" if has_target_verb else "Syntactic structure aligns with cognitive demand",
+        "is_aligned": distance <= tolerance,
+        "evaluated": True,
+        "detected_level": actual,
+        "requested_level": requested,
+        "distance": distance,
+        "tolerance": tolerance,
+        "reason": (
+            f"question classified as '{actual}' (requested '{requested}', "
+            f"distance {distance}, tolerance {tolerance})"
+        ),
     }
 
 
@@ -293,7 +391,11 @@ def validate_question(
     Checks:
     1. Duplicate detection: embedding similarity against stored questions <= 0.90.
     2. Answerability check: embedding similarity to retrieved context + keyword overlap.
-    3. Cognitive alignment check: phrasing matches requested Bloom level.
+    3. Stem check: deterministic — the question must open with an allowed verb for
+       the requested Bloom level and no forbidden lower-level verb.
+    4. Cognitive alignment gate: an LLM classifies the question's ACTUAL Bloom
+       level; it must sit within the configured tolerance of the requested one
+       (skipped when no judge client is passed).
 
     Returns::
 
@@ -301,14 +403,18 @@ def validate_question(
           "passed": bool,
           "duplicate_check": {...},
           "answerability_check": {...},
+          "stem_check": {...},
           "cognitive_alignment_check": {...},
           "reason": str | None,
-          "reason_code": "duplicate" | "answerability" | "cognitive" | None,
+          "reason_code": "duplicate" | "answerability" | "stem" | "cognitive" | None,
         }
     """
     payload = generated if isinstance(generated, dict) else generated.model_dump()
     bloom = requested_bloom or payload.get("bloom_level") or ""
     question_text = payload["question"]
+
+    # Deterministic stem check (Step 3b) — no embeddings, no LLM, runs first.
+    stem_check = check_stem_alignment(question_text, bloom)
 
     # Fetch the duplicate candidates up front, on the CALLER's thread:
     # SQLAlchemy sessions are not thread-safe, so the concurrent checks below
@@ -355,14 +461,15 @@ def validate_question(
     passed = (
         (not duplicate_check["is_duplicate"])
         and answerability_check["is_answerable"]
+        and stem_check["is_compliant"]
         and cognitive_check["is_aligned"]
     )
 
     reason: Optional[str] = None
     # Machine-readable companion to *reason* so callers can map a failure to a
     # specific error code (e.g. DUPLICATE_QUESTION) without string-matching the
-    # human-readable text. One of "duplicate" / "answerability" / "cognitive",
-    # or None when the question passed.
+    # human-readable text. One of "duplicate" / "answerability" / "stem" /
+    # "cognitive", or None when the question passed.
     reason_code: Optional[str] = None
     if duplicate_check["is_duplicate"]:
         reason_code = "duplicate"
@@ -378,17 +485,23 @@ def validate_question(
             f"{answerability_check.get('best_match_score')} < "
             f"{ANSWERABILITY_SIMILARITY_THRESHOLD}."
         )
+    elif not stem_check["is_compliant"]:
+        reason_code = "stem"
+        reason = f"Bloom stem violation for level '{bloom}': {stem_check['reason']}."
     elif not cognitive_check["is_aligned"]:
         reason_code = "cognitive"
         reason = (
-            f"Cognitive level mismatch: question does not assess Bloom level '{bloom}' "
-            f"({cognitive_check.get('reason')})."
+            f"Cognitive level mismatch: question reads as "
+            f"'{cognitive_check.get('detected_level')}' but '{bloom}' was requested "
+            f"(distance {cognitive_check.get('distance')} > tolerance "
+            f"{cognitive_check.get('tolerance')})."
         )
 
     return {
         "passed": passed,
         "duplicate_check": duplicate_check,
         "answerability_check": answerability_check,
+        "stem_check": stem_check,
         "cognitive_alignment_check": cognitive_check,
         "reason": reason,
         "reason_code": reason_code,

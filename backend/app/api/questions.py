@@ -16,7 +16,14 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.exceptions import DuplicateQuestionError, NotFoundError, ValidationError
+from app.core.config import settings
+from app.core.exceptions import (
+    BloomAlignmentError,
+    DuplicateQuestionError,
+    LLMNotConfiguredError,
+    NotFoundError,
+    ValidationError,
+)
 from app.core.timing import stage
 from app.db.session import get_db
 from app.models.models import Attempt, Question, User
@@ -27,7 +34,7 @@ from app.schemas.schemas import (
     SubmitAnswerRequest,
 )
 from app.services.evaluation_service import evaluate_answer
-from app.services.generation_service import generate_question
+from app.services.generation_service import _configure_genai, generate_question
 from app.services.mastery_service import (
     explain_recommendation,
     recommend_next,
@@ -42,12 +49,35 @@ router = APIRouter()
 
 
 def _correction_note(validation: dict) -> str:
-    """Build the corrective prompt note for the one regeneration retry."""
+    """Build the corrective prompt note for the one regeneration retry.
+
+    Each branch feeds the SPECIFIC violation back (stem, Bloom-level mismatch,
+    duplicate, grounding) so the regeneration has a concrete fix target.
+    """
     if validation.get("duplicate_check", {}).get("is_duplicate"):
         return (
             "Your previous question was too similar to a question that already "
             "exists for this topic. Generate a genuinely DIFFERENT question that "
             "tests a different aspect, definition, mechanism, or scenario."
+        )
+    if validation.get("reason_code") == "stem":
+        stem = validation.get("stem_check") or {}
+        violations = "; ".join(stem.get("violations") or []) or "invalid opening stem"
+        return (
+            "Your previous question's OPENING STEM violated the Bloom spec for the "
+            f"requested level: {violations}. Rewrite the question so it STARTS with "
+            "one of the required stems/verbs for this level and contains none of "
+            "the forbidden lower-level verbs."
+        )
+    if validation.get("reason_code") == "cognitive":
+        cog = validation.get("cognitive_alignment_check") or {}
+        return (
+            f"Your previous question was classified as a '{cog.get('detected_level')}' "
+            f"level question, but '{cog.get('requested_level')}' was requested "
+            f"(distance {cog.get('distance')} > tolerance {cog.get('tolerance')}). "
+            "Rewrite it so the cognitive demand matches the requested level: keep "
+            "the concrete depth of the level spec and remove any lower-level "
+            "phrasing."
         )
     return (
         "Your previous question's answer was not clearly supported by the SOURCE "
@@ -98,10 +128,12 @@ def generate_questions(
     - Retrieves relevant context from ChromaDB (college material priority, public fallback).
     - Constructs a structured prompt with Bloom's cognitive verb anchoring.
     - Calls Gemini to generate the question in validated JSON format.
-    - Runs pre-delivery validation (duplicate detection + answerability). If the
-      question fails, generation is retried ONCE with a corrective note; if it
-      still fails, the request is rejected with HTTP 422 rather than returning a
-      bad question.
+    - Runs pre-delivery validation (duplicate detection + answerability +
+      deterministic Bloom stem check + LLM cognitive-alignment gate). If the
+      question fails, generation is retried ONCE with the specific violation as
+      a corrective note; if it still fails, the request is rejected with HTTP 422
+      (BLOOM_ALIGNMENT_MISMATCH for an alignment mismatch) rather than returning
+      a bad question.
     - Persists the validated question so later generations can be de-duplicated.
     - With ``adaptive=true``, the learner's mastery profile (Stage 11) chooses the
       Bloom level and difficulty instead of the supplied values.
@@ -162,6 +194,16 @@ def generate_questions(
             context_chunks=context_chunks,
         )
 
+    # Cognitive-alignment judge for the validation gate (Step 3c). Built once
+    # per request after generation succeeded; if the key is missing the gate is
+    # skipped rather than failing a working generation pipeline.
+    try:
+        alignment_client = _configure_genai(
+            thinking_level=settings.llm_thinking_level  # judge = evaluation-class task
+        )
+    except LLMNotConfiguredError:
+        alignment_client = None
+
     with stage("validate"):
         validation = validate_question(
             generated=generated.model_dump(),
@@ -169,6 +211,8 @@ def generate_questions(
             topic=payload.topic,
             source_chunks=chunk_texts,
             db=db,
+            requested_bloom=bloom_level,
+            llm_client=alignment_client,
         )
 
     if not validation["passed"]:
@@ -190,18 +234,31 @@ def generate_questions(
                 topic=payload.topic,
                 source_chunks=chunk_texts,
                 db=db,
+                requested_bloom=bloom_level,
+                llm_client=alignment_client,
             )
         if not validation["passed"]:
             # A near-duplicate is a recoverable *user* situation, not a server
             # fault: surface a stable DUPLICATE_QUESTION code + an actionable hint
-            # so the client can suggest a different topic / Bloom level. Other
-            # validation failures stay a generic 422 VALIDATION_ERROR.
+            # so the client can suggest a different topic / Bloom level. A
+            # Bloom-level mismatch after the corrective regeneration gets its own
+            # BLOOM_ALIGNMENT_MISMATCH code (Step 3c). Other validation failures
+            # stay a generic 422 VALIDATION_ERROR.
             if validation.get("reason_code") == "duplicate":
                 similarity = validation.get("duplicate_check", {}).get("similarity")
                 raise DuplicateQuestionError(
                     "The generated question was too similar to one that already "
                     f"exists for this topic (similarity {similarity}). "
                     "Try a different topic or Bloom level."
+                )
+            if validation.get("reason_code") == "cognitive":
+                cog = validation.get("cognitive_alignment_check") or {}
+                raise BloomAlignmentError(
+                    "The generated question was classified as Bloom level "
+                    f"'{cog.get('detected_level')}' instead of the requested "
+                    f"'{cog.get('requested_level')}' (distance "
+                    f"{cog.get('distance')} > tolerance {cog.get('tolerance')}). "
+                    "Try a different Bloom level."
                 )
             raise ValidationError(
                 "Generated question failed pre-delivery validation after "

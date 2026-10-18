@@ -74,6 +74,13 @@ class Settings(BaseSettings):
     # models (which use ``thinkingBudget`` instead of ``thinkingLevel``).
     llm_thinking_level: str = "low"
     llm_thinking_budget: Optional[int] = None
+    # Generation-only thinking level (env: LLM_GEN_THINKING_LEVEL). Question
+    # design benefits from more reasoning than the low-latency evaluation default
+    # above, so generation gets its own knob. Per the Gemini docs every
+    # Gemini 3-family model supports minimal/low/medium/high (the flash-lite
+    # models default to minimal), so "medium" is safe across the shipped model
+    # list; Gemini 2.5 models ignore levels and use thinking_budget instead.
+    llm_gen_thinking_level: str = "medium"
     llm_max_output_tokens: int = 2048  # hard cap; thinking tokens count toward it
 
     # LLM reliability (env: LLM_TIMEOUT_SECONDS / LLM_MAX_CONCURRENCY)
@@ -111,11 +118,43 @@ class Settings(BaseSettings):
                 return None
         return value
 
-    @field_validator("llm_thinking_level")
+    @field_validator("llm_thinking_level", "llm_gen_thinking_level")
     @classmethod
     def _normalize_thinking_level(cls, value: Any) -> str:
         """Normalize the level so ``LOW`` / `` low `` behave like ``low``."""
         return str(value or "").strip().lower()
+
+    # ── Bloom alignment gate (cognitive-alignment LLM check) ──────────────
+    # Tolerance map, env override BLOOM_ALIGNMENT_TOLERANCE: comma-separated
+    # "level=N" pairs with a "default" entry, e.g.
+    # "remember=1,understand=1,default=0". A generated question whose
+    # LLM-classified ACTUAL Bloom level is within N steps (remember->create)
+    # of the requested level still passes; anything farther fails and triggers
+    # one corrective regeneration, then a clean 422. Shipped default: 1 step
+    # for the two lowest recall-style levels, 0 steps for apply and above.
+    bloom_alignment_tolerance: str = "remember=1,understand=1,default=0"
+
+    def tolerance_for(self, bloom_level: str) -> int:
+        """Alignment tolerance in Bloom steps for *bloom_level*."""
+        return self.bloom_alignment_tolerance_map.get(
+            (bloom_level or "").strip().lower(),
+            self.bloom_alignment_tolerance_map.get("default", 0),
+        )
+
+    @property
+    def bloom_alignment_tolerance_map(self) -> dict[str, int]:
+        """Parsed form of ``bloom_alignment_tolerance`` (always has 'default')."""
+        parsed: dict[str, int] = {"default": 0}
+        for part in (self.bloom_alignment_tolerance or "").split(","):
+            part = part.strip()
+            if not part or "=" not in part:
+                continue
+            key, _, value = part.partition("=")
+            try:
+                parsed[key.strip().lower()] = max(0, int(value.strip()))
+            except ValueError:
+                continue
+        return parsed
 
     @property
     def fallback_models(self) -> List[str]:
