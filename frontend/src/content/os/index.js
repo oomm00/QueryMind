@@ -232,6 +232,9 @@ function conceptWithGraph(concept) {
 // ── Normalise the graph ─────────────────────────────────────
 
 for (const { topicId, data } of topicSources) {
+  // A topic declares its subject once; a concept without its own `subject`
+  // inherits it, so a topic that lists bare ids still belongs somewhere.
+  const topicSubject = data.subject || null
   // A topic declares its concepts in one of three ways: `conceptIds` (the bodies
   // are in their own files), a list of ids (same, without the file bodies), or a
   // map of id -> seed. Any order they give is the order the topic keeps.
@@ -283,6 +286,7 @@ for (const { topicId, data } of topicSources) {
     const concept = {
       id,
       title: seed.title || titleFromSlug(id),
+      subject: seed.subject || topicSubject,
       summary: seed.summary || '',
       prerequisiteIds: seed.prerequisiteIds ?? [],
       prerequisiteLabels: seed.prerequisiteLabels ?? {},
@@ -303,6 +307,7 @@ for (const { topicId, data } of topicSources) {
   topicsById.set(topicId, {
     id: topicId,
     title: data.title || TOPIC_TITLES[topicId] || titleFromSlug(topicId),
+    subject: topicSubject,
     summary: data.summary || '',
     conceptIds,
     lessonIds: [...new Set(lessonIds)],
@@ -321,6 +326,7 @@ export function getCourse(courseId = COURSE.id) {
     .map((topic) => ({
       id: topic.id,
       title: topic.title,
+      subject: topic.subject,
       conceptCount: topic.conceptIds.length,
       // The ids, so a topic's mastery roll-up can cover its concepts without
       // loading every concept on an overview screen.

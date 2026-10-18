@@ -1,5 +1,6 @@
 {
   "id": "os-fundamentals-user-kernel-mode",
+  "subject": "operating-systems",
   "title": "User mode and kernel mode",
   "summary": "Processor privilege modes restrict ordinary application code from executing privileged operations and protect the kernel.",
   "prerequisiteIds": [

@@ -1,6 +1,7 @@
 {
   "id": "fixture-topic",
   "title": "Fixture topic",
+  "subject": "operating-systems",
   "summary": "Two concepts that pass every rule, for the validator tests.",
   "concepts": {
     "first-concept": {

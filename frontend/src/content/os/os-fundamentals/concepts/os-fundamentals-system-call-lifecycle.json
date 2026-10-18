@@ -1,5 +1,6 @@
 {
   "id": "os-fundamentals-system-call-lifecycle",
+  "subject": "operating-systems",
   "title": "System-call lifecycle and error handling",
   "summary": "A wrapper passes an operation and arguments through a controlled entry mechanism; the kernel validates the request and returns a result or error.",
   "prerequisiteIds": [

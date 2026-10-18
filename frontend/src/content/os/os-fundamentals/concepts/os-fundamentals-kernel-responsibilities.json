@@ -1,5 +1,6 @@
 {
   "id": "os-fundamentals-kernel-responsibilities",
+  "subject": "operating-systems",
   "title": "Kernel responsibilities",
   "summary": "The kernel is the privileged core of an operating system that mediates hardware access and manages shared resources.",
   "prerequisiteIds": [],

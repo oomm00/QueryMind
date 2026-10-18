@@ -1,6 +1,7 @@
 {
   "id": "file-systems",
   "title": "File Systems",
+  "subject": "operating-systems",
   "concepts": [
     "concept-file-organization",
     "concept-directory-structures",

@@ -1,6 +1,7 @@
 {
   "id": "deadlocks",
   "title": "Deadlocks",
+  "subject": "operating-systems",
   "concepts": [
     "concept-deadlock-conditions",
     "concept-deadlock-prevention"

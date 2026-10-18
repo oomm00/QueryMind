@@ -40,6 +40,7 @@ Flat topic — `src/content/os/<topic-id>.json`:
 {
   "id": "processes-threads",
   "title": "Processes and Threads",
+  "subject": "operating-systems",
   "concepts": ["concept-process-state", "concept-thread-state"]
 }
 ```
@@ -50,6 +51,7 @@ Folder topic — `src/content/os/<topic-id>/topic.json`:
 {
   "title": "Memory management",
   "summary": "One line about the topic.",
+  "subject": "operating-systems",
   "concepts": {
     "concept-paging": {
       "title": "Paging",
@@ -67,12 +69,14 @@ Folder topic — `src/content/os/<topic-id>/topic.json`:
 | field | required | notes |
 | --- | --- | --- |
 | `title` | yes | Sentence case, as authored |
+| `subject` | yes | Subject slug, e.g. `operating-systems`; concepts without their own inherit it |
 | `summary` | no | Shown on the concept panel and in list views |
 | `prerequisiteIds` | no | Concept ids; must exist somewhere in the content set |
 | `prerequisiteLabels` | no | Link name per prerequisite id, so the graph edge can be labelled |
 | `lessonIds` | no | Lesson file stems (`lesson-from-virtual-to-physical`) or full ids |
 | `resources` | no | Optional study material, see below |
 | `questions` | no | The practice bank, see below |
+| `conceptRefs` | no | Concept ids defined elsewhere; reuse them instead of copying, see below |
 
 Concept files — `src/content/os/<topic-id>/topic.json` plus one file per
 concept under `concepts/`:
@@ -87,6 +91,7 @@ concept under `concepts/`:
 {
   "id": "os-fundamentals-kernel-responsibilities",
   "title": "Kernel responsibilities",
+  "subject": "operating-systems",
   "prerequisiteIds": [],
   "resources": [],
   "questions": []
@@ -109,6 +114,7 @@ A topic may carry concepts with no lessons and no questions — an unwritten top
 concept = {
   id: string,
   title: string,
+  subject: string,        // inherited from the topic when the file omits it
   summary: string,
   prerequisiteIds: string[],
   prerequisiteLabels: Record<string, string>,
@@ -131,6 +137,33 @@ concept = {
 `getCourse()` also reports per-topic `conceptCount`, `conceptIds`, `lessonCount`,
 `resourceCount` and `questionCount` so overview screens never have to load every
 concept to count things or to roll up mastery over the concepts a topic covers.
+
+### subject, conceptRefs and the registry
+
+Mastery belongs to a concept, not to a course: the store is keyed by
+`(userId, conceptId, bloom)` and no course is in that key. So a concept can be
+taught by more than one course without its estimate splitting in two, and the
+one thing a topic needs in order to reuse a concept is its id.
+
+- Every concept carries a **`subject`** slug (`operating-systems`). A concept
+  file states its own; an inline concept or a bare id inherits the topic's
+  `subject`, which is why a topic must declare one. The validator fails on a
+  concept with no subject, on a subject that is not a lower-case slug, on a
+  duplicate concept id anywhere in the library, and on a `conceptRef` that
+  points at nothing.
+- A topic may list **`conceptRefs`** — ids of concepts another topic (or
+  another course) defines — instead of copying the body. A ref is not a second
+  definition, so it does not count twice or duplicate the id.
+- `src/content/registry.js` is the library view over every course:
+  `allConcepts()`, `getConcept(id)`, `subjects()`, `topicsOfSubject(subject)`,
+  `coursesContaining(conceptId)`, and `getKnowledgeNodes()`, one row per concept
+  with its subject, topic, estimate, confidence, last practised and courses.
+  `createRegistry(courses)` is pure, so a test can hand it two courses that
+  share a concept.
+- The selectors `conceptMastery`, `topicMastery`, `subjectMastery` and
+  `courseMastery` all return `{ value: number|null, confidence, answered,
+  basedOn: "N of M concepts" }` and all read the same stored estimates, so a
+  subject's figure and a course's figure never disagree about the same answers.
 
 ### Resource (study material, optional)
 

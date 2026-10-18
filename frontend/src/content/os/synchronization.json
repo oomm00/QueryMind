@@ -1,6 +1,7 @@
 {
   "id": "synchronization",
   "title": "Synchronization",
+  "subject": "operating-systems",
   "concepts": [
     "concept-locks",
     "concept-semaphores",

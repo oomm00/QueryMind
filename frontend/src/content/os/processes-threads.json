@@ -1,6 +1,7 @@
 {
   "id": "processes-threads",
   "title": "Processes and Threads",
+  "subject": "operating-systems",
   "concepts": [
     "concept-process-state",
     "concept-thread-state",

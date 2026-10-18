@@ -1,5 +1,6 @@
 {
   "id": "warn-two",
+  "subject": "operating-systems",
   "title": "Beta basics",
   "summary": "A fixture concept that reuses the shared fixture guide.",
   "prerequisiteIds": [],

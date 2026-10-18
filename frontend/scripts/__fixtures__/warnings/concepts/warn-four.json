@@ -1,5 +1,6 @@
 {
   "id": "warn-four",
+  "subject": "operating-systems",
   "title": "Delta basics",
   "summary": "A fixture concept with a link of its own, so nothing warns about it.",
   "prerequisiteIds": [],

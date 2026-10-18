@@ -1,6 +1,7 @@
 {
   "id": "virtual-memory-lab",
   "title": "Virtual Memory Lab",
+  "subject": "operating-systems",
   "concepts": [
     "concept-page-table-simulation",
     "concept-working-set-simulation"

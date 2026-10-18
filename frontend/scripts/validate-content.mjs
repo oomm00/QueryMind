@@ -122,6 +122,13 @@ const isObject = (value) =>
 
 const isFilled = (value) => typeof value === 'string' && value.trim().length > 0
 
+// A subject is a slug: lower-case words joined by single hyphens, e.g.
+// "operating-systems". It is what the library groups a concept under, so it is
+// checked here rather than left to whichever screen shows it.
+const SUBJECT_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
+const isSubjectSlug = (value) => typeof value === 'string' && SUBJECT_SLUG.test(value)
+
 function walkJson(dir) {
   const files = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -203,7 +210,7 @@ function isConceptPath(rel) {
  */
 function documentKind(data, rel = '') {
   if (!isObject(data)) return 'unknown'
-  if ('concepts' in data || 'conceptIds' in data) return 'topic'
+  if ('concepts' in data || 'conceptIds' in data || 'conceptRefs' in data) return 'topic'
   if ('blocks' in data || 'check' in data) return 'lesson'
   if (isConceptPath(rel) || 'questions' in data || 'resources' in data || 'prerequisiteIds' in data) {
     return 'concept'
@@ -558,13 +565,14 @@ export function validateDocuments(documents) {
   const seenLessonIds = new Map()
   const seenQuestionIds = new Map()
   const conceptSeeds = []
+  const conceptRefs = []
 
   for (const { rel, data } of documents) {
     const kind = documentKind(data, rel)
     if (kind === 'unknown') {
       report.add(
         rel,
-        'is neither a topic (has "concepts" or "conceptIds"), a lesson (has "blocks") nor a concept (has "questions")'
+        'is neither a topic (has "concepts", "conceptIds" or "conceptRefs"), a lesson (has "blocks") nor a concept (has "questions")'
       )
       continue
     }
@@ -612,6 +620,10 @@ export function validateDocuments(documents) {
         seenConceptIds.set(id, rel)
       }
       if (!isFilled(data.title)) report.add(rel, 'concept is missing a title')
+      if (!isFilled(data.subject)) report.add(rel, 'concept is missing a subject')
+      else if (!isSubjectSlug(data.subject)) {
+        report.add(rel, `subject "${data.subject}" must be a lower-case slug`)
+      }
       if (data.prerequisiteIds !== undefined && !Array.isArray(data.prerequisiteIds)) {
         report.add(rel, 'prerequisiteIds must be an array')
       }
@@ -623,6 +635,26 @@ export function validateDocuments(documents) {
 
     // topic
     const { concepts } = data
+
+    // A topic carries its subject once. Concepts in a folder topic get theirs
+    // from their own file; inline concepts and bare ids inherit it from here,
+    // so every concept in the library can answer "which subject am I under?".
+    const topicSubject = isFilled(data.subject) ? data.subject : null
+    if (!topicSubject) report.add(rel, 'topic is missing a subject')
+    else if (!isSubjectSlug(data.subject)) {
+      report.add(rel, `subject "${data.subject}" must be a lower-case slug`)
+    }
+
+    // A topic may reuse a concept another topic (or course) defines instead of
+    // copying it. The ref is resolved once every context has been read.
+    if (data.conceptRefs !== undefined) {
+      if (!Array.isArray(data.conceptRefs)) {
+        report.add(rel, 'conceptRefs must be an array of concept ids')
+      } else {
+        conceptRefs.push({ where: rel, refs: data.conceptRefs })
+      }
+    }
+
     if (Array.isArray(concepts)) {
       concepts.forEach((id, index) => {
         if (!isFilled(id)) {
@@ -663,6 +695,11 @@ export function validateDocuments(documents) {
         seenConceptIds.set(id, rel)
       }
       if (!isFilled(seed.title)) report.add(where, 'concept is missing a title')
+      const subject = isFilled(seed.subject) ? seed.subject : topicSubject
+      if (!subject) report.add(where, 'concept is missing a subject')
+      else if (!isSubjectSlug(subject)) {
+        report.add(where, `subject "${subject}" must be a lower-case slug`)
+      }
       if (seed.prerequisiteIds !== undefined && !Array.isArray(seed.prerequisiteIds)) {
         report.add(where, 'prerequisiteIds must be an array')
       }
@@ -680,6 +717,17 @@ export function validateDocuments(documents) {
         report.add(where, `prerequisite "${prerequisite}" is not a concept in this content set`)
       }
     }
+  }
+
+  // A conceptRef is not a second definition: it must point at one that exists.
+  for (const { where, refs } of conceptRefs) {
+    refs.forEach((ref, index) => {
+      if (!isFilled(ref)) {
+        report.add(`${where} conceptRefs[${index}]`, 'conceptRef must be a string')
+      } else if (!seenConceptIds.has(ref)) {
+        report.add(`${where} conceptRefs[${index}]`, `conceptRef "${ref}" is not a concept in this content set`)
+      }
+    })
   }
 
   return {

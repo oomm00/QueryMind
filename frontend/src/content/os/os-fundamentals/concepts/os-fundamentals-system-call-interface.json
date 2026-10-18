@@ -1,5 +1,6 @@
 {
   "id": "os-fundamentals-system-call-interface",
+  "subject": "operating-systems",
   "title": "The system-call interface",
   "summary": "System calls let a process request OS services such as file I/O, process creation, and interprocess communication.",
   "prerequisiteIds": [

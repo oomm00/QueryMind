@@ -61,10 +61,15 @@ describe('an invalid tree', () => {
     expectProblem(problems, 'invalid/broken.json: invalid JSON')
     expectProblem(
       problems,
-      'invalid/unknown.json: is neither a topic (has "concepts" or "conceptIds"), a lesson (has "blocks") nor a concept (has "questions")'
+      'invalid/unknown.json: is neither a topic (has "concepts", "conceptIds" or "conceptRefs"), a lesson (has "blocks") nor a concept (has "questions")'
     )
 
     // concepts
+    expectProblem(problems, 'invalid/topic.json: topic is missing a subject')
+    expectProblem(
+      problems,
+      'invalid/topic.json concepts.first-concept: concept is missing a subject'
+    )
     expectProblem(problems, 'invalid/topic.json concepts.third-concept: concept is missing a title')
     expectProblem(
       problems,
@@ -349,5 +354,106 @@ describe('concept files', () => {
     ])
 
     expect(normalised(result.problems)).toContain('concept id "one" is already used by topic/topic.json')
+  })
+})
+
+describe('subjects', () => {
+  it('are required on a topic, because a bare concept id inherits its own from there', () => {
+    const result = validateDocuments([
+      { rel: 'topic/topic.json', data: { id: 'topic', title: 'Topic', concepts: ['one'] } },
+    ])
+
+    expect(normalised(result.problems)).toContain('topic/topic.json: topic is missing a subject')
+  })
+
+  it('are inherited by an inline concept, and required when there is nothing to inherit', () => {
+    const withSubject = validateDocuments([
+      {
+        rel: 'topic/topic.json',
+        data: {
+          id: 'topic',
+          title: 'Topic',
+          subject: 'operating-systems',
+          concepts: { one: { id: 'one', title: 'One' } },
+        },
+      },
+    ])
+    expect(withSubject.problems).toEqual([])
+
+    const withoutSubject = validateDocuments([
+      {
+        rel: 'topic/topic.json',
+        data: { id: 'topic', title: 'Topic', concepts: { one: { id: 'one', title: 'One' } } },
+      },
+    ])
+    const said = normalised(withoutSubject.problems)
+    expect(said).toContain('topic/topic.json: topic is missing a subject')
+    expect(said).toContain('topic/topic.json concepts.one: concept is missing a subject')
+  })
+
+  it('are required on a concept file, and must be a lower-case slug', () => {
+    const missing = validateDocuments([
+      { rel: 'topic/concepts/one.json', data: { id: 'one', title: 'One' } },
+    ])
+    expect(normalised(missing.problems)).toContain(
+      'topic/concepts/one.json: concept is missing a subject'
+    )
+
+    const wrongShape = validateDocuments([
+      {
+        rel: 'topic/concepts/one.json',
+        data: { id: 'one', title: 'One', subject: 'Operating Systems' },
+      },
+    ])
+    expect(normalised(wrongShape.problems)).toContain(
+      'topic/concepts/one.json: subject "Operating Systems" must be a lower-case slug'
+    )
+  })
+})
+
+describe('conceptRefs', () => {
+  it('reuse a concept another topic defines instead of copying it', () => {
+    const result = validateDocuments([
+      {
+        rel: 'other/topic.json',
+        data: {
+          id: 'other',
+          title: 'Other',
+          subject: 'operating-systems',
+          concepts: { shared: { id: 'shared', title: 'Shared' } },
+        },
+      },
+      {
+        rel: 'topic/topic.json',
+        data: {
+          id: 'topic',
+          title: 'Topic',
+          subject: 'operating-systems',
+          conceptRefs: ['shared'],
+        },
+      },
+    ])
+
+    expect(result.problems).toEqual([])
+    // A ref is not a second definition, so it does not inflate the count.
+    expect(result.counts.concepts).toBe(1)
+  })
+
+  it('must point at a concept that exists somewhere in the content set', () => {
+    const result = validateDocuments([
+      {
+        rel: 'topic/topic.json',
+        data: {
+          id: 'topic',
+          title: 'Topic',
+          subject: 'operating-systems',
+          conceptRefs: ['ghost'],
+        },
+      },
+    ])
+
+    expect(normalised(result.problems)).toContain(
+      'topic/topic.json conceptRefs[0]: conceptRef "ghost" is not a concept in this content set'
+    )
   })
 })

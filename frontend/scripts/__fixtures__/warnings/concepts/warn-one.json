@@ -1,5 +1,6 @@
 {
   "id": "warn-one",
+  "subject": "operating-systems",
   "title": "Alpha basics",
   "summary": "A fixture concept whose answers all sit in the first slot.",
   "prerequisiteIds": [],
