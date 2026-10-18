@@ -2,10 +2,14 @@ import { delay } from '../config.js'
 
 /**
  * Mock Catalog Data — the Explore course catalog.
- * Contract shape: { id, title, summary, icon, level, category, topicCount, hours,
- *                  prerequisites[], status, completion, estimatedMastery, saved }
  *
- * Status is 'not_started' | 'enrolled'; completion and estimatedMastery are 0..1.
+ * Shape: { id, title, summary, icon, level, category, hours, prerequisites[] }
+ *
+ * The catalog describes courses, nothing more. It deliberately carries no
+ * enrollment, completion, mastery, bookmark or topic-count figures: those are
+ * facts about a student or about content, and inventing them here is what the
+ * app used to do. Enrollment and bookmarks come from the per-user stores, and a
+ * topic count is read from the course's content when there is any.
  */
 
 export const MOCK_CATALOG = [
@@ -17,13 +21,8 @@ export const MOCK_CATALOG = [
     icon: 'chip',
     level: 'Intermediate',
     category: 'Systems',
-    topicCount: 8,
     hours: 14,
     prerequisites: ['Data Structures & Algorithms'],
-    status: 'enrolled',
-    completion: 0.62,
-    estimatedMastery: 0.58,
-    saved: true,
   },
   {
     id: 'data-structures-algorithms',
@@ -33,13 +32,8 @@ export const MOCK_CATALOG = [
     icon: 'nodes',
     level: 'Beginner',
     category: 'Computer Science',
-    topicCount: 15,
     hours: 18,
     prerequisites: [],
-    status: 'enrolled',
-    completion: 0.34,
-    estimatedMastery: 0.41,
-    saved: true,
   },
   {
     id: 'database-management-systems',
@@ -49,13 +43,8 @@ export const MOCK_CATALOG = [
     icon: 'database',
     level: 'Intermediate',
     category: 'Data',
-    topicCount: 10,
     hours: 12,
     prerequisites: [],
-    status: 'not_started',
-    completion: 0,
-    estimatedMastery: 0,
-    saved: false,
   },
   {
     id: 'computer-networks',
@@ -65,13 +54,8 @@ export const MOCK_CATALOG = [
     icon: 'globe',
     level: 'Intermediate',
     category: 'Systems',
-    topicCount: 11,
     hours: 13,
     prerequisites: ['Operating Systems'],
-    status: 'not_started',
-    completion: 0,
-    estimatedMastery: 0,
-    saved: true,
   },
   {
     id: 'system-design',
@@ -81,13 +65,8 @@ export const MOCK_CATALOG = [
     icon: 'layers',
     level: 'Advanced',
     category: 'Architecture',
-    topicCount: 9,
     hours: 11,
     prerequisites: ['Computer Networks', 'Database Management Systems'],
-    status: 'not_started',
-    completion: 0,
-    estimatedMastery: 0,
-    saved: false,
   },
   {
     id: 'object-oriented-programming',
@@ -97,13 +76,8 @@ export const MOCK_CATALOG = [
     icon: 'code',
     level: 'Beginner',
     category: 'Programming',
-    topicCount: 8,
     hours: 9,
     prerequisites: [],
-    status: 'enrolled',
-    completion: 0.85,
-    estimatedMastery: 0.79,
-    saved: false,
   },
   {
     id: 'software-engineering',
@@ -113,13 +87,8 @@ export const MOCK_CATALOG = [
     icon: 'wrench',
     level: 'Beginner',
     category: 'Programming',
-    topicCount: 9,
     hours: 10,
     prerequisites: [],
-    status: 'not_started',
-    completion: 0,
-    estimatedMastery: 0,
-    saved: false,
   },
   {
     id: 'artificial-intelligence',
@@ -129,13 +98,8 @@ export const MOCK_CATALOG = [
     icon: 'spark',
     level: 'Advanced',
     category: 'AI',
-    topicCount: 13,
     hours: 16,
     prerequisites: ['Data Structures & Algorithms'],
-    status: 'not_started',
-    completion: 0,
-    estimatedMastery: 0,
-    saved: true,
   },
   {
     id: 'backend-development',
@@ -145,13 +109,8 @@ export const MOCK_CATALOG = [
     icon: 'server',
     level: 'Intermediate',
     category: 'Programming',
-    topicCount: 12,
     hours: 15,
     prerequisites: ['Database Management Systems'],
-    status: 'not_started',
-    completion: 0,
-    estimatedMastery: 0,
-    saved: false,
   },
 ]
 

@@ -271,3 +271,9 @@ export const IconExternalLink = (p) => (
     <path d="M18 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5" />
   </Svg>
 )
+
+export const IconBookmark = (p) => (
+  <Svg {...p}>
+    <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+  </Svg>
+)
