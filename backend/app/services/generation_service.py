@@ -25,7 +25,7 @@ from functools import lru_cache
 from typing import Any, Optional
 
 from app.core.config import settings
-from app.core.exceptions import NoContextError, QueryMindError, ValidationError
+from app.core.exceptions import LLMNotConfiguredError, NoContextError, QueryMindError, ValidationError
 from app.schemas.schemas import GeneratedQuestion
 from app.services import llm_utils
 # Re-exported for backwards compatibility (tests / callers import it from here).
@@ -186,11 +186,7 @@ def _configure_genai(response_schema: Any = None) -> GeminiAdapter:
     """Configure and return a ``GeminiAdapter`` backed by a real google.genai client."""
     api_key = settings.gemini_api_key
     if not api_key:
-        raise QueryMindError(
-            "Gemini API key is not configured. Set GEMINI_API_KEY in your .env file.",
-            status_code=503,
-            code="LLM_NOT_CONFIGURED",
-        )
+        raise LLMNotConfiguredError()
     import google.genai as genai  # local import to avoid top-level side-effects during tests
 
     client = genai.Client(api_key=api_key)

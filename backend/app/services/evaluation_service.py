@@ -30,7 +30,7 @@ from functools import lru_cache
 from typing import Any, Optional
 
 from app.core.config import settings
-from app.core.exceptions import QueryMindError, ValidationError
+from app.core.exceptions import LLMNotConfiguredError, QueryMindError, ValidationError
 from app.models.models import Question
 from app.services import llm_utils
 from app.services.generation_service import GeminiAdapter
@@ -183,11 +183,7 @@ def _configure_judge_client(response_schema: Any = None) -> GeminiAdapter:
     """Return a GeminiAdapter configured with a near-zero temperature for consistent scoring."""
     api_key = settings.gemini_api_key
     if not api_key:
-        raise QueryMindError(
-            "Gemini API key is not configured. Set GEMINI_API_KEY in your .env file.",
-            status_code=503,
-            code="LLM_NOT_CONFIGURED",
-        )
+        raise LLMNotConfiguredError()
     import google.genai as genai  # local import keeps module import side-effect free
 
     client = genai.Client(api_key=api_key)
