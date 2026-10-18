@@ -12,7 +12,7 @@
 
 import React from 'react'
 import { sentenceCase } from '../../lib/text'
-import { isResourceOpened, toggleResourceOpened } from '../../content/studyMaterial.js'
+import { isResourceOpened, toggleResourceOpened, useStudyMaterial } from '../../content/studyMaterial.js'
 import {
   IconArticle,
   IconBook,
@@ -43,6 +43,9 @@ export const RESOURCE_TYPE_LABELS = {
 }
 
 export function ResourceCard({ resource, className }) {
+  // Subscribe to the store as well as read it: this button changes the state it
+  // renders, so the card has to re-render for the change to be visible.
+  useStudyMaterial()
   const opened = isResourceOpened(resource?.url)
   const TypeIcon = TYPE_ICONS[resource?.type] ?? IconArticle
   const typeLabel = RESOURCE_TYPE_LABELS[resource?.type] ?? sentenceCase(resource?.type ?? '')

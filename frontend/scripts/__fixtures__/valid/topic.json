@@ -1,0 +1,63 @@
+{
+  "id": "fixture-topic",
+  "title": "Fixture topic",
+  "summary": "Two concepts that pass every rule, for the validator tests.",
+  "concepts": {
+    "first-concept": {
+      "id": "first-concept",
+      "title": "First concept",
+      "questions": [
+        {
+          "id": "fixture-mcq",
+          "type": "mcq",
+          "bloom": "understand",
+          "difficulty": "medium",
+          "prompt": "Which of these four options does the fixture mark as right?",
+          "options": [
+            "The first option",
+            "The second option",
+            "The third option",
+            "The fourth option"
+          ],
+          "correctIndex": 2,
+          "explanation": "The third option is the one the fixture points at.",
+          "needsHumanCheck": false
+        }
+      ],
+      "resources": [
+        {
+          "title": "Fixture reading",
+          "url": "https://example.com/fixture-reading",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC BY 4.0",
+          "estMinutes": 12,
+          "why": "Sets out the same idea as the concept.",
+          "verifiedOn": "2026-09-01"
+        }
+      ]
+    },
+    "second-concept": {
+      "id": "second-concept",
+      "title": "Second concept",
+      "prerequisiteIds": ["first-concept"],
+      "prerequisiteLabels": { "first-concept": "requires" },
+      "questions": [
+        {
+          "id": "fixture-short",
+          "type": "short",
+          "bloom": "apply",
+          "difficulty": "hard",
+          "prompt": "Explain the fixture in your own words.",
+          "answerKey": "A short answer that names both parts of the fixture.",
+          "rubric": [
+            { "criterion": "Names both parts", "points": 2 },
+            { "criterion": "Says what follows from them", "points": 1 }
+          ],
+          "explanation": "Both parts are needed for the answer to be complete.",
+          "needsHumanCheck": true
+        }
+      ]
+    }
+  }
+}

@@ -131,6 +131,28 @@ npm run dev
 # → http://localhost:5173
 ```
 
+#### Content and tests
+
+```bash
+cd frontend
+
+# Check every content file: shapes, ids, questions, resources, wording
+npm run validate:content
+
+# Check every study-material link by hand (writes link-report.json)
+npm run check:links
+
+# Bring an authored topic file into the content set, after checking it
+npm run import:content -- <file.json> <course-id> [--topic <id>] [--dry-run] [--force]
+
+# Run the test suite
+npm test
+```
+
+The content pipeline is documented in
+[docs/CONTENT_SCHEMA.md](docs/CONTENT_SCHEMA.md), and the product the content
+feeds in [docs/PRODUCT_MODEL.md](docs/PRODUCT_MODEL.md).
+
 ---
 
 
