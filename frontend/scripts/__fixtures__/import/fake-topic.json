@@ -1,0 +1,529 @@
+{
+  "topic": {
+    "id": "fake-topic",
+    "title": "Fake topic for the importer tests",
+    "summary": "Four fake concepts, six fake questions each."
+  },
+  "concepts": [
+    {
+      "id": "fake-topic-c1",
+      "title": "Fake concept 1",
+      "summary": "A fake concept for the importer tests, number 1.",
+      "prerequisiteIds": [],
+      "relatedIds": [],
+      "resources": [
+        {
+          "title": "Fake fixture guide 1",
+          "url": "https://www.example.com/fake-guide-1/",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC BY 4.0",
+          "estMinutes": 4,
+          "why": "A fake page that the importer tests normalise."
+        }
+      ],
+      "questions": [
+        {
+          "id": "fake-topic-c1-q1",
+          "type": "mcq",
+          "bloom": "remember",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 1-1?",
+          "options": [
+            "The fake option the fixture marks as right for question 1-1",
+            "A shorter fake distractor 1-1",
+            "Another fake distractor 1-1",
+            "A third fake distractor 1-1"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 1-1.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c1-q2",
+          "type": "mcq",
+          "bloom": "understand",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 1-2?",
+          "options": [
+            "The fake option the fixture marks as right for question 1-2",
+            "A shorter fake distractor 1-2",
+            "Another fake distractor 1-2",
+            "A third fake distractor 1-2"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 1-2.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c1-q3",
+          "type": "mcq",
+          "bloom": "apply",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 1-3?",
+          "options": [
+            "The fake option the fixture marks as right for question 1-3",
+            "A shorter fake distractor 1-3",
+            "Another fake distractor 1-3",
+            "A third fake distractor 1-3"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 1-3.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c1-q4",
+          "type": "mcq",
+          "bloom": "analyze",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 1-4?",
+          "options": [
+            "The fake option the fixture marks as right for question 1-4",
+            "A shorter fake distractor 1-4",
+            "Another fake distractor 1-4",
+            "A third fake distractor 1-4"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 1-4.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c1-q5",
+          "type": "mcq",
+          "bloom": "evaluate",
+          "difficulty": "hard",
+          "prompt": "Which fake option belongs to fixture question 1-5?",
+          "options": [
+            "The fake option the fixture marks as right for question 1-5",
+            "A shorter fake distractor 1-5",
+            "Another fake distractor 1-5",
+            "A third fake distractor 1-5"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 1-5.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c1-q6",
+          "type": "short",
+          "bloom": "understand",
+          "difficulty": "medium",
+          "prompt": "Name two fake parts of fake concept 1.",
+          "answerKey": "A fake answer that names two fake parts.",
+          "rubric": [
+            {
+              "criterion": "Names a fake part of concept 1",
+              "points": 2
+            },
+            {
+              "criterion": "Names a second fake part",
+              "points": 1
+            }
+          ],
+          "explanation": "The fixture wants two parts named.",
+          "needsHumanCheck": false
+        }
+      ]
+    },
+    {
+      "id": "fake-topic-c2",
+      "title": "Fake concept 2",
+      "summary": "A fake concept for the importer tests, number 2.",
+      "prerequisiteIds": [],
+      "relatedIds": [],
+      "resources": [
+        {
+          "title": "Fake fixture guide 2",
+          "url": "https://www.example.com/fake-guide-2/",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC BY 4.0",
+          "estMinutes": 4,
+          "why": "A fake page that the importer tests normalise."
+        }
+      ],
+      "questions": [
+        {
+          "id": "fake-topic-c2-q1",
+          "type": "mcq",
+          "bloom": "remember",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 2-1?",
+          "options": [
+            "The fake option the fixture marks as right for question 2-1",
+            "A shorter fake distractor 2-1",
+            "Another fake distractor 2-1",
+            "A third fake distractor 2-1"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 2-1.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c2-q2",
+          "type": "mcq",
+          "bloom": "understand",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 2-2?",
+          "options": [
+            "The fake option the fixture marks as right for question 2-2",
+            "A shorter fake distractor 2-2",
+            "Another fake distractor 2-2",
+            "A third fake distractor 2-2"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 2-2.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c2-q3",
+          "type": "mcq",
+          "bloom": "apply",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 2-3?",
+          "options": [
+            "The fake option the fixture marks as right for question 2-3",
+            "A shorter fake distractor 2-3",
+            "Another fake distractor 2-3",
+            "A third fake distractor 2-3"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 2-3.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c2-q4",
+          "type": "mcq",
+          "bloom": "analyze",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 2-4?",
+          "options": [
+            "The fake option the fixture marks as right for question 2-4",
+            "A shorter fake distractor 2-4",
+            "Another fake distractor 2-4",
+            "A third fake distractor 2-4"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 2-4.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c2-q5",
+          "type": "mcq",
+          "bloom": "evaluate",
+          "difficulty": "hard",
+          "prompt": "Which fake option belongs to fixture question 2-5?",
+          "options": [
+            "The fake option the fixture marks as right for question 2-5",
+            "A shorter fake distractor 2-5",
+            "Another fake distractor 2-5",
+            "A third fake distractor 2-5"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 2-5.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c2-q6",
+          "type": "short",
+          "bloom": "understand",
+          "difficulty": "medium",
+          "prompt": "Name two fake parts of fake concept 2.",
+          "answerKey": "A fake answer that names two fake parts.",
+          "rubric": [
+            {
+              "criterion": "Names a fake part of concept 2",
+              "points": 2
+            },
+            {
+              "criterion": "Names a second fake part",
+              "points": 1
+            }
+          ],
+          "explanation": "The fixture wants two parts named.",
+          "needsHumanCheck": false
+        }
+      ]
+    },
+    {
+      "id": "fake-topic-c3",
+      "title": "Fake concept 3",
+      "summary": "A fake concept for the importer tests, number 3.",
+      "prerequisiteIds": [],
+      "relatedIds": [],
+      "resources": [
+        {
+          "title": "Fake fixture guide 3",
+          "url": "https://www.example.com/fake-guide-3/",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC BY 4.0",
+          "estMinutes": 4,
+          "why": "A fake page that the importer tests normalise."
+        }
+      ],
+      "questions": [
+        {
+          "id": "fake-topic-c3-q1",
+          "type": "mcq",
+          "bloom": "remember",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 3-1?",
+          "options": [
+            "The fake option the fixture marks as right for question 3-1",
+            "A shorter fake distractor 3-1",
+            "Another fake distractor 3-1",
+            "A third fake distractor 3-1"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 3-1.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c3-q2",
+          "type": "mcq",
+          "bloom": "understand",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 3-2?",
+          "options": [
+            "The fake option the fixture marks as right for question 3-2",
+            "A shorter fake distractor 3-2",
+            "Another fake distractor 3-2",
+            "A third fake distractor 3-2"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 3-2.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c3-q3",
+          "type": "mcq",
+          "bloom": "apply",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 3-3?",
+          "options": [
+            "The fake option the fixture marks as right for question 3-3",
+            "A shorter fake distractor 3-3",
+            "Another fake distractor 3-3",
+            "A third fake distractor 3-3"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 3-3.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c3-q4",
+          "type": "mcq",
+          "bloom": "analyze",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 3-4?",
+          "options": [
+            "The fake option the fixture marks as right for question 3-4",
+            "A shorter fake distractor 3-4",
+            "Another fake distractor 3-4",
+            "A third fake distractor 3-4"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 3-4.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c3-q5",
+          "type": "mcq",
+          "bloom": "evaluate",
+          "difficulty": "hard",
+          "prompt": "Which fake option belongs to fixture question 3-5?",
+          "options": [
+            "The fake option the fixture marks as right for question 3-5",
+            "A shorter fake distractor 3-5",
+            "Another fake distractor 3-5",
+            "A third fake distractor 3-5"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 3-5.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c3-q6",
+          "type": "short",
+          "bloom": "understand",
+          "difficulty": "medium",
+          "prompt": "Name two fake parts of fake concept 3.",
+          "answerKey": "A fake answer that names two fake parts.",
+          "rubric": [
+            {
+              "criterion": "Names a fake part of concept 3",
+              "points": 2
+            },
+            {
+              "criterion": "Names a second fake part",
+              "points": 1
+            }
+          ],
+          "explanation": "The fixture wants two parts named.",
+          "needsHumanCheck": false
+        }
+      ]
+    },
+    {
+      "id": "fake-topic-c4",
+      "title": "Fake concept 4",
+      "summary": "A fake concept for the importer tests, number 4.",
+      "prerequisiteIds": [],
+      "relatedIds": [],
+      "resources": [
+        {
+          "title": "Fake fixture guide 4",
+          "url": "https://example.com/fake-guide-4",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC BY 4.0",
+          "estMinutes": 4,
+          "why": "A fake page that the importer tests normalise."
+        }
+      ],
+      "questions": [
+        {
+          "id": "fake-topic-c4-q1",
+          "type": "mcq",
+          "bloom": "remember",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 4-1?",
+          "options": [
+            "The fake option the fixture marks as right for question 4-1",
+            "A shorter fake distractor 4-1",
+            "Another fake distractor 4-1",
+            "A third fake distractor 4-1"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 4-1.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c4-q2",
+          "type": "mcq",
+          "bloom": "understand",
+          "difficulty": "easy",
+          "prompt": "Which fake option belongs to fixture question 4-2?",
+          "options": [
+            "The fake option the fixture marks as right for question 4-2",
+            "A shorter fake distractor 4-2",
+            "Another fake distractor 4-2",
+            "A third fake distractor 4-2"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 4-2.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c4-q3",
+          "type": "mcq",
+          "bloom": "apply",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 4-3?",
+          "options": [
+            "The fake option the fixture marks as right for question 4-3",
+            "A shorter fake distractor 4-3",
+            "Another fake distractor 4-3",
+            "A third fake distractor 4-3"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 4-3.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c4-q4",
+          "type": "mcq",
+          "bloom": "analyze",
+          "difficulty": "medium",
+          "prompt": "Which fake option belongs to fixture question 4-4?",
+          "options": [
+            "The fake option the fixture marks as right for question 4-4",
+            "A shorter fake distractor 4-4",
+            "Another fake distractor 4-4",
+            "A third fake distractor 4-4"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 4-4.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c4-q5",
+          "type": "mcq",
+          "bloom": "evaluate",
+          "difficulty": "hard",
+          "prompt": "Which fake option belongs to fixture question 4-5?",
+          "options": [
+            "The fake option the fixture marks as right for question 4-5",
+            "A shorter fake distractor 4-5",
+            "Another fake distractor 4-5",
+            "A third fake distractor 4-5"
+          ],
+          "correctIndex": 0,
+          "answerKey": "The fixture says its first option is the right one.",
+          "rubric": [],
+          "explanation": "The fixture points at the first option for question 4-5.",
+          "needsHumanCheck": false
+        },
+        {
+          "id": "fake-topic-c4-q6",
+          "type": "short",
+          "bloom": "understand",
+          "difficulty": "medium",
+          "prompt": "Name two fake parts of fake concept 4.",
+          "answerKey": "A fake answer that names two fake parts.",
+          "rubric": [
+            {
+              "criterion": "Names a fake part of concept 4",
+              "points": 2
+            },
+            {
+              "criterion": "Names a second fake part",
+              "points": 1
+            }
+          ],
+          "explanation": "The fixture wants two parts named.",
+          "needsHumanCheck": false
+        }
+      ]
+    }
+  ]
+}

@@ -4,16 +4,28 @@
  * an imported topic file would land. No test here touches the network.
  */
 
+import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { checkUrl, classifyStatus, collectResourceUrls, extractTitle, summarise } from './check-links.mjs'
-import { planImport, slugFromFile } from './import-content.mjs'
+import {
+  indexDistribution,
+  mcqAnswers,
+  planImport,
+  seedFromId,
+  seededRandom,
+  shuffleQuestion,
+  slugFromFile,
+  topicToFiles,
+} from './import-content.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const FIXTURES = join(HERE, '__fixtures__')
 const VALID = join(FIXTURES, 'valid')
 const INVALID = join(FIXTURES, 'invalid')
+const WARNINGS = join(FIXTURES, 'warnings')
+const FAKE_TOPIC = JSON.parse(readFileSync(join(FIXTURES, 'import', 'fake-topic.json'), 'utf8'))
 
 /** A fetch that answers once, so checkUrl can be tested without a network. */
 function respond({ status = 200, contentType = 'text/html', body = '' } = {}) {
@@ -40,6 +52,16 @@ describe('collectResourceUrls', () => {
   it('has nothing to collect in a folder with no content, or one it cannot read', () => {
     expect(collectResourceUrls(join(FIXTURES, 'empty'))).toEqual([])
     expect(collectResourceUrls(join(FIXTURES, 'no-such-folder'))).toEqual([])
+  })
+
+  it('reads the material of a concept that lives in its own file, once per URL', () => {
+    const urls = collectResourceUrls(WARNINGS)
+
+    expect(urls.map((entry) => entry.url)).toEqual([
+      'https://example.com/delta-guide',
+      'https://example.com/shared-guide',
+    ])
+    expect(urls[1].where).toEqual(['Alpha basics', 'Beta basics', 'Gamma basics'])
   })
 })
 
@@ -211,5 +233,122 @@ describe('planImport', () => {
 
     const badId = planImport({ data: topic, file: 'new-topic.json', courseId: 'os', topicId: 'Not An Id' })
     expect(badId.problems[0]).toContain('must be lower-case words separated by dashes')
+  })
+})
+
+describe('a file whose concepts are whole objects', () => {
+  const plan = planImport({
+    data: FAKE_TOPIC,
+    file: 'fake-topic.json',
+    courseId: 'os',
+    rootDir: 'content',
+  })
+
+  it('lands as topic.json plus one file per concept', () => {
+    expect(plan.problems).toEqual([])
+    expect(plan.shape).toBe('concepts')
+    expect(plan.isFolder).toBe(true)
+    expect(plan.target).toBe(join('content', 'os', 'fake-topic', 'topic.json'))
+    expect(plan.targets).toHaveLength(5)
+    expect(plan.targets[1]).toBe(
+      join('content', 'os', 'fake-topic', 'concepts', 'fake-topic-c1.json')
+    )
+  })
+
+  it('keeps the concepts out of topic.json, in the order the file had them', () => {
+    const { documents } = topicToFiles(FAKE_TOPIC, { courseId: 'os', topicId: 'fake-topic' })
+
+    expect(documents[0].path).toBe('os/fake-topic/topic.json')
+    expect(documents[0].data).toEqual({
+      id: 'fake-topic',
+      title: 'Fake topic for the importer tests',
+      summary: 'Four fake concepts, six fake questions each.',
+      conceptIds: ['fake-topic-c1', 'fake-topic-c2', 'fake-topic-c3', 'fake-topic-c4'],
+    })
+    expect(documents[0].data.questions).toBeUndefined()
+    expect(documents[1].path).toBe('os/fake-topic/concepts/fake-topic-c1.json')
+    expect(documents[1].data.id).toBe('fake-topic-c1')
+    expect(documents).toHaveLength(5)
+  })
+
+  it('asks for a dashed id on every concept', () => {
+    const noId = planImport({
+      data: { topic: { id: 'fake-topic' }, concepts: [{ title: 'No id here' }] },
+      file: 'fake-topic.json',
+      courseId: 'os',
+    })
+
+    expect(noId.problems.join('\n')).toContain('concept 1 needs a lower-case dashed id, found ""')
+  })
+})
+
+describe('the option shuffle', () => {
+  it('carries the answer with its option and leaves short answers alone', () => {
+    const question = {
+      id: 'fake-topic-c1-q1',
+      type: 'mcq',
+      options: ['right', 'wrong one', 'wrong two', 'wrong three'],
+      correctIndex: 0,
+    }
+
+    const shuffled = shuffleQuestion(question)
+
+    expect(shuffled.options).toHaveLength(4)
+    expect([...shuffled.options].sort()).toEqual([...question.options].sort())
+    expect(shuffled.options[shuffled.correctIndex]).toBe('right')
+
+    const short = { id: 'fake-topic-c1-q6', type: 'short', answerKey: 'A key' }
+    expect(shuffleQuestion(short)).toBe(short)
+  })
+
+  it('is a seed, not a dice roll: the same question id always lands the same way', () => {
+    const question = {
+      id: 'fake-topic-c1-q1',
+      type: 'mcq',
+      options: ['a', 'b', 'c', 'd'],
+      correctIndex: 0,
+    }
+
+    expect(seedFromId('fake-topic-c1-q1')).toBe(seedFromId('fake-topic-c1-q1'))
+    expect(shuffleQuestion(question)).toEqual(shuffleQuestion(question))
+
+    const first = seededRandom(seedFromId('x'))
+    const second = seededRandom(seedFromId('x'))
+    expect([first(), first(), first()]).toEqual([second(), second(), second()])
+  })
+
+  it('spreads the 20 answers over the four indexes, none holding more than 8', () => {
+    const { concepts } = topicToFiles(FAKE_TOPIC, { courseId: 'os', topicId: 'fake-topic' })
+    const answers = mcqAnswers(concepts)
+
+    expect(answers).toHaveLength(20)
+    const distribution = indexDistribution(answers)
+    expect(distribution).toHaveLength(4)
+
+    for (const count of distribution) expect(count).toBeLessThanOrEqual(8)
+    // The real rule behind the bound: an answer drift of at most one slot.
+    expect(Math.max(...distribution) - Math.min(...distribution)).toBeLessThanOrEqual(1)
+  })
+
+  it('writes the same bytes twice, and leaves the authored order when told to', () => {
+    const once = topicToFiles(FAKE_TOPIC, { courseId: 'os', topicId: 'fake-topic' })
+    const twice = topicToFiles(FAKE_TOPIC, { courseId: 'os', topicId: 'fake-topic' })
+    expect(JSON.stringify(twice)).toBe(JSON.stringify(once))
+
+    const untouched = topicToFiles(FAKE_TOPIC, {
+      courseId: 'os',
+      topicId: 'fake-topic',
+      shuffle: false,
+    })
+    expect(indexDistribution(mcqAnswers(untouched.concepts))).toEqual([20])
+  })
+
+  it('normalises the resource URLs and touches nothing else in them', () => {
+    const { concepts } = topicToFiles(FAKE_TOPIC, { courseId: 'os', topicId: 'fake-topic' })
+
+    expect(concepts[0].resources[0].url).toBe('https://example.com/fake-guide-1')
+    expect(concepts[3].resources[0].url).toBe('https://example.com/fake-guide-4')
+    expect(concepts[0].resources[0].title).toBe('Fake fixture guide 1')
+    expect(concepts[0].questions).toHaveLength(6)
   })
 })

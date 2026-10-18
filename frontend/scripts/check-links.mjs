@@ -23,6 +23,8 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { normalizeResourceUrl } from './validate-content.mjs'
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = resolve(HERE, '..')
 
@@ -47,8 +49,10 @@ function walkJson(dir) {
 }
 
 /**
- * Every resource URL in the content, with the concepts that use it.
- * Returns [{ url, where: string[] }] sorted by url.
+ * Every resource URL in the content, with the concepts that use it. A concept
+ * is found whether it sits in a topic's `concepts` map or in a file of its own
+ * under `concepts/`, and the same URL authored with a leading "www." or a
+ * trailing slash counts once. Returns [{ url, where: string[] }], sorted by url.
  */
 export function collectResourceUrls(rootDir = DEFAULT_ROOT) {
   let files
@@ -62,7 +66,7 @@ export function collectResourceUrls(rootDir = DEFAULT_ROOT) {
 
   const add = (url, where) => {
     if (typeof url !== 'string' || url.trim() === '') return
-    const key = url.trim()
+    const key = normalizeResourceUrl(url)
     if (!byUrl.has(key)) byUrl.set(key, new Set())
     byUrl.get(key).add(where)
   }
@@ -74,16 +78,12 @@ export function collectResourceUrls(rootDir = DEFAULT_ROOT) {
     } catch {
       continue
     }
-    if (!data || typeof data !== 'object' || !data.concepts || typeof data.concepts !== 'object') {
-      continue
-    }
-    if (Array.isArray(data.concepts)) continue
+    if (!data || typeof data !== 'object') continue
 
-    for (const [key, seed] of Object.entries(data.concepts)) {
-      if (!seed || typeof seed !== 'object') continue
-      const concept = seed.title || seed.id || key
-      for (const resource of Array.isArray(seed.resources) ? seed.resources : []) {
-        if (resource && typeof resource === 'object') add(resource.url, concept)
+    for (const concept of conceptsIn(file, data)) {
+      const where = concept.title || concept.id || 'a concept'
+      for (const resource of Array.isArray(concept.resources) ? concept.resources : []) {
+        if (resource && typeof resource === 'object') add(resource.url, where)
       }
     }
   }
@@ -91,6 +91,22 @@ export function collectResourceUrls(rootDir = DEFAULT_ROOT) {
   return [...byUrl.entries()]
     .map(([url, where]) => ({ url, where: [...where].sort() }))
     .sort((a, b) => a.url.localeCompare(b.url))
+}
+
+/** The concepts a parsed file carries: a topic's map, or a concept file of its own. */
+function conceptsIn(file, data) {
+  if (Array.isArray(data.concepts)) return []
+  if (data.concepts && typeof data.concepts === 'object') {
+    return Object.values(data.concepts).filter((seed) => seed && typeof seed === 'object')
+  }
+
+  const ownFile =
+    /(^|[/\\])concepts[/\\][^/\\]+\.json$/i.test(file) ||
+    'questions' in data ||
+    'resources' in data ||
+    'prerequisiteIds' in data
+
+  return ownFile ? [data] : []
 }
 
 function decodeEntities(text) {

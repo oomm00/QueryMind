@@ -1,0 +1,11 @@
+{
+  "id": "os-fundamentals",
+  "title": "Operating system fundamentals: kernel, privilege modes, and system calls",
+  "summary": "Introduces kernel responsibilities, privilege modes, the system-call interface, and the path from user request to kernel result.",
+  "conceptIds": [
+    "os-fundamentals-kernel-responsibilities",
+    "os-fundamentals-user-kernel-mode",
+    "os-fundamentals-system-call-interface",
+    "os-fundamentals-system-call-lifecycle"
+  ]
+}
