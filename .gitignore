@@ -94,3 +94,6 @@ perf_result_*.json
 *.sqlite3
 chroma_data/
 
+# Bloom audit raw question dumps (scripts/bloom_audit.py markdown output)
+scripts/bloom_audit_*.md
+
