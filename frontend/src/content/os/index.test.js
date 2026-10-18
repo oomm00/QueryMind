@@ -88,6 +88,75 @@ describe('getTopic', () => {
   })
 })
 
+describe('a topic whose concepts live in their own files', () => {
+  const topic = getTopic('os-fundamentals')
+
+  it('opens the course, with every prerequisite inside the topic', () => {
+    expect(COURSE.topicIds[0]).toBe('os-fundamentals')
+    expect(getCourse('os').topics[0].id).toBe('os-fundamentals')
+
+    expect(topic.concepts).toHaveLength(4)
+    expect(topic.concepts[0].prerequisites).toEqual([])
+    for (const concept of topic.concepts) {
+      // Nothing points at an earlier topic: whatever this topic needs, it
+      // teaches, so it can be the first one in the course.
+      for (const prerequisite of concept.prerequisites) {
+        expect(prerequisite.topicId).toBe('os-fundamentals')
+      }
+      expect(concept.lessonIds).toEqual([])
+    }
+  })
+
+  it('reads each concept body from its own file, in the order topic.json lists', () => {
+    expect(topic.title).toBe(
+      'Operating system fundamentals: kernel, privilege modes, and system calls'
+    )
+    expect(topic.concepts.map((concept) => concept.title)).toEqual([
+      'Kernel responsibilities',
+      'User mode and kernel mode',
+      'The system-call interface',
+      'System-call lifecycle and error handling',
+    ])
+    expect(topic.concepts[0].resources[0].url).toBe(
+      'https://en.wikipedia.org/wiki/Kernel_%28operating_system%29'
+    )
+  })
+
+  it('counts the material it brought with it, on the topic and in the course', () => {
+    const summary = getCourse('os').topics.find((entry) => entry.id === 'os-fundamentals')
+
+    expect(summary.conceptCount).toBe(4)
+    expect(summary.resourceCount).toBe(7)
+    expect(summary.questionCount).toBe(24)
+    expect(topic.resourceCount).toBe(7)
+    expect(topic.questionCount).toBe(24)
+  })
+
+  it('keeps every multiple-choice answer inside its options', () => {
+    for (const concept of topic.concepts) {
+      for (const question of concept.questions) {
+        if (question.type !== 'mcq') continue
+        expect(question.options).toHaveLength(4)
+        expect(question.correctIndex).toBeGreaterThanOrEqual(0)
+        expect(question.correctIndex).toBeLessThan(question.options.length)
+      }
+    }
+  })
+
+  it('does not put more than 8 of its 20 multiple-choice answers on one index', () => {
+    const answers = topic.concepts.flatMap((concept) =>
+      concept.questions
+        .filter((question) => question.type === 'mcq')
+        .map((question) => question.correctIndex)
+    )
+
+    expect(answers).toHaveLength(20)
+    const counts = [0, 0, 0, 0]
+    for (const index of answers) counts[index] += 1
+    for (const count of counts) expect(count).toBeLessThanOrEqual(8)
+  })
+})
+
 describe('getConcept', () => {
   it('returns one concept with the same shape as the topic list', () => {
     const concept = getConcept('paging')

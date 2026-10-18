@@ -17,7 +17,7 @@ export const MOCK_CATALOG = [
     icon: 'chip',
     level: 'Intermediate',
     category: 'Systems',
-    topicCount: 12,
+    topicCount: 8,
     hours: 14,
     prerequisites: ['Data Structures & Algorithms'],
     status: 'enrolled',

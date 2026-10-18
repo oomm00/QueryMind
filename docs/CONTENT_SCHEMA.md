@@ -22,7 +22,7 @@ course = {
   title: string,         // "Operating Systems"
   summary: string,       // 2-3 sentences
   level: "intro" | "intermediate" | "advanced",
-  topicIds: string[]     // ["memory-management", ...]
+  topicIds: string[]     // ["os-fundamentals", "memory-management", ...]
 }
 ```
 
@@ -31,7 +31,8 @@ loader maps them onto the content course id, and both resolve.
 
 ### topic
 
-Two on-disk shapes are supported and normalised into one topic graph.
+Two on-disk shapes are supported and normalised into one topic graph — three,
+when a topic's concepts are long enough to want a file each.
 
 Flat topic — `src/content/os/<topic-id>.json`:
 
@@ -72,6 +73,32 @@ Folder topic — `src/content/os/<topic-id>/topic.json`:
 | `lessonIds` | no | Lesson file stems (`lesson-from-virtual-to-physical`) or full ids |
 | `resources` | no | Optional study material, see below |
 | `questions` | no | The practice bank, see below |
+
+Concept files — `src/content/os/<topic-id>/topic.json` plus one file per
+concept under `concepts/`:
+
+```json
+{ "id": "os-fundamentals", "title": "…", "summary": "…",
+  "conceptIds": ["os-fundamentals-kernel-responsibilities"] }
+```
+
+```json
+// src/content/os/os-fundamentals/concepts/os-fundamentals-kernel-responsibilities.json
+{
+  "id": "os-fundamentals-kernel-responsibilities",
+  "title": "Kernel responsibilities",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": []
+}
+```
+
+`topic.json` carries the topic's metadata and the reading order; each concept
+file carries one concept, in the same shape a concept has inside `concepts`
+above. A concept file's body wins over an inline seed with the same id. This is
+what `scripts/import-content.mjs` writes for a topic authored as a list of whole
+concepts, and it is how `os-fundamentals` — the first topic of the course — is
+stored: four concepts, twenty-four questions, seven resources.
 
 A topic may carry concepts with no lessons and no questions — an unwritten topic
 — and the app says so rather than inventing content.
@@ -210,6 +237,7 @@ so a student can be asked it in a session as well as in the reader.
 frontend/src/content/os/
   <topic-id>.json                  flat topic (concepts as a list of ids)
   <topic-id>/topic.json            folder topic (concepts as a map of seeds)
+  <topic-id>/concepts/<id>.json    one concept per file, listed by `conceptIds`
   <topic-id>/<lesson-stem>.json    one lesson per file
 ```
 
@@ -218,6 +246,8 @@ frontend/src/content/os/
 - Adding a lesson is adding a file: the loader globs the directory, so no import
   list needs updating.
 - `topic.json` wins over a same-named flat topic file for the same topic id.
+- A concept file is read whatever `topic.json` lists: the order comes from
+  `conceptIds`, and a file's body wins over an inline seed with the same id.
 
 ## Validation
 
@@ -262,8 +292,17 @@ and a trailing slash is ignored, so `https://www.example.com/guide/` and
 rewritten.
 
 `node scripts/import-content.mjs <file.json> <course-id>` validates a topic file
-written elsewhere (for example by ChatGPT), then copies it into
-`src/content/<course-id>/<topic-id>/`.
+written elsewhere (for example by ChatGPT), then writes it into
+`src/content/<course-id>/<topic-id>/`: `topic.json`, plus one file per concept
+under `concepts/` when the file carries whole concepts. It rewrites two things
+and nothing else — a resource URL loses a leading `www.` and an ignored trailing
+slash, and each mcq's options are shuffled by a generator seeded with the
+question id, with the answer's slot balanced across the topic so no index
+collects them. The seed is why importing the same file twice writes the same
+bytes; the balance is why the answers do not all sit at index 0, which is what
+the first imported topic looked like before it was imported. It prints the
+distribution it produced, and it prints the warnings above rather than failing —
+the file is imported, and a person decides what to do about the rest.
 
 ## Content guidelines
 

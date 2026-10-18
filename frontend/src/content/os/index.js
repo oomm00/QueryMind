@@ -3,17 +3,26 @@
  *
  * Every `.json` file under `src/content/os` is imported eagerly at build time, so
  * dropping a new lesson file into a topic folder is the only step needed to add
- * content. Two on-disk shapes are supported:
+ * content. The on-disk shapes:
  *
  *   <topic>.json          flat topic: { id, title, concepts: ["concept-x", ...] }
  *   <topic>/topic.json    full topic: { concepts: { "concept-x": { id, title,
  *                                              prerequisiteIds,
  *                                              prerequisiteLabels: { id: label },
  *                                              lessonIds, resources, questions } } }
+ *   <topic>/topic.json    folder topic: { id, title, summary,
+ *                                              conceptIds: ["concept-x", ...] }
+ *   <topic>/concepts/<id>.json  concept: { id, title, prerequisiteIds,
+ *                                              lessonIds, resources, questions }
  *   <topic>/<lesson>.json lesson:     { id, title, estMinutes, source,
  *                                              objectives, blocks }
  *
- * Both topic shapes are normalised into one graph, and the loose lesson
+ * A folder topic may name its concepts and leave each body to its own file,
+ * which is how `scripts/import-content.mjs` writes a long topic: topic.json
+ * holds the metadata and the reading order, and one file holds one concept.
+ * A concept file's body wins over an inline seed with the same id.
+ *
+ * Every topic shape is normalised into one graph, and the loose lesson
  * references in topic.json (file stems, "lesson-*" ids) are resolved to
  * canonical lesson ids. A lesson's check question may be a block or a
  * top-level `check` object; both are normalised to the block form.
@@ -37,6 +46,7 @@ const COURSE = {
     'How a computer runs your programs: processes and threads, CPU scheduling, synchronisation, deadlocks, memory management and file systems.',
   level: 'intermediate',
   topicIds: [
+    'os-fundamentals',
     'processes-threads',
     'cpu-scheduling',
     'synchronization',
@@ -61,6 +71,7 @@ function resolveCourseId(courseId) {
 
 const RE_FLAT_TOPIC = /^\.\/([^/]+)\.json$/
 const RE_FOLDER_TOPIC = /^\.\/([^/]+)\/topic\.json$/
+const RE_CONCEPT = /^\.\/([^/]+)\/concepts\/([^/]+)\.json$/
 const RE_LESSON = /^\.\/([^/]+)\/([^/]+)\.json$/
 
 function titleFromSlug(slug) {
@@ -82,15 +93,18 @@ const conceptsById = new Map()
 
 const topicSources = []
 const lessonSources = []
+const conceptSources = []
 
 for (const [path, mod] of Object.entries(modules)) {
   const data = mod?.default ?? mod
   const folderTopic = path.match(RE_FOLDER_TOPIC)
   const flatTopic = path.match(RE_FLAT_TOPIC)
+  const concept = path.match(RE_CONCEPT)
   const lesson = path.match(RE_LESSON)
 
   if (folderTopic) topicSources.push({ topicId: folderTopic[1], data })
   else if (flatTopic) topicSources.push({ topicId: flatTopic[1], data })
+  else if (concept) conceptSources.push({ topicId: concept[1], stem: concept[2], data })
   else if (lesson) lessonSources.push({ topicId: lesson[1], stem: lesson[2], data })
 }
 
@@ -218,9 +232,30 @@ function conceptWithGraph(concept) {
 // ── Normalise the graph ─────────────────────────────────────
 
 for (const { topicId, data } of topicSources) {
-  const entries = Array.isArray(data.concepts)
+  // A topic declares its concepts in one of three ways: `conceptIds` (the bodies
+  // are in their own files), a list of ids (same, without the file bodies), or a
+  // map of id -> seed. Any order they give is the order the topic keeps.
+  const declared = Array.isArray(data.conceptIds) ? data.conceptIds.map((id) => [id, {}]) : null
+  const inline = Array.isArray(data.concepts)
     ? data.concepts.map((id) => [id, {}])
     : Object.entries(data.concepts ?? {})
+
+  const ordered = []
+  const seedsById = new Map()
+  const remember = (id, seed) => {
+    if (!seedsById.has(id)) ordered.push(id)
+    seedsById.set(id, { ...(seedsById.get(id) ?? {}), ...seed })
+  }
+
+  for (const [id, seed] of declared ?? inline) remember(id, seed)
+  if (declared) for (const [id, seed] of inline) remember(id, seed)
+
+  for (const concept of conceptSources) {
+    if (concept.topicId !== topicId) continue
+    remember(concept.data.id || concept.stem, concept.data)
+  }
+
+  const entries = ordered.map((id) => [id, seedsById.get(id) ?? {}])
 
   const conceptIds = []
   const lessonIds = []
