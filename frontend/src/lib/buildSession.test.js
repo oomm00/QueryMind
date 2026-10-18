@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { buildSession, levelsFor, nextTopicOf, PRACTICE_LEVELS } from './buildSession.js'
+import { buildSession, levelsFor, nextTopicOf, PRACTICE_LEVELS, scopeQuestionCount } from './buildSession.js'
 
 function q(id, bloom) {
   return { question_id: id, type: 'mcq', bloom_level: bloom, correctIndex: 0, options: ['a', 'b'] }
@@ -201,5 +201,76 @@ describe('nothing to ask', () => {
   it('returns no questions when the count is zero', () => {
     const session = buildSession({ scope: 'topic', scopeId: 't1', count: 0 }, data)
     expect(session.questions).toEqual([])
+  })
+})
+
+describe('a custom session, built by the practice board', () => {
+  it('asks the topics it was given, and only those', () => {
+    const session = buildSession(
+      { scope: 'custom', subject: 'operating-systems', topicIds: ['t1'], level: 'mixed', count: 6 },
+      data
+    )
+
+    expect(session.questions).toHaveLength(6)
+    expect(session.questions.every((question) => question.topicId === 't1')).toBe(true)
+    expect(session.courseId).toBe('os')
+    expect(session.subject).toBe('operating-systems')
+    expect(session.scopeId).toBeNull()
+  })
+
+  it('spans the courses that hold the topics, and names none when there is more than one', () => {
+    const session = buildSession(
+      { scope: 'custom', topicIds: ['t2', 'd1'], level: 'mixed', count: 10 },
+      data
+    )
+
+    expect(new Set(session.questions.map((question) => question.courseId))).toEqual(
+      new Set(['os', 'dbms'])
+    )
+    expect(session.courseId).toBeNull()
+  })
+
+  it('never asks the same question twice across the topics', () => {
+    const session = buildSession(
+      { scope: 'custom', topicIds: ['t1', 't2'], level: 'mixed', count: 20 },
+      data
+    )
+
+    const ids = session.questions.map((question) => question.question_id)
+    expect(ids).toHaveLength(9)
+    expect(new Set(ids).size).toBe(9)
+  })
+
+  it('keeps the level band, and says when the band cannot fill the session', () => {
+    const easy = buildSession(
+      { scope: 'custom', topicIds: ['t1'], level: 'easy', count: 6 },
+      data
+    )
+    expect(easy.questions).toHaveLength(6)
+    expect(easy.note).toMatch(/Not enough easy questions here, so a few are medium/)
+
+    const medium = buildSession(
+      { scope: 'custom', topicIds: ['t1'], level: 'medium', count: 2 },
+      data
+    )
+    expect(medium.note).toBe('')
+    expect(
+      blooms(medium.questions).every((bloom) => ['apply', 'analyze'].includes(bloom))
+    ).toBe(true)
+  })
+
+  it('asks nothing when the topics hold no questions', () => {
+    const session = buildSession(
+      { scope: 'custom', topicIds: ['t3'], level: 'mixed', count: 6 },
+      data
+    )
+    expect(session.questions).toEqual([])
+  })
+
+  it('counts what the ticks would draw, for the button', () => {
+    expect(
+      scopeQuestionCount({ scope: 'custom', topicIds: ['t1', 't2'], level: 'mixed', count: 20 }, data)
+    ).toBe(9)
+    expect(scopeQuestionCount({ scope: 'custom', topicIds: ['t3'], count: 6 }, data)).toBe(0)
   })
 })

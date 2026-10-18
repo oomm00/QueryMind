@@ -17,6 +17,7 @@ import CoursePage from './course/CoursePage.jsx'
 import CoursePracticeTab from './course/CoursePracticeTab.jsx'
 import SessionPage from './SessionPage.jsx'
 import ResultsPage from './ResultsPage.jsx'
+import { readSessions } from '../lib/sessions.js'
 
 vi.mock('../hooks/useCatalog', async () => {
   const fixture = await import('../__fixtures__/practice.js')
@@ -145,6 +146,27 @@ describe('starting a session', () => {
     expect(screen.getByText('Not enough hard questions here, so a few are medium.')).toBeInTheDocument()
     // Two evaluate/create questions, filled up from the medium band.
     expect(screen.getByText('Question 1 of 5')).toBeInTheDocument()
+  })
+})
+
+describe('when a session reaches storage', () => {
+  it('is not written until the first answer, which is stamped with its moment', async () => {
+    const user = userEvent.setup()
+    await startSession(user)
+
+    // Started, not stored: the recent list must never show "0 answered".
+    expect(readSessions(userId).sessions).toEqual([])
+
+    await user.click(screen.getByRole('radio', { name: 'Fake cache' }))
+
+    const [session] = readSessions(userId).sessions
+    expect(session).toBeTruthy()
+    expect(session.questionIds).toHaveLength(6)
+    expect(Object.entries(session.answers)).toHaveLength(1)
+    expect(Object.values(session.answers)[0]).toMatchObject({
+      selected: 3,
+      at: expect.any(String),
+    })
   })
 })
 

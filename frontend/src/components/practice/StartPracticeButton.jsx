@@ -73,6 +73,7 @@ export function StartPracticeButton({
       courseId: built.courseId ?? courseId,
       scope,
       scopeId: built.scopeId ?? scopeId,
+      subject: built.subject ?? subject,
       level,
       label: sessionLabel,
       questionIds: built.questions.map((question) => question.question_id),
