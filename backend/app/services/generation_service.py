@@ -438,14 +438,19 @@ def _configure_genai(
     response_schema: Any = None,
     thinking_level: Optional[str] = None,
     max_output_tokens: Optional[int] = None,
+    bloom_level: Optional[str] = None,
 ) -> GeminiAdapter:
     """Configure and return a ``GeminiAdapter`` backed by a real google.genai client.
 
     ``thinking_level`` defaults to the generation-specific setting
-    (``LLM_GEN_THINKING_LEVEL``, medium) and the output cap to the
-    generation-specific setting (``LLM_GEN_MAX_OUTPUT_TOKENS``, 8192) — small
-    validation/judgement callers pass the lower evaluation level and cap to
-    keep latency (and blast radius) down.
+    (``LLM_GEN_THINKING_LEVEL``), resolved per Bloom level via *bloom_level*
+    when that setting is a per-level map (e.g. ``remember=low,understand=low,
+    default=medium``) — recall-style levels are as fast as the model allows,
+    Apply+ levels keep the extra reasoning that concrete-scenario quality needs.
+    The output cap defaults to the generation-specific setting
+    (``LLM_GEN_MAX_OUTPUT_TOKENS``, 8192); small validation/judgement callers
+    pass the lower evaluation level and cap to keep latency (and blast radius)
+    down.
     """
     api_key = settings.gemini_api_key
     if not api_key:
@@ -453,12 +458,14 @@ def _configure_genai(
     import google.genai as genai  # local import to avoid top-level side-effects during tests
 
     client = genai.Client(api_key=api_key)
+    if thinking_level is None:
+        thinking_level = settings.gen_thinking_level_for(bloom_level)
     return GeminiAdapter(
         client,
         settings.llm_model,
         settings.llm_temperature,
         response_schema=response_schema,
-        thinking_level=thinking_level or settings.llm_gen_thinking_level,
+        thinking_level=thinking_level,
         thinking_budget=settings.llm_thinking_budget,
         max_output_tokens=(
             max_output_tokens
@@ -746,7 +753,9 @@ def generate_question(
         client = llm_client
         model_chain = None
     else:
-        client = _configure_genai(response_schema=_generation_schema())
+        client = _configure_genai(
+            response_schema=_generation_schema(), bloom_level=bloom_level
+        )
         # LLM_FALLBACK_MODELS: on a quota/503 error, retry against the next model.
         model_chain = llm_utils.resolve_model_chain(settings.llm_model)
 

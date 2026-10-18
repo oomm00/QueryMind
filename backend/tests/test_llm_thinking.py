@@ -31,8 +31,10 @@ def test_thinking_defaults():
     assert settings.llm_thinking_budget is None
     assert settings.llm_max_output_tokens == 2048
     # Generation gets its own (roomier) cap: thinking tokens count toward
-    # max_output_tokens, and medium thinking alone can eat ~1-2k tokens.
-    assert settings.llm_gen_thinking_level == "medium"
+    # max_output_tokens, and medium thinking alone can eat ~1-2k tokens. The
+    # default thinking level is a per-Bloom map: low for recall-style levels
+    # (same quality, ~2x faster), medium for the Apply+ concrete-scenario levels.
+    assert settings.llm_gen_thinking_level == "remember=low,understand=low,default=medium"
     assert settings.llm_gen_max_output_tokens == 8192
     assert settings.warmup_on_startup is True
 
@@ -55,6 +57,37 @@ def test_blank_budget_is_treated_as_unset(monkeypatch):
     settings = Settings(_env_file=None)
     assert settings.llm_thinking_budget is None
     assert settings.llm_thinking_level == "off"
+
+
+# ── gen_thinking_level_for (per-Bloom-level thinking map) ────────────────────
+
+def test_gen_thinking_level_map_resolution():
+    s = Settings(_env_file=None)
+    mapped = Settings(_env_file=None, llm_gen_thinking_level="remember=low,default=high")
+    # Map: explicit rows win for their level, default covers the rest.
+    assert mapped.gen_thinking_level_for("remember") == "low"
+    assert mapped.gen_thinking_level_for("apply") == "high"
+    assert mapped.gen_thinking_level_for("create") == "high"
+    # The shipped default: low for recall-style, medium (default) for Apply+.
+    assert s.gen_thinking_level_for("remember") == "low"
+    assert s.gen_thinking_level_for("understand") == "low"
+    assert s.gen_thinking_level_for("apply") == "medium"
+    assert s.gen_thinking_level_for("analyze") == "medium"
+    assert s.gen_thinking_level_for("evaluate") == "medium"
+    assert s.gen_thinking_level_for("create") == "medium"
+
+
+def test_gen_thinking_level_plain_value_is_global():
+    # A value with no "=" is a single global level for every Bloom level.
+    s = Settings(_env_file=None, llm_gen_thinking_level="medium")
+    assert s.gen_thinking_level_for("remember") == "medium"
+    assert s.gen_thinking_level_for("create") == "medium"
+
+
+def test_gen_thinking_level_fallback_when_map_has_no_default():
+    s = Settings(_env_file=None, llm_gen_thinking_level="remember=low")
+    # No explicit row and no default -> raw setting text (model default path).
+    assert s.gen_thinking_level_for("create") == "remember=low"
 
 
 # ── build_thinking_config ─────────────────────────────────────────────────────
@@ -146,6 +179,30 @@ def test_configure_genai_wires_thinking_settings(monkeypatch):
     adapter = gs._configure_genai(thinking_level="low", max_output_tokens=333)
     assert adapter._thinking_level == "low"
     assert adapter._max_output_tokens == 333
+
+
+def test_configure_genai_resolves_thinking_per_bloom_level(monkeypatch):
+    """The shipped per-level map routes recall-style levels to low thinking and
+    Apply+ levels to medium, without the caller pinning a level."""
+    pytest.importorskip("google.genai")
+    import google.genai as genai
+
+    from app.services import generation_service as gs
+
+    monkeypatch.setattr(gs.settings, "gemini_api_key", "test-key")
+    monkeypatch.setattr(
+        gs.settings,
+        "llm_gen_thinking_level",
+        "remember=low,understand=low,default=medium",
+    )
+    monkeypatch.setattr(genai, "Client", lambda *a, **k: MagicMock())
+
+    assert gs._configure_genai(bloom_level="remember")._thinking_level == "low"
+    assert gs._configure_genai(bloom_level="understand")._thinking_level == "low"
+    assert gs._configure_genai(bloom_level="apply")._thinking_level == "medium"
+    assert gs._configure_genai(bloom_level="create")._thinking_level == "medium"
+    # No bloom_level (e.g. schema warm-up) falls back to the default row.
+    assert gs._configure_genai()._thinking_level == "medium"
 
 
 def test_configure_judge_client_wires_thinking_settings(monkeypatch):
