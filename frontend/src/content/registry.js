@@ -25,6 +25,15 @@
  * `getKnowledgeNodes()` is the same library as a flat list, one row per concept
  * with its subject, topic, estimate, confidence, last practised and courses —
  * the shape a graph view can draw without asking the loader anything.
+ *
+ * A topic a student typed on the generate page has no course behind it, but it
+ * can still be mastered: mastery is keyed by (user, concept, bloom) and knows
+ * nothing about courses, so the slug of what they typed is a perfectly good id.
+ * `registerCustomConcept` files one of those in a per-browser list, and
+ * `getKnowledgeNodes()` reports it beside the authored concepts with
+ * `custom: true`, so nothing mistakes it for taught material. The authored
+ * selectors — subjects, topics, courses — leave custom concepts out: they have
+ * no course content, and the practice board practises content.
  */
 
 import { getCourse, getTopic } from './os/index.js'
@@ -229,12 +238,107 @@ function loadCourses() {
 
 export const registry = createRegistry(loadCourses())
 
-export const allConcepts = () => registry.allConcepts()
-export const getConcept = (id) => registry.getConcept(id)
+// ── Concepts the student made by asking for a topic ─────────
+
+const CUSTOM_STORAGE_KEY = 'qm_custom_concepts'
+
+const canStoreCustom = typeof window !== 'undefined' && Boolean(window.localStorage)
+
+let customCache = null
+
+function readCustom() {
+  if (!canStoreCustom) return []
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.filter((entry) => entry?.id) : []
+  } catch {
+    return []
+  }
+}
+
+function writeCustom(list) {
+  if (!canStoreCustom) return
+  try {
+    window.localStorage.setItem(CUSTOM_STORAGE_KEY, JSON.stringify(list))
+  } catch {
+    // Storage full or blocked: the in-memory list is still right this session.
+  }
+}
+
+/** Every custom concept this browser has registered, oldest first. */
+export function customConcepts() {
+  if (customCache === null) customCache = readCustom()
+  return customCache
+}
+
+/**
+ * Register (or refresh) the concept behind a topic the student typed. The id
+ * is the caller's to build - `custom:<slug>` - so it is stable across runs and
+ * the mastery already earned stays attached. Returns the stored entry, or null
+ * when there is nothing worth registering.
+ */
+export function registerCustomConcept({ id, title, subject } = {}) {
+  const name = String(title ?? '').trim()
+  if (!id || !name) return null
+  const entry = { id, title: name, subject: subject || null }
+  const next = [...customConcepts().filter((concept) => concept.id !== id), entry]
+  customCache = next
+  writeCustom(next)
+  return entry
+}
+
+/** Forget every custom concept. For tests, and for a full profile reset. */
+export function resetCustomConcepts() {
+  customCache = []
+  writeCustom([])
+}
+
+/** A custom concept in the same shape `allConcepts()` reports. */
+function customConceptEntry(concept) {
+  return {
+    id: concept.id,
+    title: concept.title,
+    subject: concept.subject,
+    subjectLabel: subjectLabel(concept.subject),
+    topicId: null,
+    topicTitle: concept.title,
+    courseIds: [],
+  }
+}
+
+export const allConcepts = () => [
+  ...registry.allConcepts(),
+  ...customConcepts().map(customConceptEntry),
+]
+
+export const getConcept = (id) => {
+  const authored = registry.getConcept(id)
+  if (authored) return authored
+  const custom = customConcepts().find((concept) => concept.id === id)
+  return custom ? customConceptEntry(custom) : null
+}
+
 export const subjects = () => registry.subjects()
 export const topicsOfSubject = (subject) => registry.topicsOfSubject(subject)
 export const coursesContaining = (conceptId) => registry.coursesContaining(conceptId)
-export const getKnowledgeNodes = (estimates) => registry.getKnowledgeNodes(estimates)
+
+/** The authored library, then the concepts the student made, marked as such. */
+export const getKnowledgeNodes = (estimates) => [
+  ...registry.getKnowledgeNodes(estimates),
+  ...customConcepts().map((concept) => {
+    const estimate = estimates?.[concept.id] ?? null
+    return {
+      ...customConceptEntry(concept),
+      conceptId: concept.id,
+      estimate: estimate && estimate.value != null ? estimate.value : null,
+      confidence: estimate?.confidence ?? null,
+      lastPractised: estimate?.updatedAt ?? null,
+      custom: true,
+    }
+  }),
+]
+
 export const conceptMastery = (estimates, conceptId) => registry.conceptMastery(estimates, conceptId)
 export const topicMastery = (estimates, topicId) => registry.topicMastery(estimates, topicId)
 export const subjectMastery = (estimates, subject) => registry.subjectMastery(estimates, subject)

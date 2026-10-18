@@ -28,7 +28,7 @@ import { generationError } from '../../api/errorMessages.js'
 import { useCatalog } from '../../hooks/useCatalog'
 import { usePracticeData } from '../../hooks/usePracticeData.js'
 import { contentCourseIds } from '../../content/practiceBank.js'
-import { createRegistry } from '../../content/registry.js'
+import { createRegistry, registerCustomConcept } from '../../content/registry.js'
 import { BLOOM_COLORS, BLOOM_LEVELS } from '../../constants/bloomTaxonomy.js'
 import { holdDraft, newSession } from '../../lib/sessions.js'
 import {
@@ -36,6 +36,7 @@ import {
   GENERATE_COUNT_CHOICES,
   GENERAL_SUBJECT,
   bloomsForDifficulty,
+  customConceptId,
   difficultyLabel,
   findTopicSuggestion,
   matchingSuggestions,
@@ -231,6 +232,14 @@ export function GeneratePanel() {
         return
       }
       setReady(outcome.questions)
+      // A topic the student typed becomes a concept of its own, so the answers
+      // to its questions move mastery like any other concept's and the number
+      // shows up in the library beside the authored ones.
+      registerCustomConcept({
+        id: customConceptId(trimmed),
+        title: trimmed,
+        subject,
+      })
     } finally {
       setRunning(false)
       abortRef.current = null
