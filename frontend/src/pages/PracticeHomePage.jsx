@@ -45,9 +45,21 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { LevelControl } from '../components/practice/LevelControl.jsx'
 import { CountControl } from '../components/practice/CountControl.jsx'
 import { StartPracticeButton } from '../components/practice/StartPracticeButton.jsx'
+import { GeneratePanel } from '../components/practice/GeneratePanel.jsx'
+import { Tabs } from '../components/ui/Tabs'
 import { IconTarget, IconArrowRight } from '../components/ui/Icons'
 
 const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
+
+/**
+ * The two ways to practise. "Question bank" is the board below - the authored
+ * questions, chosen by subject and topic. "Any topic" is the generate form,
+ * which used to be a page of its own at /generate.
+ */
+const TABS = [
+  { value: 'bank', label: 'Question bank' },
+  { value: 'topic', label: 'Any topic' },
+]
 
 const SCOPE_LABELS = {
   course: 'Course',
@@ -227,6 +239,7 @@ export default function PracticeHomePage() {
   const [level, setLevel] = useState('mixed')
   const [count, setCount] = useState(BOARD_DEFAULT_COUNT)
   const [label, setLabel] = useState('')
+  const [tab, setTab] = useState('bank')
 
   useBreadcrumbs([WORKSPACE_CRUMB, { label: 'Practice' }])
 
@@ -306,102 +319,115 @@ export default function PracticeHomePage() {
         you answer, and nothing is measured until you do.
       </p>
 
-      <PanelLarge className="mt-5">
-        <h2 className="text-sm font-semibold text-ink">Build a practice session</h2>
-        <p className="mt-0.5 max-w-2xl text-xs text-muted">
-          Pick a subject, keep the topics you want, choose a level and a length. Practice here is
-          free: it never adds a course to My courses.
-        </p>
+      <Tabs className="mt-5" tabs={TABS} value={tab} onChange={setTab} />
 
-        <div className="mt-4">
-          <h3 className="text-[13px] font-medium text-ink">Subject</h3>
-          {subjectRows.length === 0 ? (
-            <p className="mt-1.5 text-xs text-muted">No subjects have content yet.</p>
-          ) : (
-            <ul className="mt-1.5 grid gap-2 sm:grid-cols-2">
-              {subjectRows.map((row) => (
-                <SubjectRow
-                  key={row.slug}
-                  row={row}
-                  selected={row.slug === current?.slug}
-                  onSelect={selectSubject}
-                />
-              ))}
-            </ul>
-          )}
+      {tab === 'topic' && (
+        <div className="mt-5">
+          <GeneratePanel />
         </div>
+      )}
 
-        <div className="mt-4">
-          <h3 className="text-[13px] font-medium text-ink">Topics</h3>
-          {current === null || current.topics.length === 0 ? (
-            <p className="mt-1.5 text-xs text-muted">This subject has no topics yet.</p>
-          ) : (
-            <div className="mt-1.5">
-              <TopicChoices topics={current.topics} excluded={excluded} onToggle={toggleTopic} />
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-3">
-          <div>
-            <h3 className="text-[13px] font-medium text-ink">Level</h3>
-            <LevelControl className="mt-1.5" value={level} onChange={setLevel} />
-          </div>
-          <div>
-            <h3 className="text-[13px] font-medium text-ink">Number of questions</h3>
-            <CountControl className="mt-1.5" value={count} onChange={setCount} />
-          </div>
-        </div>
-
-        <div className="mt-4 max-w-md">
-          <Input
-            id="practice-session-label"
-            label="Label this session (optional)"
-            placeholder="For example: paging before the quiz"
-            value={label}
-            maxLength={80}
-            onChange={(event) => setLabel(event.target.value)}
-          />
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <StartPracticeButton
-            scope="custom"
-            topicIds={chosenTopics.map((topic) => topic.id)}
-            subject={current?.slug ?? null}
-            sessionLabel={label.trim()}
-            level={level}
-            count={count}
-            label={`Start practice (${chosenCount} question${chosenCount === 1 ? '' : 's'})`}
-            emptyLabel="No questions yet"
-          />
-          <span className="text-xs text-muted">
-            {chosenCount === 0
-              ? 'Tick at least one topic with questions.'
-              : `${questionCountOf(chosenCount)} available in the topics you kept.`}
-          </span>
-        </div>
-      </PanelLarge>
-
-      <Panel className="mt-4 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-ink">Mixed practice across my courses</h2>
-            <p className="mt-0.5 max-w-xl text-xs text-muted">
-              {enrolledCount > 0
-                ? `Six questions drawn from your ${enrolledCount} course${enrolledCount === 1 ? '' : 's'} in My courses, across every Bloom level.`
-                : 'Add a course to My courses and its questions become available here.'}
+      {tab === 'bank' && (
+        <>
+          <PanelLarge className="mt-5">
+            <h2 className="text-sm font-semibold text-ink">Build a practice session</h2>
+            <p className="mt-0.5 max-w-2xl text-xs text-muted">
+              Pick a subject, keep the topics you want, choose a level and a length. Practice here is
+              free: it never adds a course to My courses.
             </p>
-          </div>
-          <StartPracticeButton
-            scope="mixed"
-            label="Start mixed practice"
-            emptyLabel={enrolledCount > 0 ? 'No questions yet' : 'Add a course first'}
-            variant="secondary"
-            count={DEFAULT_SESSION_COUNT}
-          />
-        </div>
-      </Panel>
+
+            <div className="mt-4">
+              <h3 className="text-[13px] font-medium text-ink">Subject</h3>
+              {subjectRows.length === 0 ? (
+                <p className="mt-1.5 text-xs text-muted">No subjects have content yet.</p>
+              ) : (
+                <ul className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                  {subjectRows.map((row) => (
+                    <SubjectRow
+                      key={row.slug}
+                      row={row}
+                      selected={row.slug === current?.slug}
+                      onSelect={selectSubject}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-4">
+              <h3 className="text-[13px] font-medium text-ink">Topics</h3>
+              {current === null || current.topics.length === 0 ? (
+                <p className="mt-1.5 text-xs text-muted">This subject has no topics yet.</p>
+              ) : (
+                <div className="mt-1.5">
+                  <TopicChoices topics={current.topics} excluded={excluded} onToggle={toggleTopic} />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-3">
+              <div>
+                <h3 className="text-[13px] font-medium text-ink">Level</h3>
+                <LevelControl className="mt-1.5" value={level} onChange={setLevel} />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-medium text-ink">Number of questions</h3>
+                <CountControl className="mt-1.5" value={count} onChange={setCount} />
+              </div>
+            </div>
+
+            <div className="mt-4 max-w-md">
+              <Input
+                id="practice-session-label"
+                label="Label this session (optional)"
+                placeholder="For example: paging before the quiz"
+                value={label}
+                maxLength={80}
+                onChange={(event) => setLabel(event.target.value)}
+              />
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <StartPracticeButton
+                scope="custom"
+                topicIds={chosenTopics.map((topic) => topic.id)}
+                subject={current?.slug ?? null}
+                sessionLabel={label.trim()}
+                level={level}
+                count={count}
+                label={`Start practice (${chosenCount} question${chosenCount === 1 ? '' : 's'})`}
+                emptyLabel="No questions yet"
+              />
+              <span className="text-xs text-muted">
+                {chosenCount === 0
+                  ? 'Tick at least one topic with questions.'
+                  : `${questionCountOf(chosenCount)} available in the topics you kept.`}
+              </span>
+            </div>
+          </PanelLarge>
+
+          <Panel className="mt-4 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-ink">Mixed practice across my courses</h2>
+                <p className="mt-0.5 max-w-xl text-xs text-muted">
+                  {enrolledCount > 0
+                    ? `Six questions drawn from your ${enrolledCount} course${enrolledCount === 1 ? '' : 's'} in My courses, across every Bloom level.`
+                    : 'Add a course to My courses and its questions become available here.'}
+                </p>
+              </div>
+              <StartPracticeButton
+                scope="mixed"
+                label="Start mixed practice"
+                emptyLabel={enrolledCount > 0 ? 'No questions yet' : 'Add a course first'}
+                variant="secondary"
+                count={DEFAULT_SESSION_COUNT}
+              />
+            </div>
+          </Panel>
+
+        </>
+      )}
 
       <div className="mt-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

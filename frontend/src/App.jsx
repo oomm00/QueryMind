@@ -4,10 +4,12 @@
  * Public:  /login
  * Default: /explore (redirect target after sign-in)
  * Built:   /dashboard, /explore, /courses, /practice, /practice/:sessionId,
- *          /practice/:sessionId/results, /history, /upload, /generate,
+ *          /practice/:sessionId/results, /history, /notes,
  *          /course/:id (overview, material, progress, about),
  *          /learn/:courseId/:topicId/:lessonId,
  *          /map/:courseId/:topicId (topic knowledge graph)
+ * Moved:   /generate and /upload redirected - the generate form is the
+ *          "Any topic" tab on /practice, upload is the Documents tab on /notes.
  * Stubs:   everything else renders <ComingSoon/>.
  */
 
@@ -21,8 +23,7 @@ import PracticeHomePage from './pages/PracticeHomePage'
 import DashboardPage from './pages/DashboardPage'
 import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
-import UploadDocumentsPage from './pages/UploadDocumentsPage'
-import GenerateQuestionsPage from './pages/GenerateQuestionsPage'
+import NotesPage from './pages/NotesPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ComingSoon from './pages/ComingSoon'
 import LessonPage from './pages/LessonPage'
@@ -88,22 +89,10 @@ export default function App() {
             </Protected>
           }
         />
-        <Route
-          path="/upload"
-          element={
-            <Protected>
-              <UploadDocumentsPage />
-            </Protected>
-          }
-        />
-        <Route
-          path="/generate"
-          element={
-            <Protected>
-              <GenerateQuestionsPage />
-            </Protected>
-          }
-        />
+        {/* Moved: the form lives on /practice as "Any topic", the upload page
+            on /notes as "Documents". Old links and bookmarks still land. */}
+        <Route path="/generate" element={<Navigate to="/practice" replace />} />
+        <Route path="/upload" element={<Navigate to="/notes" replace />} />
         <Route
           path="/practice"
           element={
@@ -153,7 +142,7 @@ export default function App() {
           path="/weak-areas"
           element={soon('Weak Areas', 'Topics that need attention, ranked by mastery.')}
         />
-        <Route path="/notes" element={soon('My Notes', 'Your saved notes and highlights.')} />
+        <Route path="/notes" element={<Protected><NotesPage /></Protected>} />
         <Route path="/settings" element={soon('Settings', 'Account, theme and study preferences.')} />
         <Route
           path="/course/:id"

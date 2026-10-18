@@ -1,38 +1,40 @@
 /**
- * UploadDocumentsPage — get a student's notes into the knowledge base, and
- * show what is already there.
+ * DocumentsPanel — get a student's notes into the knowledge base, and show what
+ * is already there.
  *
- * One page, two jobs that belong together: the dropzone queues files with the
+ * One panel, two jobs that belong together: the dropzone queues files with the
  * client-side type/10 MB checks (a rejection costs no upload), Subject and
  * Topic tag the batch — retrieval filters on an exact match, so both are
  * suggested from what has been uploaded before — and the table below lists
  * GET /documents. Files upload one at a time so every row carries its own
  * outcome; a failure never blocks the rows behind it.
+ *
+ * This is the Documents tab of My notes. It used to be a page of its own; the
+ * heading belongs to the page now, so the panel starts at the form.
  */
 
 import React, { useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { documentsApi } from '../api/endpoints/documents.js'
-import { uploadErrorMessage } from '../api/uploadErrorMessages.js'
-import { useDocuments, useDocumentTopics } from '../hooks/useDocuments.js'
+import { documentsApi } from '../../api/endpoints/documents.js'
+import { uploadErrorMessage } from '../../api/uploadErrorMessages.js'
+import { useDocuments, useDocumentTopics } from '../../hooks/useDocuments.js'
 import {
   ACCEPTED_EXTENSIONS,
   MAX_FILE_SIZE_BYTES,
   formatMegabytes,
   validateFile,
-} from '../lib/uploadValidation.js'
-import { subjectList, topicsFor } from '../lib/topicSuggestions.js'
-import { Button, buttonClasses } from '../components/ui/Button'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorState } from '../components/ui/ErrorState'
-import { IconAlert, IconCheck, IconClose, IconDocs, IconUpload } from '../components/ui/Icons'
-import { Input } from '../components/ui/Input'
-import { PageHeader } from '../components/ui/PageHeader'
-import { Panel, PanelLarge, PanelSmall } from '../components/ui/Panel'
-import { Select } from '../components/ui/Select'
-import { Toast } from '../components/ui/Toast'
-import { cx } from '../lib/cx'
+} from '../../lib/uploadValidation.js'
+import { subjectList, topicsFor } from '../../lib/topicSuggestions.js'
+import { Button, buttonClasses } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
+import { ErrorState } from '../ui/ErrorState'
+import { IconAlert, IconCheck, IconClose, IconDocs, IconUpload } from '../ui/Icons'
+import { Input } from '../ui/Input'
+import { Panel, PanelLarge, PanelSmall } from '../ui/Panel'
+import { Select } from '../ui/Select'
+import { Toast } from '../ui/Toast'
+import { cx } from '../../lib/cx'
 
 const SOURCE_OPTIONS = [
   { value: 'college', label: 'College material' },
@@ -76,7 +78,7 @@ function queueDetail(item) {
   return `${formatMegabytes(item.size)} — ready`
 }
 
-export default function UploadDocumentsPage() {
+export function DocumentsPanel() {
   const queryClient = useQueryClient()
   const documents = useDocuments()
   const topicsQuery = useDocumentTopics()
@@ -207,11 +209,6 @@ export default function UploadDocumentsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Upload documents"
-        description="Add your notes to the knowledge base. Question generation reads them back by the subject and topic you file them under, so pick those carefully."
-      />
-
       <PanelLarge>
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* ── Dropzone ─────────────────────────────────────── */}
@@ -464,3 +461,5 @@ export default function UploadDocumentsPage() {
     </div>
   )
 }
+
+export default DocumentsPanel
