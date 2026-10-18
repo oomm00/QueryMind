@@ -74,7 +74,15 @@ export async function apiFetch(path, options = {}) {
       headers,
     })
   } catch (err) {
-    throw new ApiError(0, err.message || 'Network request failed', null)
+    // A deadline (AbortSignal.timeout) rejects with TimeoutError/AbortError —
+    // browser-specific messages, so both collapse to one sentence and a code
+    // the screens can branch on, instead of every caller pattern-matching text.
+    const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError'
+    throw new ApiError(
+      0,
+      timedOut ? 'The request timed out. Try again.' : err.message || 'Network request failed',
+      timedOut ? { code: 'TIMEOUT' } : null
+    )
   }
 
   if (response.status === 401) {

@@ -1,0 +1,85 @@
+{
+  "id": "invalid-topic",
+  "title": "TODO write the real title",
+  "concepts": {
+    "first-concept": {
+      "id": "first-concept",
+      "title": "First concept",
+      "prerequisiteIds": ["ghost-concept"],
+      "resources": [
+        {
+          "title": "Wrong scheme",
+          "url": "http://example.com/wrong-scheme",
+          "type": "paper",
+          "provider": "Example Press",
+          "license": "CC0",
+          "estMinutes": 0,
+          "why": "Because it is here.",
+          "verifiedOn": "1 September 2026"
+        },
+        {
+          "title": "Second reading",
+          "url": "https://example.com/second",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC0",
+          "estMinutes": 5,
+          "why": "Because it is here.",
+          "verifiedOn": "2026-09-01"
+        },
+        {
+          "title": "Third reading",
+          "url": "https://example.com/third",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC0",
+          "estMinutes": 5,
+          "why": "Because it is here.",
+          "verifiedOn": "2026-09-01"
+        },
+        {
+          "title": "Fourth reading",
+          "url": "https://example.com/fourth",
+          "type": "article",
+          "provider": "Example Press",
+          "license": "CC0",
+          "estMinutes": 5,
+          "why": "Because it is here.",
+          "verifiedOn": "2026-09-01"
+        }
+      ],
+      "questions": [
+        {
+          "id": "fixture-mcq",
+          "type": "mcq",
+          "bloom": "understand",
+          "difficulty": "medium",
+          "prompt": "Which option is repeated?",
+          "options": ["Same", "Same", "Different", "Also different"],
+          "correctIndex": 9,
+          "explanation": "One option is repeated and the index points past the end."
+        },
+        {
+          "id": "fixture-mcq-few",
+          "type": "mcq",
+          "bloom": "remember",
+          "difficulty": "easy",
+          "prompt": "Which option is missing?",
+          "options": ["One", "Two", "Three"],
+          "correctIndex": 0,
+          "explanation": "There are three options where four are required."
+        },
+        {
+          "id": "fixture-short",
+          "type": "short",
+          "bloom": "apply",
+          "difficulty": "hard",
+          "prompt": "Explain what is missing here.",
+          "explanation": "The answer key and the rubric are both missing."
+        }
+      ]
+    },
+    "second-concept": { "id": "first-concept", "title": "First concept again" },
+    "third-concept": { "id": "third-concept" }
+  }
+}

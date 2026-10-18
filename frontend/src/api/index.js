@@ -4,6 +4,7 @@
 
 export * from './client.js'
 export * from './adapter.js'
+export * from './errorMessages.js'
 export { authEndpoints, authApi } from './endpoints/auth.js'
 export { questionsEndpoints, questionsApi } from './endpoints/questions.js'
 export { attemptsEndpoints, attemptsApi } from './endpoints/attempts.js'

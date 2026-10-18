@@ -1,0 +1,152 @@
+{
+  "id": "os-fundamentals-system-call-lifecycle",
+  "subject": "operating-systems",
+  "title": "System-call lifecycle and error handling",
+  "summary": "A wrapper passes an operation and arguments through a controlled entry mechanism; the kernel validates the request and returns a result or error.",
+  "prerequisiteIds": [
+    "os-fundamentals-system-call-interface"
+  ],
+  "relatedIds": [
+    "os-fundamentals-user-kernel-mode"
+  ],
+  "resources": [
+    {
+      "title": "syscall(2): Invoke a system call",
+      "url": "https://man7.org/linux/man-pages/man2/syscall.2.html",
+      "type": "docs",
+      "provider": "Linux man-pages project",
+      "license": "Free documentation; see site terms",
+      "estMinutes": 12,
+      "why": "Describes syscall arguments, return values, and errno behavior."
+    },
+    {
+      "title": "syscalls(2): Linux system calls",
+      "url": "https://man7.org/linux/man-pages/man2/syscalls.2.html",
+      "type": "docs",
+      "provider": "Linux man-pages project",
+      "license": "Free documentation; see site terms",
+      "estMinutes": 12,
+      "why": "Lists system calls and explains their role as the application-to-kernel interface."
+    }
+  ],
+  "questions": [
+    {
+      "id": "os-fundamentals-system-call-lifecycle-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "For many Linux C-library wrappers, how is a system-call failure commonly reported?",
+      "options": [
+        "Return -1 and set errno",
+        "Retry forever until success",
+        "Return a positive process ID and clear errno",
+        "Return 0 and overwrite every buffer"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Many glibc wrappers report failure as -1 and set errno to describe the error; exact return conventions depend on the call.",
+      "rubric": [],
+      "explanation": "Do not generalize one return convention to every system call.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-lifecycle-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Why must a kernel validate pointers and permissions supplied with a system-call request?",
+      "options": [
+        "Compiled programs cannot contain invalid pointers",
+        "User input can be invalid or unauthorized, and the kernel must not trust it blindly",
+        "A mode switch makes every pointer valid",
+        "Validation is only needed when the system has no files"
+      ],
+      "correctIndex": 1,
+      "answerKey": "System-call arguments cross a protection boundary and must be checked before the kernel uses them or performs privileged work.",
+      "rubric": [],
+      "explanation": "Privilege transition does not make arbitrary user data trustworthy.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-lifecycle-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A process calls open(\"secret.txt\", O_RDONLY), but file permissions deny read access. What should the OS do?",
+      "options": [
+        "Delete the file",
+        "Open the file because O_RDONLY overrides permissions",
+        "Switch the process permanently to kernel mode",
+        "Fail the request and report an access error"
+      ],
+      "correctIndex": 3,
+      "answerKey": "The OS checks permissions; O_RDONLY chooses the requested access mode but does not bypass access controls.",
+      "rubric": [],
+      "explanation": "Access mode and authorization are separate checks.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-lifecycle-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "A Linux wrapper returns -1 and sets errno to EACCES after open(). Which interpretation is best?",
+      "options": [
+        "The request failed because access was denied; the caller should handle the error path",
+        "The process must always terminate immediately",
+        "The file opened successfully with descriptor -1",
+        "The kernel necessarily panicked"
+      ],
+      "correctIndex": 0,
+      "answerKey": "EACCES indicates a permission/access failure in this context; application behavior after failure is a design choice.",
+      "rubric": [],
+      "explanation": "A system-call failure does not itself imply a kernel crash or mandatory process termination.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-lifecycle-q5",
+      "type": "mcq",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "A kernel handler dereferences a user-provided pointer without safely checking or copying the referenced data. What is the principal risk?",
+      "options": [
+        "The pointer is automatically replaced with errno",
+        "The pointer automatically becomes a safe kernel pointer",
+        "Invalid user memory can cause faults or unsafe kernel behavior",
+        "The call is guaranteed to be faster and correct"
+      ],
+      "correctIndex": 2,
+      "answerKey": "Kernel code must safely access user memory; an arbitrary user pointer cannot be trusted just because execution entered kernel mode.",
+      "rubric": [],
+      "explanation": "Mode transition does not validate the pointer for the kernel.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-lifecycle-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Describe the typical path from a C library system-call wrapper to the result returned to the application. Include validation and failure reporting.",
+      "answerKey": "The wrapper prepares the system-call identifier and arguments and invokes the architecture's controlled entry mechanism. The kernel handler validates arguments and permissions, performs or rejects the request, and returns a result. For many Linux C-library interfaces, the wrapper translates an error into -1 and sets errno; exact details depend on the interface and architecture.",
+      "rubric": [
+        {
+          "criterion": "Wrapper prepares identifier and arguments",
+          "points": 3
+        },
+        {
+          "criterion": "Controlled kernel entry",
+          "points": 3
+        },
+        {
+          "criterion": "Kernel validation and service or rejection",
+          "points": 2
+        },
+        {
+          "criterion": "Return path and error reporting",
+          "points": 2
+        }
+      ],
+      "explanation": "The answer must include ordered control flow, validation, and the caller-visible error convention.",
+      "needsHumanCheck": false
+    }
+  ]
+}

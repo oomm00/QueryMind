@@ -1,0 +1,18 @@
+{
+  "id": "warn-four",
+  "subject": "operating-systems",
+  "title": "Delta basics",
+  "summary": "A fixture concept with a link of its own, so nothing warns about it.",
+  "prerequisiteIds": [],
+  "resources": [
+    {
+      "title": "Delta fixture guide",
+      "url": "https://example.com/delta-guide",
+      "type": "docs",
+      "provider": "Example Press",
+      "license": "CC BY 4.0",
+      "estMinutes": 3,
+      "why": "A page no other fixture concept lists."
+    }
+  ]
+}

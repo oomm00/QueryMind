@@ -1,0 +1,20 @@
+{
+  "blocks": [
+    {
+      "kind": "check",
+      "id": "fixture-check",
+      "prompt": "Which option comes first?",
+      "options": ["One", "Two", "Three", "Four"],
+      "correctIndex": 0,
+      "explanation": "The first option is the one the fixture names."
+    },
+    {
+      "kind": "check",
+      "id": "fixture-check",
+      "prompt": "Which option comes last?",
+      "options": ["One", "Two", "Three", "Four"],
+      "correctIndex": 4,
+      "explanation": "The fourth option is the one the fixture names."
+    }
+  ]
+}

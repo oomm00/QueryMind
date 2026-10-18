@@ -1,0 +1,16 @@
+{
+  "id": "lesson-working-sets-fundamentals",
+  "title": "Working sets fundamentals",
+  "estMinutes": 5,
+  "source": "Official material",
+  "objectives": [
+    "Define the working set of a process as the set of pages recently accessed",
+    "Explain how the working set model prevents thrashing by keeping the working set in memory"
+  ],
+  "blocks": [
+    {
+      "kind": "paragraph",
+      "text": "The working set of a process at time t is the set of pages referenced during a sliding window of recent instructions. If the total working set size exceeds available memory, the system experiences thrashing, spending more time swapping pages than executing instructions. The working set model provides a basis for determining the optimal allocation of physical frames to processes."
+    }
+  ]
+}
