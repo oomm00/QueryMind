@@ -124,6 +124,9 @@ function QuestionReview({ userId, sessionId, question, answer, selfMark, flagged
       <div className="flex flex-wrap items-center gap-2">
         <BloomChip bloom={question.bloom_level} />
         <Badge tone="neutral" label={QUESTION_TYPE_LABELS[question.type] ?? question.type} />
+        {question.origin === 'generated' && (
+          <Badge tone="neutral" label={question.originLabel ?? 'Generated'} />
+        )}
         {flagged && <Badge tone="warning" label="Flagged" />}
         <span className="text-xs tabular-nums text-muted">
           {earnedDisplay != null
@@ -231,8 +234,8 @@ export default function ResultsPage() {
   const [updateCount, setUpdateCount] = useState(0)
 
   const questions = useMemo(
-    () => resolveQuestions(session?.questionIds ?? []),
-    [session?.questionIds]
+    () => resolveQuestions(session?.questionIds ?? [], session?.questions ?? []),
+    [session?.questionIds, session?.questions]
   )
 
   const score = useMemo(

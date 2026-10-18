@@ -88,8 +88,16 @@ export function questionIndex() {
   return index
 }
 
-/** The questions behind a list of ids, in the order they were asked. */
-export function resolveQuestions(questionIds = []) {
+/**
+ * The questions behind a list of ids, in the order they were asked.
+ *
+ * `own` is a session's own question bodies, which only a generated session
+ * has: those questions are not in the content files, so they come first and the
+ * bank answers for everything else. A session drawn from the bank passes
+ * nothing and resolves exactly as it always did.
+ */
+export function resolveQuestions(questionIds = [], own = []) {
   const byId = questionIndex()
-  return questionIds.map((id) => byId.get(id)).filter(Boolean)
+  const generated = new Map((own ?? []).map((question) => [question.question_id, question]))
+  return questionIds.map((id) => generated.get(id) ?? byId.get(id)).filter(Boolean)
 }

@@ -34,6 +34,7 @@ import {
 } from '../lib/sessions.js'
 import { recordScore } from '../lib/masteryStore.js'
 import { marksForQuestion, scoreOf } from '../lib/marks.js'
+import { gradeGeneratedAnswer } from '../lib/generateGrading.js'
 import { resolveQuestions } from '../content/practiceBank.js'
 import { QUESTION_TYPE_LABELS } from '../content/questionBank.js'
 import { Badge } from '../components/ui/Badge'
@@ -70,8 +71,8 @@ export default function SessionPage() {
   const session = storedSession ?? draft
 
   const questions = useMemo(
-    () => resolveQuestions(session?.questionIds ?? []),
-    [session?.questionIds]
+    () => resolveQuestions(session?.questionIds ?? [], session?.questions ?? []),
+    [session?.questionIds, session?.questions]
   )
 
   const firstOpen = useMemo(
@@ -83,6 +84,7 @@ export default function SessionPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
   const [resumed, setResumed] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Resume at the first unanswered question, once, when the session loads.
   useEffect(() => {
@@ -192,7 +194,7 @@ export default function SessionPage() {
     return () => document.removeEventListener('keydown', onKeyDown)
   })
 
-  const submit = () => {
+  const submit = async () => {
     // A session only reaches storage with its first answer, so an unanswered one
     // has nothing to submit and nothing to keep.
     if (!storedSession) {
@@ -201,23 +203,45 @@ export default function SessionPage() {
       return
     }
 
-    // Score the mcqs now, once each: the store remembers the (session, question)
-    // pair, so submitting twice cannot count an answer twice.
-    for (const question of questions) {
-      if (question.type !== 'mcq') continue
-      const score = scoreOf(question, session.answers?.[question.question_id], null)
-      if (score == null) continue
-      recordScore(userId, {
-        conceptId: question.conceptId,
-        bloom: question.bloom_level,
-        score,
-        sessionId,
-        questionId: question.question_id,
-      })
+    setSubmitting(true)
+    try {
+      // Score what can be scored now, once each: the store remembers the
+      // (session, question) pair, so submitting twice cannot count an answer
+      // twice. An mcq is right or wrong here; a question the model wrote is
+      // marked by the model, through the attempt endpoint.
+      for (const question of questions) {
+        const answer = session.answers?.[question.question_id]
+
+        if (question.origin === 'generated' && question.type !== 'mcq') {
+          const score = await gradeGeneratedAnswer(question, answer?.text, userId)
+          if (score == null) continue
+          recordScore(userId, {
+            conceptId: question.conceptId,
+            bloom: question.bloom_level,
+            score,
+            sessionId,
+            questionId: question.question_id,
+          })
+          continue
+        }
+
+        if (question.type !== 'mcq') continue
+        const score = scoreOf(question, answer, null)
+        if (score == null) continue
+        recordScore(userId, {
+          conceptId: question.conceptId,
+          bloom: question.bloom_level,
+          score,
+          sessionId,
+          questionId: question.question_id,
+        })
+      }
+      submitSession(userId, sessionId)
+      setConfirmOpen(false)
+      navigate(`/practice/${sessionId}/results`)
+    } finally {
+      setSubmitting(false)
     }
-    submitSession(userId, sessionId)
-    setConfirmOpen(false)
-    navigate(`/practice/${sessionId}/results`)
   }
 
   const exit = () => {
@@ -302,6 +326,9 @@ export default function SessionPage() {
             <div className="flex flex-wrap items-center gap-2">
               <BloomChip bloom={current.bloom_level} />
               <Badge tone="neutral" label={QUESTION_TYPE_LABELS[current.type] ?? current.type} />
+              {current.origin === 'generated' && (
+                <Badge tone="neutral" label={current.originLabel ?? 'Generated'} />
+              )}
               <MarksLabel question={current} />
             </div>
 
@@ -389,7 +416,9 @@ export default function SessionPage() {
             <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
               Keep practicing
             </Button>
-            <Button onClick={submit}>Submit</Button>
+            <Button onClick={submit} loading={submitting}>
+              Submit
+            </Button>
           </>
         }
       />

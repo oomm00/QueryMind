@@ -101,6 +101,7 @@ export function newSession({
   subject = null,
   level = 'mixed',
   questionIds = [],
+  questions = [],
   note = '',
   label = '',
 } = {}) {
@@ -115,6 +116,11 @@ export function newSession({
     createdAt: new Date().toISOString(),
     status: SESSION_STATUS.inProgress,
     questionIds: [...questionIds],
+    // A content session stores ids and resolves them against the course files.
+    // A generated session's questions exist nowhere else, so it carries them:
+    // empty for every session drawn from the bank, which is what makes the two
+    // kinds tell themselves apart without a flag.
+    questions: [...questions],
     answers: {},
     flagged: [],
     selfMarks: {},

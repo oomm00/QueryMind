@@ -19,6 +19,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useDocumentTopics } from '../../hooks/useDocuments.js'
@@ -29,6 +30,7 @@ import { usePracticeData } from '../../hooks/usePracticeData.js'
 import { contentCourseIds } from '../../content/practiceBank.js'
 import { createRegistry } from '../../content/registry.js'
 import { BLOOM_COLORS, BLOOM_LEVELS } from '../../constants/bloomTaxonomy.js'
+import { holdDraft, newSession } from '../../lib/sessions.js'
 import {
   GENERATE_DIFFICULTIES,
   GENERATE_COUNT_CHOICES,
@@ -112,6 +114,7 @@ function elapsedLabel(ms) {
 }
 
 export function GeneratePanel() {
+  const navigate = useNavigate()
   const { userId } = useAuth()
   const topicsQuery = useDocumentTopics()
 
@@ -238,6 +241,25 @@ export function GeneratePanel() {
   // library: "Deadlock" should suggest the "Deadlocks" they uploaded, and a
   // concept title they have no notes on would only fail the same way again.
   const suggestion = noContext ? findTopicSuggestion(topic.trim(), documentTopics) : null
+
+  // The generated questions become a session exactly like one drawn from the
+  // bank does: the same strip, the same flags, the same results page. The only
+  // difference is that it carries its own questions, because nothing else has
+  // them.
+  const startPractice = () => {
+    if (ready.length === 0) return
+    const trimmed = topic.trim()
+    const session = newSession({
+      scope: 'custom',
+      subject: hasDocuments ? subjectForTopic(trimmed, rows) : GENERAL_SUBJECT,
+      level: difficulty,
+      label: trimmed,
+      questionIds: ready.map((question) => question.question_id),
+      questions: ready,
+    })
+    holdDraft(session)
+    navigate(`/practice/${session.id}`)
+  }
 
   return (
     <div className="space-y-4">
@@ -410,7 +432,11 @@ export function GeneratePanel() {
                   : `${sentenceCase(topic.trim())} · ${difficultyLabel(difficulty)}`}
               </p>
             </div>
-            <Badge tone="neutral" label={`${difficultyLabel(difficulty)} · ${blooms.length} levels`} />
+            <Button onClick={startPractice}>
+              {ready.length < count
+                ? `Start with ${ready.length} question${ready.length === 1 ? '' : 's'}`
+                : 'Start practice'}
+            </Button>
           </div>
 
           <ul className="mt-4 space-y-2">
