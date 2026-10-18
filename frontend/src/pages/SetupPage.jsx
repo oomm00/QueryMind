@@ -1,25 +1,55 @@
 /**
  * SetupPage — /practice/new
- * Preparation Setup form: goal, topic, Bloom level, difficulty, and question count.
- * Uses questionsApi.generate and initializes SessionContext before navigating to /practice/session.
+ *
+ * The form draws a practice session from the course bank: the questions the
+ * content files already hold. So it offers what the bank can actually ask — how
+ * many questions a topic or a concept has, and which Bloom levels they sit at —
+ * instead of filters that could come back empty.
+ *
+ * Nothing is generated here. A course with no questions says so, the session
+ * cannot start until there is something real to ask, and the count never
+ * pretends to be larger than the bank.
  */
 
-import React, { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { questionsApi } from '../api/index.js'
-import { useAuth } from '../context/AuthContext.jsx'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSession } from '../context/SessionContext.jsx'
+import { useCourseBank } from '../hooks/useCourseBank.js'
+import { DEFAULT_COURSE_ID } from '../hooks/useCourse.js'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { BLOOM_LEVELS, DIFFICULTIES } from '../constants/bloomTaxonomy.js'
-import { cx } from '../lib/cx'
-import { clampPracticeCount } from '../lib/practiceLink'
+import {
+  ANY_DIFFICULTY,
+  BANK_SOURCE_LABEL,
+  bloomMix,
+  choiceLabel,
+  difficultyFit,
+  pickBank,
+  questionsForChoice,
+  resolveChoice,
+} from '../content/questionBank.js'
+import { sentenceCase } from '../lib/text'
+import { clampPracticeCount, MAX_PRACTICE_COUNT } from '../lib/practiceLink'
+import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Panel } from '../components/ui/Panel'
 import { PageHeader } from '../components/ui/PageHeader'
+import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorState } from '../components/ui/ErrorState'
-import { IconTarget, IconLearning, IconSettings } from '../components/ui/Icons'
+import { Skeleton } from '../components/ui/Skeleton'
+import { IconLearning, IconSettings, IconTarget } from '../components/ui/Icons'
+
+const BLOOM_LABELS = Object.fromEntries(BLOOM_LEVELS.map((level) => [level.value, level.label]))
+
+function plural(count, word) {
+  return `${count} ${word}${count === 1 ? '' : 's'}`
+}
+
+function bloomLabel(level) {
+  return BLOOM_LABELS[level] ?? sentenceCase(level)
+}
 
 function SectionHeading({ icon: Icon, children }) {
   return (
@@ -32,77 +62,131 @@ function SectionHeading({ icon: Icon, children }) {
 
 export default function SetupPage() {
   const navigate = useNavigate()
-  const { userId } = useAuth()
   const { initSession } = useSession()
   const [searchParams] = useSearchParams()
+  const { data, isLoading, isError, error, refetch } = useCourseBank(DEFAULT_COURSE_ID)
+
   useBreadcrumbs([
     { label: 'Workspace', to: '/dashboard' },
     { label: 'Practice', to: '/practice/new' },
     { label: 'New session' },
   ])
 
-  // A link can arrive with a prepared topic and question count, e.g. from a
-  // concept on the knowledge graph. Both are optional and validated here.
-  const [form, setForm] = useState(() => ({
-    goal: '',
-    topic: searchParams.get('topic')?.trim() ?? '',
-    bloom: 'understand',
-    difficulty: 'medium',
-    count: searchParams.has('count') ? clampPracticeCount(searchParams.get('count')) : 3,
-  }))
+  const topics = data?.topics ?? []
+  const [choice, setChoice] = useState('')
+  const [goal, setGoal] = useState('')
+  const [difficulty, setDifficulty] = useState(ANY_DIFFICULTY)
+  const [count, setCount] = useState(() =>
+    searchParams.has('count') ? clampPracticeCount(searchParams.get('count')) : 5
+  )
+  const [errorMessage, setErrorMessage] = useState(null)
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  // A link can name a topic or a concept; resolve it against the bank once,
+  // when the bank is here.
+  useEffect(() => {
+    if (isLoading || choice) return
+    setChoice(
+      resolveChoice(topics, {
+        topic: searchParams.get('topic') ?? '',
+        concept: searchParams.get('concept') ?? '',
+      })
+    )
+  }, [isLoading, topics, choice, searchParams])
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  const questions = useMemo(() => questionsForChoice(topics, choice), [topics, choice])
+  const mix = bloomMix(questions)
+  const asked = Math.min(count, questions.length)
+  const fit = difficultyFit(questions, { count: asked, difficulty })
+  const label = choiceLabel(topics, choice)
+  const courseTotal = topics.reduce((sum, topic) => sum + topic.questions.length, 0)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!form.topic.trim()) return
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      const response = await questionsApi.generate(
-        {
-          topic: form.topic,
-          bloom_level: form.bloom,
-          difficulty: form.difficulty,
-          count: Number(form.count),
-        },
-        userId
-      )
-
-      const questionsList = response?.questions ?? []
-      if (questionsList.length === 0) {
-        throw new Error('No questions could be generated. Please try another topic.')
-      }
-
-      // Initialize persistent study session in SessionContext
-      initSession(form, questionsList)
-      navigate('/practice/session')
-    } catch (err) {
-      setError(err.message ?? 'Failed to generate session questions')
-    } finally {
-      setLoading(false)
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    const picked = pickBank(questions, { count: asked, difficulty })
+    if (picked.length === 0) {
+      setErrorMessage('This bank has no questions to ask yet.')
+      return
     }
+    initSession(
+      {
+        goal: goal.trim(),
+        topic: label,
+        choice,
+        difficulty,
+        count: picked.length,
+        source: BANK_SOURCE_LABEL,
+      },
+      picked
+    )
+    navigate('/practice/session')
+  }
+
+  const header = (
+    <PageHeader
+      title="Practice setup"
+      description={
+        courseTotal > 0
+          ? `Questions come from the ${BANK_SOURCE_LABEL.toLowerCase()} — ${plural(courseTotal, 'question')} written for this course.`
+          : 'Questions come from the course bank, which is built from the content files.'
+      }
+    />
+  )
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        {header}
+        <Skeleton className="h-44 w-full" />
+        <Skeleton className="mt-6 h-32 w-full" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        {header}
+        <ErrorState
+          title="Could not read the course bank"
+          message={error?.message || 'The course content is unavailable right now.'}
+          onRetry={() => refetch()}
+        />
+      </div>
+    )
+  }
+
+  if (topics.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        {header}
+        <Panel>
+          <EmptyState
+            icon={IconLearning}
+            title="No questions written yet"
+            description="The course bank is empty: no concept has questions or a study-notes check. Practice starts working as soon as questions are authored — nothing is invented to fill the gap."
+            action={
+              <Link
+                to={`/course/${DEFAULT_COURSE_ID}`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                See the course
+              </Link>
+            }
+          />
+        </Panel>
+      </div>
+    )
   }
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader
-        title="Preparation setup"
-        description="Configure your target domain, cognitive depth, and question count."
-      />
+      {header}
 
-      {error && (
-        <ErrorState className="mb-4" title="Could not start session" message={error} />
+      {errorMessage && (
+        <ErrorState className="mb-4" title="Could not start the session" message={errorMessage} />
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Target & topic */}
         <Panel className="p-5">
           <SectionHeading icon={IconTarget}>Learning objective</SectionHeading>
 
@@ -112,63 +196,62 @@ export default function SetupPage() {
               name="goal"
               type="text"
               label="Goal (optional)"
-              placeholder="e.g. Pass AWS Solutions Architect, Technical interview prep"
-              value={form.goal}
-              onChange={handleChange}
+              placeholder="e.g. Technical interview prep, pass the OS exam"
+              value={goal}
+              onChange={(event) => setGoal(event.target.value)}
             />
 
-            <Input
-              id="topic"
-              name="topic"
-              type="text"
-              label="Topic"
-              placeholder="e.g. Distributed consensus, SQL query optimization, Concurrency"
-              value={form.topic}
-              onChange={handleChange}
-              required
-            />
-          </div>
-        </Panel>
-
-        {/* Bloom's taxonomy level */}
-        <Panel className="p-5">
-          <SectionHeading icon={IconLearning}>Bloom&apos;s cognitive level</SectionHeading>
-
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {BLOOM_LEVELS.map((level) => {
-              const isSelected = form.bloom === level.value
-              return (
-                <label
-                  key={level.value}
-                  htmlFor={`bloom-${level.value}`}
-                  className={cx(
-                    'flex cursor-pointer flex-col rounded-control border p-3 transition-colors duration-150',
-                    'focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus',
-                    isSelected
-                      ? 'border-primary bg-primary-tint'
-                      : 'border-line bg-surface-raised hover:border-line-strong'
-                  )}
+            <Select
+              id="bank"
+              label="What to practise"
+              value={choice}
+              onChange={(event) => setChoice(event.target.value)}
+              hint={`${plural(questions.length, 'question')} in this bank${
+                label ? ` — ${sentenceCase(label)}` : ''
+              }`}
+            >
+              {topics.map((topic) => (
+                <optgroup
+                  key={topic.id}
+                  label={`${sentenceCase(topic.title)} — ${plural(topic.questions.length, 'question')}`}
                 >
-                  <input
-                    type="radio"
-                    id={`bloom-${level.value}`}
-                    name="bloom"
-                    value={level.value}
-                    checked={isSelected}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <span className="mb-1 text-sm font-medium capitalize text-ink">
-                    {level.label}
-                  </span>
-                  <span className="text-[11px] leading-tight text-muted">{level.desc}</span>
-                </label>
-              )
-            })}
+                  <option value={`topic:${topic.id}`}>
+                    Whole topic — {plural(topic.questions.length, 'question')}
+                  </option>
+                  {topic.concepts.map((concept) => (
+                    <option key={concept.id} value={`concept:${concept.id}`}>
+                      {sentenceCase(concept.title)} — {plural(concept.questions.length, 'question')}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </Select>
           </div>
         </Panel>
 
-        {/* Difficulty & count */}
+        <Panel className="p-5">
+          <SectionHeading icon={IconLearning}>Cognitive level</SectionHeading>
+
+          <p className="text-sm leading-relaxed text-muted">
+            Sessions are mixed across Bloom levels: consecutive questions come from different levels
+            wherever the bank has them, so a session never drills one level on end.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {mix.length > 0 ? (
+              mix.map((entry) => (
+                <Badge
+                  key={entry.level}
+                  variant="neutral"
+                  label={`${bloomLabel(entry.level)} × ${entry.count}`}
+                />
+              ))
+            ) : (
+              <span className="text-xs text-muted">No questions in this bank.</span>
+            )}
+          </div>
+        </Panel>
+
         <Panel className="p-5">
           <SectionHeading icon={IconSettings}>Session scope</SectionHeading>
 
@@ -176,21 +259,37 @@ export default function SetupPage() {
             <Select
               id="difficulty"
               name="difficulty"
-              label="Difficulty"
-              value={form.difficulty}
-              onChange={handleChange}
-              options={DIFFICULTIES}
+              label="Difficulty preference"
+              value={difficulty}
+              onChange={(event) => setDifficulty(event.target.value)}
+              options={[{ value: ANY_DIFFICULTY, label: 'Any' }, ...DIFFICULTIES]}
+              hint={
+                difficulty === ANY_DIFFICULTY
+                  ? 'Every question in the bank is fair game.'
+                  : fit.used
+                    ? `The bank has ${plural(fit.matching, difficulty)} question${
+                        fit.matching === 1 ? '' : 's'
+                      }, enough for all ${plural(asked, 'question')}.`
+                    : `Only ${plural(fit.matching, difficulty)} question${
+                        fit.matching === 1 ? '' : 's'
+                      } — the session will also cover the rest of the bank.`
+              }
             />
 
             <Input
               id="count"
               name="count"
               type="number"
-              label="Number of questions (1–10)"
+              label={`Number of questions (1–${Math.min(MAX_PRACTICE_COUNT, questions.length) || 1})`}
               min={1}
-              max={10}
-              value={form.count}
-              onChange={handleChange}
+              max={Math.max(1, Math.min(MAX_PRACTICE_COUNT, questions.length))}
+              value={count}
+              onChange={(event) => setCount(clampPracticeCount(event.target.value, 1))}
+              hint={
+                count > questions.length
+                  ? `Only ${plural(questions.length, 'question')} in this bank — the session will ask all of them.`
+                  : `Up to ${plural(questions.length, 'question')} available.`
+              }
             />
           </div>
         </Panel>
@@ -200,10 +299,9 @@ export default function SetupPage() {
           type="submit"
           fullWidth
           size="lg"
-          loading={loading}
-          disabled={!form.topic.trim()}
+          disabled={asked === 0}
         >
-          {loading ? 'Synthesizing session questions…' : 'Start study session'}
+          {asked > 0 ? `Start practice · ${plural(asked, 'question')}` : 'No questions to practise'}
         </Button>
       </form>
     </div>

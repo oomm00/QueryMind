@@ -78,7 +78,7 @@ function TopicRow({ courseId, topic, progress }) {
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Link to={practiceLink({ topic: topic.title })} className={buttonClasses({ size: 'sm' })}>
+          <Link to={practiceLink({ topic: topic.id })} className={buttonClasses({ size: 'sm' })}>
             {started ? 'Continue practice' : 'Start practice'}
           </Link>
           <a
@@ -179,7 +179,7 @@ export default function CoursePage() {
   const started = reviewed > 0 || mastery !== null
   const primary = practiceTopic
     ? {
-        to: practiceLink({ topic: practiceTopic.title }),
+        to: practiceLink({ topic: practiceTopic.id }),
         label: started ? 'Continue practice' : 'Start practice',
       }
     : null

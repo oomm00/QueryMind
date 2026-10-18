@@ -23,7 +23,7 @@ export function ConceptActions({ courseId, topicId, concept, className }) {
   return (
     <div className={`space-y-2 ${className ?? ''}`}>
       <Link
-        to={practiceLink({ topic: title, count: 5 })}
+        to={practiceLink({ topic: topicId, concept: concept?.id, count: 5 })}
         className={buttonClasses({ size: 'sm', className: 'w-full' })}
       >
         Practice this concept

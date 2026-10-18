@@ -1,14 +1,30 @@
 /**
- * SessionContext — Study Session State Store
- * ===========================================
- * Replaces router-state passing with a persistent session store backed by
- * sessionStorage so refreshing /question or /feedback never loses progress.
+ * SessionContext — study session state store.
+ *
+ * The session holds the questions drawn from the course bank, where the student
+ * is in that list, the draft answer for the current question, and the result of
+ * every question answered so far. It is kept in sessionStorage so refreshing
+ * /practice/session or /practice/feedback never loses progress.
+ *
+ * Results are stored per question rather than summed, so the running score is
+ * derived and the two can never disagree.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 
 const SessionContext = createContext(null)
 const SESSION_STORAGE_KEY = 'qm_study_session'
+
+function emptySession(setup, questions) {
+  return {
+    setup,
+    questions,
+    currentIdx: 0,
+    userAnswer: '',
+    answers: {},
+    startedAt: Date.now(),
+  }
+}
 
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(() => {
@@ -35,19 +51,11 @@ export function SessionProvider({ children }) {
 
   /**
    * Initializes a new study session
-   * @param {Object} setup - { goal, topic, subject, bloom, difficulty, count }
-   * @param {Array} questions - questions matching contract shape
+   * @param {Object} setup - { goal, topic, concept, difficulty, count }
+   * @param {Array} questions - questions drawn from the course bank
    */
   const initSession = (setup, questions = []) => {
-    const newSession = {
-      setup,
-      questions,
-      currentIdx: 0,
-      userAnswer: '',
-      lastSubmission: null,
-      startedAt: Date.now(),
-    }
-    setSession(newSession)
+    setSession(emptySession(setup, questions))
   }
 
   const setCurrentIdx = (idx) => {
@@ -58,14 +66,29 @@ export function SessionProvider({ children }) {
     setSession((prev) => (prev ? { ...prev, userAnswer: answer } : prev))
   }
 
-  const recordSubmission = (submissionData) => {
-    setSession((prev) => (prev ? { ...prev, lastSubmission: submissionData } : prev))
+  /**
+   * Record one scored answer: the score, whether it was right, and whether the
+   * student marked it themselves. Re-answering the same question replaces its
+   * result instead of counting twice.
+   */
+  const recordAnswer = (result) => {
+    setSession((prev) => {
+      if (!prev) return prev
+      const id = result.questionId
+      if (!id) return prev
+      return { ...prev, answers: { ...prev.answers, [id]: { ...result } } }
+    })
   }
 
   const resetSession = () => {
     setSession(null)
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
   }
+
+  const answers = session?.answers ?? {}
+  const results = Object.values(answers)
+  const answeredCount = results.length
+  const scoreTotal = results.reduce((sum, result) => sum + (Number(result.score) || 0), 0)
 
   const value = {
     session,
@@ -75,11 +98,14 @@ export function SessionProvider({ children }) {
     currentIdx: session?.currentIdx ?? 0,
     currentQuestion: session?.questions?.[session?.currentIdx ?? 0] ?? null,
     userAnswer: session?.userAnswer ?? '',
-    lastSubmission: session?.lastSubmission ?? null,
+    answers,
+    answeredCount,
+    scoreTotal,
+    scorePercent: answeredCount > 0 ? scoreTotal / answeredCount : null,
     initSession,
+    recordAnswer,
     setCurrentIdx,
     setUserAnswer,
-    recordSubmission,
     resetSession,
   }
 

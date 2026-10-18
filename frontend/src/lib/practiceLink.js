@@ -17,14 +17,24 @@ export function clampPracticeCount(value, fallback = DEFAULT_PRACTICE_COUNT) {
   return Math.min(MAX_PRACTICE_COUNT, Math.max(MIN_PRACTICE_COUNT, count))
 }
 
+function param(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 /**
- * @param {{topic?: string, count?: number}} options
+ * @param {{topic?: string, concept?: string, count?: number}} options
  * @returns {string} the /practice/new URL, with only the parameters we have
+ *
+ * `topic` and `concept` are content ids, so the link keeps working when a title
+ * is reworded. The setup form still resolves a title, for links written before
+ * the ids were passed.
  */
-export function practiceLink({ topic, count } = {}) {
+export function practiceLink({ topic, concept, count } = {}) {
   const params = new URLSearchParams()
-  const name = typeof topic === 'string' ? topic.trim() : ''
-  if (name) params.set('topic', name)
+  const topicName = param(topic)
+  const conceptId = param(concept)
+  if (topicName) params.set('topic', topicName)
+  if (conceptId) params.set('concept', conceptId)
   if (count != null && count !== '') params.set('count', String(clampPracticeCount(count)))
   const query = params.toString()
   return query ? `/practice/new?${query}` : '/practice/new'
