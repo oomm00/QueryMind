@@ -278,6 +278,15 @@ class GeminiAdapter:
 
         ``model`` overrides the adapter's configured model for this call; the
         model-fallback path uses it to pin each attempt to a specific model.
+
+        Every call logs the Gemini ``finish_reason`` plus token usage (prompt /
+        output / thinking) so truncation is diagnosable from the logs alone.
+        A ``finish_reason=MAX_TOKENS`` response — thinking tokens count toward
+        ``max_output_tokens``, so a capped call can run out of budget before the
+        JSON answer is finished — is retried **once** with a doubled cap instead
+        of being handed upstream as "malformed JSON".  If the second attempt is
+        still truncated the (still-truncated) response is returned and the
+        existing JSON-retry path takes over as the last resort.
         """
         from google.genai import types as genai_types  # local import keeps module-level clean
 
@@ -295,11 +304,82 @@ class GeminiAdapter:
         if thinking is not None:
             config_kwargs["thinking_config"] = thinking
 
-        return self._client.models.generate_content(
+        response = self._client.models.generate_content(
             model=model or self._model,
             contents=prompt,
             config=genai_types.GenerateContentConfig(**config_kwargs),
         )
+        reason = _finish_reason(response)
+        if reason == "MAX_TOKENS" and config_kwargs.get("max_output_tokens"):
+            retry_cap = min(int(config_kwargs["max_output_tokens"]) * 2, 65536)
+            logger.warning(
+                "Gemini finish_reason=MAX_TOKENS model=%s cap=%s usage=%s — "
+                "retrying once with max_output_tokens=%d",
+                model or self._model,
+                config_kwargs["max_output_tokens"],
+                _usage_metadata(response),
+                retry_cap,
+            )
+            config_kwargs["max_output_tokens"] = retry_cap
+            response = self._client.models.generate_content(
+                model=model or self._model,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(**config_kwargs),
+            )
+            reason = _finish_reason(response)
+        logger.info(
+            "Gemini call model=%s finish_reason=%s usage=%s thinking=%s",
+            model or self._model,
+            reason,
+            _usage_metadata(response),
+            self._thinking_level,
+        )
+        return response
+
+
+def _finish_reason(response: Any) -> Optional[str]:
+    """Best-effort ``finish_reason`` name from a google.genai response.
+
+    Returns ``None`` for missing/non-string reasons (including MagicMock
+    responses in tests), so callers can compare against ``"MAX_TOKENS"`` safely.
+    """
+    try:
+        candidates = getattr(response, "candidates", None) or []
+        if not candidates:
+            return None
+        reason = getattr(candidates[0], "finish_reason", None)
+        name = getattr(reason, "name", None)
+        if isinstance(name, str):
+            return name
+        if isinstance(reason, str):
+            return reason
+    except Exception:  # pragma: no cover - defensive on odd response shapes
+        return None
+    return None
+
+
+def _usage_metadata(response: Any) -> Optional[dict]:
+    """Prompt/output/thinking token counts from a google.genai response.
+
+    Only real ``int`` values are kept: test doubles (MagicMock) fabricate
+    non-int attributes and must not leak into logs or assertions.
+    """
+    try:
+        usage = getattr(response, "usage_metadata", None)
+        if usage is None:
+            return None
+        out = {}
+        for key, attr in (
+            ("prompt", "prompt_token_count"),
+            ("output", "candidates_token_count"),
+            ("thinking", "thoughts_token_count"),
+        ):
+            value = getattr(usage, attr, None)
+            if isinstance(value, int):
+                out[key] = value
+        return out or None
+    except Exception:  # pragma: no cover - defensive on odd response shapes
+        return None
 
 
 @lru_cache(maxsize=1)
@@ -352,12 +432,15 @@ def _generation_schema() -> Any:
 def _configure_genai(
     response_schema: Any = None,
     thinking_level: Optional[str] = None,
+    max_output_tokens: Optional[int] = None,
 ) -> GeminiAdapter:
     """Configure and return a ``GeminiAdapter`` backed by a real google.genai client.
 
     ``thinking_level`` defaults to the generation-specific setting
-    (``LLM_GEN_THINKING_LEVEL``, medium) — small validation/judgement callers can
-    pass the lower evaluation level to keep latency down.
+    (``LLM_GEN_THINKING_LEVEL``, medium) and the output cap to the
+    generation-specific setting (``LLM_GEN_MAX_OUTPUT_TOKENS``, 8192) — small
+    validation/judgement callers pass the lower evaluation level and cap to
+    keep latency (and blast radius) down.
     """
     api_key = settings.gemini_api_key
     if not api_key:
@@ -372,7 +455,11 @@ def _configure_genai(
         response_schema=response_schema,
         thinking_level=thinking_level or settings.llm_gen_thinking_level,
         thinking_budget=settings.llm_thinking_budget,
-        max_output_tokens=settings.llm_max_output_tokens,
+        max_output_tokens=(
+            max_output_tokens
+            if max_output_tokens is not None
+            else settings.llm_gen_max_output_tokens
+        ),
     )
 
 

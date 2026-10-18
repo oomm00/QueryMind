@@ -199,7 +199,8 @@ def generate_questions(
     # skipped rather than failing a working generation pipeline.
     try:
         alignment_client = _configure_genai(
-            thinking_level=settings.llm_thinking_level  # judge = evaluation-class task
+            thinking_level=settings.llm_thinking_level,  # judge = evaluation-class task
+            max_output_tokens=settings.llm_max_output_tokens,
         )
     except LLMNotConfiguredError:
         alignment_client = None
