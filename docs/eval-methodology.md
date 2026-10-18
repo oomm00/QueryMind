@@ -81,3 +81,13 @@ Student answers are untrusted input. The judge prompt isolates the answer inside
 ```
 
 By persisting `criteria_scores` as a JSONB column, QueryMind maintains per-criterion historical trends (e.g., whether a student is consistently weak on *technical depth* versus *example application*) without requiring destructive database schema alterations.
+
+---
+
+## 6. Known Limitations
+
+- **Judge variance.** The judge is a single LLM pass (evaluation thinking level: low). The same answer can drift by ±1 point on a criterion between runs, so overall weighted scores are indicative, not exact — deltas below ~3 points are not meaningful. The deterministic weighted arithmetic (computed in code) removes arithmetic noise, not judgement noise.
+- **Single-judge bias.** There is no ensemble or multi-judge voting; a systematic quirk of the judge model (e.g. favouring longer answers) propagates to every score. Storing per-criterion `criteria_scores` makes such drift detectable retroactively, but does not prevent it.
+- **Reference-answer dependence.** Correctness is judged relative to the stored reference answer; a flawed reference answer caps every attempt at its own quality.
+- **Prompt-injection surface.** Student answers are delimited and the judge is instructed to treat them as data only (§4), but delimiter-forging inputs remain a residual risk. A successful injection affects only that attempt's score, and any suspect attempt can be re-graded by re-running the judge.
+- **Bloom-alignment judge.** The question-generation alignment gate (validation of the requested Bloom level against the judge's classification) shares the same single-judge variance; that is why `BLOOM_ALIGNMENT_TOLERANCE` allows ±1 level at remember/understand and 0 elsewhere.
