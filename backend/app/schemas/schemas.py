@@ -65,6 +65,27 @@ class DocumentUploadResponse(BaseModel):
             self.chunks_ingested = self.chunks_count
 
 
+class DocumentOut(BaseModel):
+    """One uploaded document as GET /documents returns it (newest first)."""
+
+    document_id: uuid.UUID
+    filename: str
+    subject: str
+    topic: str
+    source_type: str
+    course: Optional[str] = None
+    status: str = "ready"
+    chunk_count: Optional[int] = Field(default=None, ge=0)
+    created_at: datetime
+
+
+class SubjectTopicsOut(BaseModel):
+    """One subject and the distinct topics filed under it (A-Z in both)."""
+
+    subject: str
+    topics: list[str]
+
+
 
 # ══════════════════════════════════════════════════════════════
 # Questions
