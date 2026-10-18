@@ -1,0 +1,54 @@
+{
+  "subject": "operating-systems",
+  "concepts": {
+    "address-translation": {
+      "id": "address-translation",
+      "title": "Address Translation",
+      "prerequisiteIds": [],
+      "prerequisiteLabels": {},
+      "lessonIds": ["lesson-address-translation-basics"]
+    },
+    "paging": {
+      "id": "paging",
+      "title": "Paging",
+      "prerequisiteIds": ["address-translation"],
+      "prerequisiteLabels": { "address-translation": "requires" },
+      "lessonIds": ["paging-from-virtual-to-physical", "paging-page-table-walkthrough", "paging-practice"]
+    },
+    "segmentation": {
+      "id": "segmentation",
+      "title": "Segmentation",
+      "prerequisiteIds": ["address-translation"],
+      "prerequisiteLabels": { "address-translation": "alternative model" },
+      "lessonIds": ["segmentation-basics"]
+    },
+    "virtual-memory": {
+      "id": "virtual-memory",
+      "title": "Virtual Memory",
+      "prerequisiteIds": ["paging"],
+      "prerequisiteLabels": { "paging": "extends" },
+      "lessonIds": ["virtual-memory-fundamentals"]
+    },
+    "demand-paging": {
+      "id": "demand-paging",
+      "title": "Demand Paging",
+      "prerequisiteIds": ["virtual-memory"],
+      "prerequisiteLabels": { "virtual-memory": "loads on fault" },
+      "lessonIds": ["demand-paging-fundamentals"]
+    },
+    "page-replacement": {
+      "id": "page-replacement",
+      "title": "Page Replacement",
+      "prerequisiteIds": ["demand-paging"],
+      "prerequisiteLabels": { "demand-paging": "chooses a victim" },
+      "lessonIds": ["page-replacement-algorithms"]
+    },
+    "working-sets": {
+      "id": "working-sets",
+      "title": "Working Sets",
+      "prerequisiteIds": ["demand-paging"],
+      "prerequisiteLabels": { "demand-paging": "locality & frames" },
+      "lessonIds": ["working-sets-fundamentals"]
+    }
+  }
+}

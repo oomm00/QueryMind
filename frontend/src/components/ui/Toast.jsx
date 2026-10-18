@@ -1,15 +1,27 @@
 /**
- * Toast — transient notification at top-right.
- * Renders as a component; auto-hides after `duration` and then calls `onClose`.
+ * Toast — transient notification. Renders as a component, auto-hides after
+ * `duration`, then calls `onClose` (typically to unmount it from the parent).
  */
 
 import React from 'react'
+import { cx } from '../../lib/cx'
+import { IconClose, IconInfo, IconCheck, IconAlert } from './Icons'
 
-export function Toast({ title, description, variant = 'default', duration = 4000, onClose, ...rest }) {
+const TONES = {
+  default: { accent: 'text-primary', Icon: IconInfo },
+  primary: { accent: 'text-primary', Icon: IconInfo },
+  info: { accent: 'text-primary', Icon: IconInfo },
+  success: { accent: 'text-success', Icon: IconCheck },
+  warning: { accent: 'text-warning', Icon: IconAlert },
+  danger: { accent: 'text-danger', Icon: IconAlert },
+  error: { accent: 'text-danger', Icon: IconAlert },
+}
+
+export function Toast({ title, description, variant = 'default', duration = 4000, onClose, className, ...rest }) {
   const [visible, setVisible] = React.useState(true)
-
-  // Keep the latest onClose without resetting the timer on every render.
+  const tone = TONES[variant] || TONES.default
   const onCloseRef = React.useRef(onClose)
+
   React.useEffect(() => {
     onCloseRef.current = onClose
   })
@@ -24,25 +36,34 @@ export function Toast({ title, description, variant = 'default', duration = 4000
 
   return (
     <div
-      className={`toast ${variant} ${visible ? 'visible' : ''}`}
       role="status"
+      aria-live="polite"
+      className={cx(
+        'fixed right-4 top-4 z-[60] w-[min(360px,calc(100vw-2rem))] rounded-panel border border-line bg-surface p-3.5 shadow-pop',
+        'transition-opacity duration-200',
+        visible ? 'opacity-100' : 'opacity-0',
+        className
+      )}
       {...rest}
     >
       <div className="flex items-start gap-3">
-        {variant === 'error' && (
-          <svg
-            className="shrink-0 w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-label="Error"
-          >
-            <path d="M18 6L6 18M6 6l12 12"/>
-          </svg>
-        )}
-        <div className="flex-1 min-w-0">
+        <span className={cx('mt-0.5 shrink-0', tone.accent)}>
+          <tone.Icon size={16} />
+        </span>
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-ink">{title}</p>
-          {description && <p className="text-xs text-muted">{description}</p>}
+          {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Dismiss notification"
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-muted hover:bg-surface-raised hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
+          >
+            <IconClose size={14} />
+          </button>
+        )}
       </div>
     </div>
   )

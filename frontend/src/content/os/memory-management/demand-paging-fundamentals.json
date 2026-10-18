@@ -1,0 +1,17 @@
+{
+  "id": "lesson-demand-paging-fundamentals",
+  "title": "Demand paging fundamentals",
+  "draft": true,
+  "estMinutes": 5,
+  "source": "Official material",
+  "objectives": [
+    "Describe demand paging as a strategy where pages are loaded into memory only when referenced",
+    "Explain the benefit of demand paging over loading the entire program at once"
+  ],
+  "blocks": [
+    {
+      "kind": "paragraph",
+      "text": "With demand paging, the operating system initially loads only the essential pages of a process. When a program references a page not currently in memory, a page fault occurs, the OS loads the required page from disk, and execution resumes. This approach reduces initial load time and memory usage, as unused code and data never reside in physical memory."
+    }
+  ]
+}

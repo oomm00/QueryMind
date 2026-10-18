@@ -24,7 +24,11 @@ QueryMind is a full-stack web application that:
 - **Evaluates free-text answers** and returns structured feedback.
 - Maintains a **Knowledge Profile** per user, tracking mastery over time.
 
->  This commit is the **skeleton / scaffold only**. All API routes return stub/placeholder data. Real AI logic (RAG, LLM calls, adaptive scoring) will be layered in subsequent milestones.
+The demo is wired end-to-end: authentication, document ingestion, retrieval,
+Gemini question generation, answer evaluation, attempt history, and mastery
+updates use the FastAPI backend. Course lessons and a small set of preference
+surfaces intentionally use the bundled demo content until their backend
+endpoints are added.
 
 ---
 
@@ -143,6 +147,12 @@ npm run dev
 # → http://localhost:5173
 ```
 
+For a complete local demo, start the backend before opening the frontend and
+make sure `GEMINI_API_KEY` is set in `backend/.env`. The frontend defaults to
+the real API for implemented domains. Mocking can be enabled per domain with
+`VITE_MOCK_<DOMAIN>=true` when working offline; see
+[`frontend/.env.example`](frontend/.env.example).
+
 ---
 
 ## LLM configuration & resilience
@@ -184,6 +194,61 @@ server-side only, never sent to the client). Leaving the
 variable empty keeps the original single-model behaviour.
 
 ---
+
+## Production deployment
+
+The supported deployment shape is a static Vite frontend plus a persistent
+FastAPI service:
+
+```text
+Vercel frontend -> Render/Railway FastAPI -> managed PostgreSQL
+                                      -> persistent Chroma or Chroma Cloud
+                                      -> Gemini API
+```
+
+### Deploy the frontend to Vercel
+
+Create a Vercel project from this repository with:
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `frontend` |
+| Framework preset | `Vite` |
+| Build command | `npm run build` |
+| Output directory | `dist` |
+
+Set `VITE_API_BASE_URL` to the public backend URL. The SPA fallback is already
+configured in [`frontend/vercel.json`](frontend/vercel.json), so browser routes
+such as `/practice` continue to work after a refresh. Use
+[`frontend/.env.production.example`](frontend/.env.production.example) as the
+environment-variable template.
+
+### Deploy the backend
+
+The repository includes a Render blueprint in [`render.yaml`](render.yaml).
+It creates the FastAPI Docker service and a managed PostgreSQL database. Set
+these values in the Render dashboard:
+
+- `GEMINI_API_KEY`
+- `ALLOWED_ORIGINS` to the exact Vercel URL, for example
+  `https://querymind.vercel.app`
+- `CHROMA_HOST` and `CHROMA_PORT` for Chroma Cloud or another persistent Chroma
+  deployment
+
+The backend container runs Alembic migrations before starting Uvicorn and
+exposes `/health` for the platform health check. Keep Chroma on persistent
+storage; an ephemeral vector-store container loses uploaded-note embeddings on
+restart.
+
+After deployment, seed the demo documents against the public API:
+
+```bash
+python scripts/seed_demo.py --base-url https://your-api.example.com
+```
+
+Finally, test registration, login, note upload, note-based generation,
+internet-backed generation, practice submission, and the results page from the
+Vercel URL. Never commit `.env` files or provider API keys.
 
 
 ## License

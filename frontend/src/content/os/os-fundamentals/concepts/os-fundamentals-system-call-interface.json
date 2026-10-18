@@ -1,0 +1,153 @@
+{
+  "id": "os-fundamentals-system-call-interface",
+  "subject": "operating-systems",
+  "title": "The system-call interface",
+  "summary": "System calls let a process request OS services such as file I/O, process creation, and interprocess communication.",
+  "prerequisiteIds": [
+    "os-fundamentals-user-kernel-mode"
+  ],
+  "relatedIds": [
+    "os-fundamentals-system-call-lifecycle",
+    "os-fundamentals-kernel-responsibilities"
+  ],
+  "resources": [
+    {
+      "title": "intro(2): Introduction to system calls",
+      "url": "https://man7.org/linux/man-pages/man2/intro.2.html",
+      "type": "docs",
+      "provider": "Linux man-pages project",
+      "license": "Free documentation; see site terms",
+      "estMinutes": 10,
+      "why": "Explains kernel entry points, library wrappers, mode transitions, and error reporting."
+    },
+    {
+      "title": "syscalls(2): Linux system calls",
+      "url": "https://man7.org/linux/man-pages/man2/syscalls.2.html",
+      "type": "docs",
+      "provider": "Linux man-pages project",
+      "license": "Free documentation; see site terms",
+      "estMinutes": 12,
+      "why": "Lists system calls and explains their role as the application-to-kernel interface."
+    }
+  ],
+  "questions": [
+    {
+      "id": "os-fundamentals-system-call-interface-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which POSIX-like function requests bytes from an open file descriptor?",
+      "options": [
+        "read()",
+        "strlen()",
+        "qsort()",
+        "strcmp()"
+      ],
+      "correctIndex": 0,
+      "answerKey": "read() requests data from a file descriptor; the other functions operate on strings or arrays in user space.",
+      "rubric": [],
+      "explanation": "read() is the file-descriptor I/O operation in this list.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-interface-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Which statement correctly distinguishes a C library function from a system call?",
+      "options": [
+        "Every system call runs only in user mode",
+        "A library wrapper may invoke a system call, while many library functions run entirely in user space",
+        "System calls can only sort arrays",
+        "Every library function has its own system-call number"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Wrappers often prepare arguments and enter the kernel, but functions such as strlen() usually compute in user space.",
+      "rubric": [],
+      "explanation": "A function call is not necessarily a system call.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-interface-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "On a POSIX-like system, a program wants to create a child and then replace the child's program image. Which sequence is conventional?",
+      "options": [
+        "malloc() followed by free()",
+        "printf() followed by fflush()",
+        "fork() followed by an exec-family call",
+        "strlen() followed by strcmp()"
+      ],
+      "correctIndex": 2,
+      "answerKey": "fork() creates a child process; an exec-family call replaces the calling process's program image.",
+      "rubric": [],
+      "explanation": "String and memory-management functions do not create a child process.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-interface-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "A program calls strlen(\"hello\") and then read(fd, buf, 5). Which statement is correct on a typical Unix-like system?",
+      "options": [
+        "strlen() reads from the disk and read() counts characters in memory",
+        "Both must enter kernel mode because both are C functions",
+        "Neither can return a result",
+        "strlen() can inspect local memory in user space; read() requests OS-managed I/O"
+      ],
+      "correctIndex": 3,
+      "answerKey": "strlen() ordinarily scans the process's own memory; read() asks the OS to read from a file descriptor.",
+      "rubric": [],
+      "explanation": "The distinction is local computation versus a request for an operating-system service.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-interface-q5",
+      "type": "mcq",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "Why is directly dereferencing a guessed disk-controller address not a general replacement for read(fd, buf, n)?",
+      "options": [
+        "It makes all storage devices expose identical registers",
+        "It bypasses file abstractions, permission checks, and device coordination",
+        "It guarantees the file descriptor is always valid",
+        "It automatically provides portable error handling"
+      ],
+      "correctIndex": 1,
+      "answerKey": "The OS uses file descriptors and drivers to validate access and coordinate devices; direct hardware access is protected and device-specific.",
+      "rubric": [],
+      "explanation": "A file descriptor is an OS-managed handle, not a physical device address.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-system-call-interface-q6",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Give one system-call example for file I/O, one for process management, and one for interprocess communication. State the service each requests.",
+      "answerKey": "Examples: read() or write() for file-descriptor I/O; fork(), execve(), or waitpid() for process management; pipe() or socket() for interprocess communication. Each name must be paired with the service it requests.",
+      "rubric": [
+        {
+          "criterion": "File-I/O example and purpose",
+          "points": 3
+        },
+        {
+          "criterion": "Process-management example and purpose",
+          "points": 3
+        },
+        {
+          "criterion": "IPC example and purpose",
+          "points": 2
+        },
+        {
+          "criterion": "Clear distinction between call and service",
+          "points": 2
+        }
+      ],
+      "explanation": "Accept other correct OS-specific examples when the purpose is accurately stated.",
+      "needsHumanCheck": false
+    }
+  ]
+}
