@@ -22,7 +22,7 @@ Options::
 
     --base-url   API root                  (default: $QUERYMIND_API_URL or http://localhost:8000)
     --data-dir   folder of documents       (default: <repo>/demo_data)
-    --email      demo account to create    (default: demo@querymind.local)
+    --email      demo account to create    (default: demo@querymind.dev)
     --password   demo account password     (default: demo-password-1)
     --source-type  college | public        (default: college)
     --course     optional course label     (e.g. CSE302)
@@ -52,7 +52,9 @@ CONTENT_TYPES = {
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
-DEFAULT_EMAIL = "demo@querymind.local"
+# Note: .local is a special-use TLD that pydantic's EmailStr rejects (and the
+# API returns 422 for it), so the demo account uses a plain-looking domain.
+DEFAULT_EMAIL = "demo@querymind.dev"
 DEFAULT_PASSWORD = "demo-password-1"
 
 
