@@ -28,6 +28,7 @@ export function StartPracticeButton({
   scopeId = null,
   level = 'mixed',
   count = DEFAULT_SESSION_COUNT,
+  questionIds = null,
   label = 'Start practice',
   emptyLabel = 'No questions yet',
   variant = 'primary',
@@ -43,7 +44,7 @@ export function StartPracticeButton({
   const { data: courses = [], isLoading } = usePracticeData([courseId])
   const context = usePracticeContext(userId)
 
-  const request = { courseId, scope, scopeId, level, count }
+  const request = { courseId, scope, scopeId, level, count, questionIds }
   const data = { ...context, courses }
   const total = scopeQuestionCount(request, data)
   const empty = !isLoading && total === 0

@@ -19,6 +19,7 @@ import SetupPage from './pages/SetupPage'
 import QuestionPage from './pages/QuestionPage'
 import FeedbackPage from './pages/FeedbackPage'
 import SessionPage from './pages/SessionPage'
+import ResultsPage from './pages/ResultsPage'
 import DashboardPage from './pages/DashboardPage'
 import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
@@ -116,6 +117,14 @@ export default function App() {
           element={
             <Protected>
               <SessionPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice/:sessionId/results"
+          element={
+            <Protected>
+              <ResultsPage />
             </Protected>
           }
         />
