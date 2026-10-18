@@ -43,6 +43,7 @@ from app.schemas.schemas import GeneratedQuestion
 from app.services import llm_utils, validation_service
 from app.services.generation_service import (
     BLOOM_FORBIDDEN_VERBS,
+    BLOOM_LEVEL_SPECS,
     THIN_CONTEXT_MIN_CHARS,
     _build_prompt,
     check_stem,
@@ -537,3 +538,25 @@ def test_prompt_lists_forbidden_verbs_for_create():
     for verb in ("critique", "justify", "evaluate")[:2]:
         assert verb in prompt
     assert "CONCRETE SCENARIO RULE" in prompt
+
+
+# ── Analyze: ONE analytical task per question (single_concept regression) ────
+
+def test_analyze_spec_defines_single_task_rule():
+    """The analyze regression (single_concept 5.0 -> 3.75 in the medium-think
+    audit: questions bundling a compare sub-task with a separate explain
+    sub-task) is addressed directly in the spec."""
+    definition = BLOOM_LEVEL_SPECS["analyze"]["definition"]
+    assert "ONE analytical task" in definition
+    assert "bundle" in definition
+
+
+def test_analyze_prompt_includes_single_task_rule():
+    prompt = _prompt_for("analyze")
+    assert "ONE analytical task per" in prompt
+    assert "separate explain" in prompt
+
+
+def test_single_task_rule_is_analyze_only():
+    for level in ("remember", "understand", "apply", "evaluate", "create"):
+        assert "ONE analytical task per" not in _prompt_for(level)
