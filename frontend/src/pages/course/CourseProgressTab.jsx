@@ -91,7 +91,7 @@ export default function CourseProgressTab() {
         <h2 className="text-sm font-semibold text-ink">Practice coverage</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <Stat
-            label="Concepts practised"
+            label="Concepts practiced"
             value={`${practised} of ${allConcepts.length}`}
             hint="A concept counts once it has any scored answer."
           >

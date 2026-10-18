@@ -76,14 +76,14 @@ function CourseCard({ course, entry, stats, last, onOpen }) {
       <div className="mt-3 text-xs text-muted">
         {last ? (
           <p>
-            Last practised:{' '}
+            Last practiced:{' '}
             <span className="text-ink">
               {last.title ? sentenceCase(last.title) : 'this course'}
             </span>
             {lastWhen ? ` · ${lastWhen}` : ''}
           </p>
         ) : (
-          <p>Not practised yet.</p>
+          <p>Not practiced yet.</p>
         )}
       </div>
 

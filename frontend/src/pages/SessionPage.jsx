@@ -82,7 +82,7 @@ export default function SessionPage() {
     setResumed(true)
   }, [resumed, questions.length, firstOpen])
 
-  useBreadcrumbs([WORKSPACE_CRUMB, { label: 'Practice', to: '/practice' }, { label: 'Session' }])
+  useBreadcrumbs([WORKSPACE_CRUMB, { label: 'Practice', to: '/practice' }, { label: session?.label || 'Session' }])
 
   const current = questions[index] ?? null
   const answer = current ? session?.answers?.[current.question_id] : null
@@ -332,7 +332,7 @@ export default function SessionPage() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
-              Keep practising
+              Keep practicing
             </Button>
             <Button onClick={submit}>Submit</Button>
           </>

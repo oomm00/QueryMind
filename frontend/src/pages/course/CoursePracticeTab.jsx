@@ -142,9 +142,9 @@ export default function CoursePracticeTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink">Practise this course</h2>
+          <h2 className="text-sm font-semibold text-ink">Practice this course</h2>
           <p className="mt-0.5 text-xs text-muted">
-            Pick a level, then practise a topic or a single concept.
+            Pick a level, then practice a topic or a single concept.
           </p>
         </div>
         <LevelControl value={level} onChange={setLevel} />

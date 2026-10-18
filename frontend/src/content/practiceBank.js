@@ -42,6 +42,7 @@ export function practiceCourse(courseId) {
     .map((topic) => ({
       id: topic.id,
       title: topic.title,
+      subject: topic.subject ?? null,
       summary: topic.summary ?? '',
       concepts: topic.concepts.map((concept) => ({
         id: concept.id,
@@ -60,6 +61,7 @@ export function practiceCourse(courseId) {
     id: courseId,
     contentId: course.id,
     title: course.title,
+    subject: course.topics.find((topic) => topic.subject)?.subject ?? null,
     summary: course.summary ?? '',
     level: course.level ?? '',
     topics,

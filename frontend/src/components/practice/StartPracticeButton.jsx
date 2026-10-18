@@ -9,6 +9,9 @@
  *
  * The button is disabled, with an honest label, when the scope holds no
  * questions at all — a property of the scope, not of the level selected.
+ *
+ * The practice board uses it with scope "custom", the topics it ticked, and a
+ * label for the session. Free practice is not a course, so it never enrols.
  */
 
 import React from 'react'
@@ -19,6 +22,7 @@ import { usePracticeContext } from '../../hooks/usePracticeContext.js'
 import { buildSession, scopeQuestionCount, DEFAULT_SESSION_COUNT } from '../../lib/buildSession.js'
 import { newSession, saveSession } from '../../lib/sessions.js'
 import { enroll, isEnrolled, useEnrollments } from '../../lib/enrollment.js'
+import { contentCourseIds } from '../../content/practiceBank.js'
 import { flashState } from '../routing/FlashHost.jsx'
 import { Button } from '../ui/Button.jsx'
 
@@ -29,6 +33,9 @@ export function StartPracticeButton({
   level = 'mixed',
   count = DEFAULT_SESSION_COUNT,
   questionIds = null,
+  topicIds = null,
+  subject = null,
+  sessionLabel = '',
   label = 'Start practice',
   emptyLabel = 'No questions yet',
   variant = 'primary',
@@ -41,16 +48,16 @@ export function StartPracticeButton({
 }) {
   const navigate = useNavigate()
   const { userId } = useAuth()
-  // Mixed practice draws from every course the student is enrolled in; every
-  // other scope needs just the one course it belongs to.
+  // Mixed practice draws from every course the student is enrolled in, a custom
+  // session from every course that holds the topics it was given, and every
+  // other scope from the single course it belongs to.
   const enrollments = useEnrollments(userId)
   const enrolledIds = Object.keys(enrollments.courses ?? {})
-  const { data: courses = [], isLoading } = usePracticeData(
-    scope === 'mixed' ? enrolledIds : [courseId]
-  )
+  const courseIds = scope === 'mixed' ? enrolledIds : scope === 'custom' ? contentCourseIds() : [courseId]
+  const { data: courses = [], isLoading } = usePracticeData(courseIds)
   const context = usePracticeContext(userId)
 
-  const request = { courseId, scope, scopeId, level, count, questionIds }
+  const request = { courseId, scope, scopeId, level, count, questionIds, topicIds, subject }
   const data = { ...context, courses }
   const total = scopeQuestionCount(request, data)
   const empty = !isLoading && total === 0
@@ -67,6 +74,7 @@ export function StartPracticeButton({
       scope,
       scopeId: built.scopeId ?? scopeId,
       level,
+      label: sessionLabel,
       questionIds: built.questions.map((question) => question.question_id),
       note: built.note,
     })

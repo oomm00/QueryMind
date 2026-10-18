@@ -96,6 +96,7 @@ export function newSession({
   level = 'mixed',
   questionIds = [],
   note = '',
+  label = '',
 } = {}) {
   return {
     id,
@@ -103,6 +104,7 @@ export function newSession({
     scope,
     scopeId,
     level,
+    label,
     createdAt: new Date().toISOString(),
     status: SESSION_STATUS.inProgress,
     questionIds: [...questionIds],

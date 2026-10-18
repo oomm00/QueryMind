@@ -228,7 +228,7 @@ export function SelectedConceptPanel({
 
             <Section title="Study material (optional)">
               <p className="mb-1.5 text-[11px] leading-snug text-muted">
-                Reading for this concept. Nothing here is required to practise it.
+                Reading for this concept. Nothing here is required to practice it.
               </p>
               <StudyMaterial resources={concept.resources ?? []} />
             </Section>

@@ -289,7 +289,7 @@ export default function ExplorePage() {
         Explore your next subject
       </h1>
       <p className="mt-1 max-w-2xl text-sm text-muted">
-        Pick a computer science course and start practising. Every answer is scored, and study
+        Pick a computer science course and start practicing. Every answer is scored, and study
         material is there when you want it.
       </p>
 

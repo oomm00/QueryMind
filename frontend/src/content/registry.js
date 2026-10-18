@@ -213,7 +213,7 @@ function loadCourses() {
     {
       id: course.id,
       title: course.title,
-      subject: 'operating-systems',
+      subject: course.topics.find((entry) => entry.subject)?.subject ?? null,
       topics: course.topics.map((entry) => {
         const topic = getTopic(entry.id)
         return {

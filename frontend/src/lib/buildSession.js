@@ -17,7 +17,9 @@
  * estimate once they all have answers. `topic` spreads across its concepts,
  * unanswered ones first and then the lowest estimates. `concept` is that one
  * concept. `mixed` is across all the courses it is given. `retry` is an explicit
- * set of question ids (the ones a student missed).
+ * set of question ids (the ones a student missed). `custom` is the practice
+ * board: the topics the student ticked, under a subject, across whatever courses
+ * hold them.
  *
  * When a band cannot fill the session, the neighbours make up the difference and
  * the session says so in `note`, so the page can tell the student why a "hard"
@@ -50,6 +52,12 @@ export const PRACTICE_LEVELS = [
 ]
 
 export const DEFAULT_SESSION_COUNT = 6
+
+/** The session lengths the practice board offers. */
+export const SESSION_COUNT_CHOICES = [5, 10, 15]
+
+/** The length the practice board opens on. */
+export const BOARD_DEFAULT_COUNT = 5
 
 /** The Bloom levels a level covers; mixed covers them all. */
 export function levelsFor(level) {
@@ -181,6 +189,34 @@ function chooseScope(request, data) {
     }
   }
 
+  // A custom session is the practice board's own scope: the topics the student
+  // ticked, across whatever courses hold them, in the order the student's own
+  // answers suggest. Free practice is not a course, so it never enrols anyone.
+  if (scope === 'custom') {
+    const wanted = new Set(request.topicIds ?? [])
+    const pairs = []
+    for (const course of courses) {
+      for (const topic of course.topics ?? []) {
+        if (wanted.has(topic.id)) pairs.push({ course, topic })
+      }
+    }
+
+    const conceptOrder = []
+    for (const { topic } of pairs) {
+      for (const id of preferredConceptIds(topic, data)) {
+        if (!conceptOrder.includes(id)) conceptOrder.push(id)
+      }
+    }
+
+    const courseIds = [...new Set(pairs.map((pair) => pair.course.id))]
+    return {
+      questions: pairs.flatMap(({ course, topic }) => topicQuestions(course, topic)),
+      courseId: courseIds.length === 1 ? courseIds[0] : null,
+      scopeId: null,
+      conceptOrder,
+    }
+  }
+
   const course = courses.find((candidate) => candidate.id === request.courseId) ?? courses[0] ?? null
   if (!course) return { questions: [], courseId: request.courseId ?? null, scopeId, conceptOrder: null }
 
@@ -283,7 +319,7 @@ export function buildSession(request = {}, data = {}) {
     ? spreadByConcept(deduped, chosen.conceptOrder)
     : deduped
 
-  const base = { courseId: chosen.courseId, scopeId: chosen.scopeId, scope, level }
+  const base = { courseId: chosen.courseId, scopeId: chosen.scopeId, scope, level, subject: request.subject ?? null }
 
   if (count === 0) return { ...base, questions: [], note: '' }
 
