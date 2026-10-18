@@ -16,7 +16,13 @@ Four concerns live here so they are implemented exactly once:
    (:data:`LLM_CALL_TIMEOUT_SECONDS`) and a process-wide concurrency cap
    (:data:`LLM_MAX_CONCURRENCY`). A timed-out call surfaces as a transient error,
    so it is retried and, if it keeps failing, reported as a clean
-   503 / ``LLM_CALL_FAILED``.
+   503 / ``LLM_UNAVAILABLE`` (or ``LLM_QUOTA_EXHAUSTED`` for rate limits).
+
+**Error sanitization** — raw SDK/provider error text (429 payloads, quota tables,
+request ids) must never reach an API response. Every terminal failure is
+classified (:func:`is_quota_error`) into ``503 / LLM_QUOTA_EXHAUSTED`` or
+``503 / LLM_UNAVAILABLE`` with a short fixed human message; the raw text is
+logged server-side only and chained as ``__cause__`` for local debugging.
 
 ``sleep`` is injectable on the retry helpers purely so callers can pass their own
 ``time.sleep`` (keeping module-local test patches working); production callers can
@@ -30,10 +36,15 @@ import logging
 import re
 import threading
 import time
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, NoReturn, Optional, TypeVar
 
 from app.core.config import settings
-from app.core.exceptions import QueryMindError, ValidationError
+from app.core.exceptions import (
+    LLMQuotaExhaustedError,
+    LLMUnavailableError,
+    QueryMindError,
+    ValidationError,
+)
 
 logger = logging.getLogger("querymind.llm")
 
@@ -53,7 +64,7 @@ MODEL_FALLBACK_STATUS_CODES = {429, 503}
 # Every Gemini round-trip is bounded by *LLM_CALL_TIMEOUT_SECONDS*; a call that
 # overruns raises a (transient) TimeoutError so the existing backoff retry below
 # handles it, and once retries are exhausted the caller gets a clean
-# 503 / LLM_CALL_FAILED. A process-wide BoundedSemaphore caps how many Gemini
+# 503 / LLM_UNAVAILABLE. A process-wide BoundedSemaphore caps how many Gemini
 # calls are in flight at once. Both are env-overridable via config.py.
 LLM_CALL_TIMEOUT_SECONDS: float = settings.llm_timeout_seconds
 LLM_MAX_CONCURRENCY: int = settings.llm_max_concurrency
@@ -68,6 +79,56 @@ STRICT_JSON_INSTRUCTION = (
 )
 
 T = TypeVar("T")
+
+
+# ── Sanitized error classification ────────────────────────────────────────────
+# Raw SDK/provider error text (429 payloads, quota tables, request ids) must
+# NEVER reach an API response. Every LLM failure is classified into one of two
+# machine-readable codes — quota/rate-limit vs. other — the raw text is logged
+# server-side only, and the caller sees a short fixed human message.
+
+#: Lowercased substrings that identify a provider quota / rate-limit failure.
+QUOTA_MARKERS = ("resource_exhausted", "resource exhausted", "quota", "rate limit", "429")
+
+
+def is_quota_error(exc: BaseException) -> bool:
+    """Return True when *exc* (or its cause chain) is a quota/rate-limit failure.
+
+    Recognises HTTP 429 on the error itself or its deepest ``__cause__`` (the
+    post-retry wrappers chain the original SDK error), our own
+    ``LLM_QUOTA_EXHAUSTED`` code, and quota wording in the message.
+    """
+    if getattr(exc, "code", None) == "LLM_QUOTA_EXHAUSTED":
+        return True
+
+    root: BaseException = exc
+    for _ in range(10):  # bound the walk; unwrap __cause__ to the original error
+        cause = getattr(root, "__cause__", None)
+        if cause is None:
+            break
+        root = cause
+
+    for candidate in (exc, root):
+        for attr in ("status_code", "code", "http_status"):
+            if getattr(candidate, attr, None) == 429:
+                return True
+
+    message = str(root).lower()
+    return any(marker in message for marker in QUOTA_MARKERS)
+
+
+def _raise_sanitized(exc: BaseException, *, context: str) -> "NoReturn":
+    """Log the raw *exc* server-side, then raise a clean classified error.
+
+    Quota/rate-limit failures become ``503 / LLM_QUOTA_EXHAUSTED``; every other
+    SDK/transport failure becomes ``503 / LLM_UNAVAILABLE``. The raised detail
+    is a short fixed message — the raw provider text is never interpolated.
+    ``exc`` is chained as ``__cause__`` so server-side tracebacks stay useful.
+    """
+    logger.error("LLM %s failed (raw provider error, server-side only): %s", context, exc)
+    if is_quota_error(exc):
+        raise LLMQuotaExhaustedError() from exc
+    raise LLMUnavailableError() from exc
 
 
 # ── Transient-error detection & retrying ──────────────────────────────────────
@@ -119,10 +180,10 @@ def is_model_fallback_error(exc: Exception) -> bool:
     same model by :func:`generate_with_retry`, so reaching this helper means those
     retries were spent.
 
-    Our own post-retry wrapper (:class:`QueryMindError` with code
-    ``LLM_CALL_FAILED``) is unwrapped to the underlying SDK error before the
-    status/message is inspected, so a 429 that survived the retries is still
-    recognised.
+    Our own post-retry wrappers (:class:`QueryMindError` with code
+    ``LLM_QUOTA_EXHAUSTED`` / ``LLM_UNAVAILABLE``) are unwrapped to the
+    underlying SDK error before the status/message is inspected, so a 429 that
+    survived the retries is still recognised.
     """
     # Malformed-output / validation failures are never a "try another model" case.
     if isinstance(exc, ValidationError):
@@ -140,8 +201,9 @@ def is_model_fallback_error(exc: Exception) -> bool:
         if isinstance(value, int) and value in MODEL_FALLBACK_STATUS_CODES:
             return True
 
-    # We raise LLM_CALL_FAILED (503) once a model's retries are exhausted.
-    if getattr(exc, "code", None) == "LLM_CALL_FAILED":
+    # Our own post-retry wrappers (LLM_QUOTA_EXHAUSTED / LLM_UNAVAILABLE, both
+    # 503) mean "this model's retries are spent" — a different model may answer.
+    if getattr(exc, "code", None) in ("LLM_QUOTA_EXHAUSTED", "LLM_UNAVAILABLE"):
         return True
 
     message = str(root).lower()
@@ -228,8 +290,10 @@ def generate_with_retry(
     path so one adapter can serve several models).
 
     Only *transient* failures (503/429/timeout/connection) are retried; permanent
-    errors are raised immediately. After the retries are exhausted a
-    :class:`QueryMindError` (503 / ``LLM_CALL_FAILED``) is raised.
+    errors are raised immediately. After the retries are exhausted a clean
+    classified error is raised: ``503 / LLM_QUOTA_EXHAUSTED`` for
+    rate-limit failures, ``503 / LLM_UNAVAILABLE`` otherwise. The raw SDK text
+    is logged server-side only.
     """
     attempts = LLM_MAX_RETRIES + 1
     last_exc: Optional[Exception] = None
@@ -256,11 +320,10 @@ def generate_with_retry(
             )
             sleep(delay)
 
-    raise QueryMindError(
-        f"LLM call failed after {attempts} attempts due to transient errors: {last_exc}",
-        status_code=503,
-        code="LLM_CALL_FAILED",
-    ) from last_exc
+    _raise_sanitized(
+        last_exc if last_exc is not None else RuntimeError("unknown LLM failure"),
+        context=f"call for model '{model}' after {attempts} attempts",
+    )
 
 
 def request_text(
@@ -272,8 +335,10 @@ def request_text(
 ) -> str:
     """One round-trip: retry transient errors, unwrap the response, and return raw text.
 
-    Permanent transport failures are surfaced as a :class:`QueryMindError`
-    (503 / ``LLM_CALL_FAILED``) so callers never see an opaque SDK exception.
+    Permanent transport failures are surfaced as a clean classified
+    :class:`QueryMindError` (``503 / LLM_QUOTA_EXHAUSTED`` or
+    ``503 / LLM_UNAVAILABLE``) so callers never see an opaque SDK exception or
+    raw provider text.
 
     When *models* holds more than one model id (see :func:`resolve_model_chain`),
     the models are tried in order — primary first — and a model that exhausts its
@@ -287,11 +352,9 @@ def request_text(
     except QueryMindError:
         raise
     except Exception as exc:
-        raise QueryMindError(
-            f"LLM call failed: {exc}",
-            status_code=503,
-            code="LLM_CALL_FAILED",
-        ) from exc
+        # Non-transient SDK failure: log the raw text server-side and surface a
+        # clean classified code (LLM_QUOTA_EXHAUSTED / LLM_UNAVAILABLE).
+        _raise_sanitized(exc, context="single-model request")
     return response.text
 
 
@@ -306,10 +369,14 @@ def _request_text_with_fallback(
 
     Only :func:`is_model_fallback_error` failures (429/RESOURCE_EXHAUSTED or
     persistent 503) move on to the next model; anything else propagates
-    immediately. When every model fails the caller gets a clean
-    ``502 / LLM_MODELS_EXHAUSTED`` naming the models that were tried.
+    immediately. When every model fails the caller gets a clean classified
+    error — ``503 / LLM_QUOTA_EXHAUSTED`` when every failure was a
+    quota/rate-limit error, ``503 / LLM_UNAVAILABLE`` otherwise — naming the
+    models that were tried. Raw SDK text is logged server-side only.
     """
     last_exc: Optional[Exception] = None
+    saw_quota = False
+    saw_other = False
 
     for index, model in enumerate(models):
         try:
@@ -318,6 +385,10 @@ def _request_text_with_fallback(
             if not is_model_fallback_error(exc):
                 raise
             last_exc = exc
+            if is_quota_error(exc):
+                saw_quota = True
+            else:
+                saw_other = True
             if index < len(models) - 1:
                 logger.warning(
                     "Model %r unavailable (%s) — falling back to %r",
@@ -325,11 +396,7 @@ def _request_text_with_fallback(
                 )
             continue
         except Exception as exc:  # non-transient: not a fallback case
-            raise QueryMindError(
-                f"LLM call failed: {exc}",
-                status_code=503,
-                code="LLM_CALL_FAILED",
-            ) from exc
+            _raise_sanitized(exc, context=f"model {model!r}")
 
         if index > 0:
             logger.info(
@@ -340,11 +407,19 @@ def _request_text_with_fallback(
             logger.info("LLM request served by primary model %r", model)
         return response.text
 
-    raise QueryMindError(
-        "All configured LLM models are unavailable right now "
-        f"({', '.join(models)}). Please try again later.",
-        status_code=502,
-        code="LLM_MODELS_EXHAUSTED",
+    tried = ", ".join(models)
+    logger.error(
+        "All %d configured LLM models failed (last raw error, server-side only): %s",
+        len(models), last_exc,
+    )
+    if saw_quota and not saw_other:
+        raise LLMQuotaExhaustedError(
+            f"All configured AI models are out of quota right now ({tried}). "
+            "Please try again in a few minutes."
+        ) from last_exc
+    raise LLMUnavailableError(
+        f"All configured AI models are unavailable right now ({tried}). "
+        "Please try again shortly."
     ) from last_exc
 
 

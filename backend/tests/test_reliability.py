@@ -4,7 +4,7 @@ Tests — LLM reliability guards (hard timeout + concurrency cap)
 Covers:
 
 1. A Gemini call that hangs past the (patched) timeout is treated as a transient
-   error, retried, and finally fails with a clean 503 / LLM_CALL_FAILED — inside a
+   error, retried, and finally fails with a clean 503 / LLM_UNAVAILABLE — inside a
    sane wall-clock budget.
 2. No more than ``LLM_MAX_CONCURRENCY`` Gemini calls ever run at the same time
    across concurrent callers.
@@ -36,7 +36,7 @@ class _Response:
 
 
 def test_hung_llm_call_times_out_retries_then_fails(monkeypatch):
-    """A call slower than the timeout is retried and ends as LLM_CALL_FAILED (503)."""
+    """A call slower than the timeout is retried and ends as LLM_UNAVAILABLE (503)."""
     monkeypatch.setattr(llm_utils, "LLM_CALL_TIMEOUT_SECONDS", 0.05)
 
     client = MagicMock()
@@ -52,7 +52,7 @@ def test_hung_llm_call_times_out_retries_then_fails(monkeypatch):
         llm_utils.generate_with_retry(client, "prompt", sleep=lambda _s: None)
     elapsed = time.monotonic() - started
 
-    assert exc_info.value.code == "LLM_CALL_FAILED"
+    assert exc_info.value.code == "LLM_UNAVAILABLE"
     assert exc_info.value.status_code == 503
     # initial attempt + LLM_MAX_RETRIES retries were all dispatched
     assert client.generate_content.call_count == llm_utils.LLM_MAX_RETRIES + 1

@@ -9,8 +9,11 @@ Covers the demo-readiness addition:
 3. :func:`app.services.llm_utils.is_model_fallback_error` classification.
 4. :func:`app.services.llm_utils.request_text`:
    - primary 429  -> fallback model serves the request;
-   - every model fails -> clean ``502 / LLM_MODELS_EXHAUSTED`` (no raw SDK error);
-   - no fallbacks configured -> the historical ``503 / LLM_CALL_FAILED`` path.
+   - every model fails -> clean ``503 / LLM_QUOTA_EXHAUSTED`` (all failures were
+     quota errors) or ``503 / LLM_UNAVAILABLE``, naming the models tried — never
+     a raw SDK error;
+   - no fallbacks configured -> the single-model path with the same classified
+     codes (``LLM_QUOTA_EXHAUSTED`` / ``LLM_UNAVAILABLE``).
 5. Service wiring: generation + evaluation pick up the chain, and a total outage
    surfaces through the FastAPI handler as structured JSON (never a stack trace).
 """
@@ -28,7 +31,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import Settings, settings
-from app.core.exceptions import QueryMindError, ValidationError
+from app.core.exceptions import LLMQuotaExhaustedError, QueryMindError, ValidationError
 from app.models.models import Question
 from app.services import evaluation_service as es
 from app.services import generation_service as gs
@@ -179,11 +182,16 @@ def test_is_model_fallback_error_quota_and_503():
 
 
 def test_is_model_fallback_error_unwraps_our_wrapper():
-    outer = QueryMindError("wrapper", status_code=503, code="LLM_CALL_FAILED")
+    outer = QueryMindError("wrapper", status_code=503, code="LLM_UNAVAILABLE")
     outer.__cause__ = _RateLimited("m")
     assert llm_utils.is_model_fallback_error(outer) is True
     assert llm_utils.is_model_fallback_error(
-        QueryMindError("x", status_code=503, code="LLM_CALL_FAILED")
+        QueryMindError("x", status_code=503, code="LLM_QUOTA_EXHAUSTED")
+    ) is True
+    # A timeout that exhausted its retries is wrapped as LLM_UNAVAILABLE and must
+    # still move the chain on to the next model.
+    assert llm_utils.is_model_fallback_error(
+        QueryMindError("x", status_code=503, code="LLM_UNAVAILABLE")
     ) is True
 
 
@@ -228,7 +236,7 @@ def test_request_text_falls_back_on_persistent_503():
     assert "fb1" in client.models_called()
 
 
-def test_request_text_all_models_fail_is_clean_502():
+def test_request_text_all_models_fail_is_clean_quota_error():
     client = _ScriptedClient(
         {"primary": _RateLimited("primary"), "fb1": _RateLimited("fb1")}
     )
@@ -237,20 +245,36 @@ def test_request_text_all_models_fail_is_clean_502():
             client, "p", sleep=lambda _: None, models=["primary", "fb1"]
         )
     err = ei.value
-    assert err.status_code == 502
-    assert err.code == "LLM_MODELS_EXHAUSTED"
+    assert err.status_code == 503
+    assert err.code == "LLM_QUOTA_EXHAUSTED"
     # The detail is human-readable and names the models that were tried.
     assert "primary" in err.detail and "fb1" in err.detail
     assert "RESOURCE_EXHAUSTED" not in err.detail  # no raw SDK text leaked
 
 
-def test_request_text_no_fallbacks_is_unchanged_503():
-    """No chain configured -> behaviour exactly as before (503 LLM_CALL_FAILED)."""
+def test_request_text_all_models_fail_non_quota_is_unavailable():
+    """Mixed/only non-quota failures classify as LLM_UNAVAILABLE (clean detail)."""
+    client = _ScriptedClient(
+        {"primary": _ServerError(), "fb1": _ServerError()}
+    )
+    with pytest.raises(QueryMindError) as ei:
+        llm_utils.request_text(
+            client, "p", sleep=lambda _: None, models=["primary", "fb1"]
+        )
+    err = ei.value
+    assert err.status_code == 503
+    assert err.code == "LLM_UNAVAILABLE"
+    assert "primary" in err.detail and "fb1" in err.detail
+    assert "overloaded" not in err.detail  # no raw SDK text leaked
+
+
+def test_request_text_no_fallbacks_is_classified_quota_503():
+    """No chain configured -> single-model path, 503 LLM_QUOTA_EXHAUSTED."""
     client = _ScriptedClient({"primary": _RateLimited("primary")})
     with pytest.raises(QueryMindError) as ei:
         llm_utils.request_text(client, "p", sleep=lambda _: None)  # models=None
     assert ei.value.status_code == 503
-    assert ei.value.code == "LLM_CALL_FAILED"
+    assert ei.value.code == "LLM_QUOTA_EXHAUSTED"
 
 
 def test_request_text_non_fallback_error_does_not_try_next_model():
@@ -259,7 +283,7 @@ def test_request_text_non_fallback_error_does_not_try_next_model():
         llm_utils.request_text(
             client, "p", sleep=lambda _: None, models=["primary", "fb1"]
         )
-    assert ei.value.code == "LLM_CALL_FAILED"
+    assert ei.value.code == "LLM_UNAVAILABLE"
     assert client.models_called() == ["primary"]
 
 
@@ -284,7 +308,7 @@ def test_generate_question_uses_fallback_chain(monkeypatch):
     assert "fb1" in client.models_called()
 
 
-def test_generate_question_total_outage_raises_502(monkeypatch):
+def test_generate_question_total_outage_raises_clean_503(monkeypatch):
     monkeypatch.setattr(settings, "llm_model", "primary")
     monkeypatch.setattr(settings, "llm_fallback_models", ["fb1"])
     client = _ScriptedClient(
@@ -300,8 +324,8 @@ def test_generate_question_total_outage_raises_502(monkeypatch):
             difficulty="medium",
             context_chunks=[{"text": "ctx", "source_doc": "d.pdf"}],
         )
-    assert ei.value.status_code == 502
-    assert ei.value.code == "LLM_MODELS_EXHAUSTED"
+    assert ei.value.status_code == 503
+    assert ei.value.code == "LLM_QUOTA_EXHAUSTED"
 
 
 def test_evaluate_answer_uses_fallback_chain(monkeypatch):
@@ -325,7 +349,7 @@ def test_evaluate_answer_uses_fallback_chain(monkeypatch):
     assert "fb1" in client.models_called()
 
 
-# ── 6. End-to-end: clean 502 JSON (never a stack trace) ───────────────────────
+# ── 6. End-to-end: clean 503 JSON (never a stack trace) ───────────────────────
 
 @pytest.fixture
 def api_client(monkeypatch):
@@ -360,7 +384,7 @@ def api_client(monkeypatch):
     engine.dispose()
 
 
-def test_total_model_outage_returns_clean_502_json(api_client, monkeypatch):
+def test_total_model_outage_returns_clean_503_json(api_client, monkeypatch):
     from app.api import questions as questions_api
 
     monkeypatch.setattr(
@@ -370,11 +394,9 @@ def test_total_model_outage_returns_clean_502_json(api_client, monkeypatch):
     )
 
     def _boom(**kwargs):
-        raise QueryMindError(
-            "All configured LLM models are unavailable right now "
-            "(primary, fb1). Please try again later.",
-            status_code=502,
-            code="LLM_MODELS_EXHAUSTED",
+        raise LLMQuotaExhaustedError(
+            "All configured AI models are out of quota right now "
+            "(primary, fb1). Please try again in a few minutes."
         )
 
     monkeypatch.setattr(questions_api, "generate_question", _boom)
@@ -389,9 +411,9 @@ def test_total_model_outage_returns_clean_502_json(api_client, monkeypatch):
             "question_type": "open",
         },
     )
-    assert resp.status_code == 502
+    assert resp.status_code == 503
     body = resp.json()
-    assert body["code"] == "LLM_MODELS_EXHAUSTED"
-    assert "unavailable" in body["detail"]
+    assert body["code"] == "LLM_QUOTA_EXHAUSTED"
+    assert "quota" in body["detail"]
     assert "Traceback" not in resp.text
     assert "RESOURCE_EXHAUSTED" not in resp.text

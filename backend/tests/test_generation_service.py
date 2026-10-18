@@ -320,7 +320,7 @@ def test_transient_error_is_retried_then_succeeds(mock_sleep, mock_retrieve):
 @patch("app.services.generation_service.retrieve_context")
 @patch("app.services.generation_service.time.sleep")
 def test_persistent_transient_error_exhausts_retries(mock_sleep, mock_retrieve):
-    """When every attempt is transient, retries exhaust and LLM_CALL_FAILED is raised."""
+    """When every attempt is transient, retries exhaust and LLM_UNAVAILABLE (503) is raised."""
     mock_retrieve.return_value = FAKE_CONTEXT_CHUNKS
     mock_client = MagicMock()
     mock_client.generate_content.side_effect = FakeTransientError()
@@ -333,7 +333,8 @@ def test_persistent_transient_error_exhausts_retries(mock_sleep, mock_retrieve):
 
     assert mock_client.generate_content.call_count == LLM_MAX_RETRIES + 1
     assert mock_sleep.call_count == LLM_MAX_RETRIES
-    assert exc_info.value.code == "LLM_CALL_FAILED"
+    assert exc_info.value.code == "LLM_UNAVAILABLE"
+    assert exc_info.value.status_code == 503
 
 
 @patch("app.services.generation_service.retrieve_context")
@@ -352,7 +353,10 @@ def test_non_transient_error_is_not_retried(mock_sleep, mock_retrieve):
 
     assert mock_client.generate_content.call_count == 1
     mock_sleep.assert_not_called()
-    assert exc_info.value.code == "LLM_CALL_FAILED"
+    # Non-transient raw errors are still sanitized: clean LLM_UNAVAILABLE, no
+    # raw provider text in the API-visible detail.
+    assert exc_info.value.code == "LLM_UNAVAILABLE"
+    assert "INVALID_ARGUMENT" not in exc_info.value.detail
 
 
 @patch("app.services.generation_service.retrieve_context")
