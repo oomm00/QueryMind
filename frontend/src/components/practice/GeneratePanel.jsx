@@ -1,5 +1,5 @@
 /**
- * GeneratePanel — "Any topic": questions about whatever the student names.
+ * GeneratePanel — "Pick a topic": questions about whatever the student names.
  *
  * This is the form that used to live on /generate, rebuilt around the way a
  * student actually arrives: knowing the topic, not the course code. Topic is
@@ -7,6 +7,8 @@
  * titles the library already knows; subject is never asked for, because it is
  * looked up from the document the topic matched (or "general"). Difficulty is a
  * Bloom band, and the six chips under it start from that band and can be moved.
+ * The length is the student's to set: three quick picks and any number beside
+ * them.
  *
  * Question generation answers one question per call, so a run of ten is ten
  * calls, two in flight at a time. While it runs the page says how many are
@@ -30,12 +32,15 @@ import { usePracticeData } from '../../hooks/usePracticeData.js'
 import { contentCourseIds } from '../../content/practiceBank.js'
 import { createRegistry, registerCustomConcept } from '../../content/registry.js'
 import { BLOOM_COLORS, BLOOM_LEVELS } from '../../constants/bloomTaxonomy.js'
-import { holdDraft, newSession } from '../../lib/sessions.js'
+import { holdDraft, newSession, saveSession } from '../../lib/sessions.js'
 import {
   GENERATE_DIFFICULTIES,
   GENERATE_COUNT_CHOICES,
   GENERAL_SUBJECT,
+  MAX_GENERATE_COUNT,
+  MIN_GENERATE_COUNT,
   bloomsForDifficulty,
+  clampCount,
   customConceptId,
   difficultyLabel,
   findTopicSuggestion,
@@ -259,13 +264,17 @@ export function GeneratePanel() {
     if (ready.length === 0) return
     const trimmed = topic.trim()
     const session = newSession({
-      scope: 'custom',
+      scope: 'generated',
       subject: hasDocuments ? subjectForTopic(trimmed, rows) : GENERAL_SUBJECT,
       level: difficulty,
       label: trimmed,
       questionIds: ready.map((question) => question.question_id),
       questions: ready,
     })
+    // Written now, not with the first answer: these questions exist nowhere but
+    // this record, so a refresh before the first answer would throw the run
+    // away. The draft is still held, for the one case where storage is refused.
+    saveSession(userId, session)
     holdDraft(session)
     navigate(`/practice/${session.id}`)
   }
@@ -273,7 +282,7 @@ export function GeneratePanel() {
   return (
     <div className="space-y-4">
       <PanelLarge>
-        <h2 className="text-sm font-semibold text-ink">Any topic</h2>
+        <h2 className="text-sm font-semibold text-ink">Pick a topic</h2>
         <p className="mt-0.5 max-w-2xl text-xs text-muted">
           Name a topic and the questions are written for it. Nothing is set up in advance and
           nothing is enrolled: the questions start a practice session like any other.
@@ -346,13 +355,31 @@ export function GeneratePanel() {
 
           <div>
             <h3 className="text-[13px] font-medium text-ink">Number of questions</h3>
-            <Segmented
-              className="mt-1.5"
-              label="Number of questions"
-              options={GENERATE_COUNT_CHOICES.map((value) => ({ value, label: String(value) }))}
-              value={count}
-              onChange={setCount}
-            />
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Segmented
+                label="Number of questions"
+                options={GENERATE_COUNT_CHOICES.map((value) => ({ value, label: String(value) }))}
+                value={count}
+                onChange={setCount}
+              />
+              <label className="flex items-center gap-1.5 text-xs text-muted">
+                <span>or any number</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_GENERATE_COUNT}
+                  max={MAX_GENERATE_COUNT}
+                  step={1}
+                  aria-label="Any number of questions"
+                  value={count}
+                  onChange={(event) => {
+                    const next = clampCount(event.target.value)
+                    if (next != null) setCount(next)
+                  }}
+                  className="w-16 rounded-control border border-line bg-surface px-2 py-1.5 text-[13px] tabular-nums text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                />
+              </label>
+            </div>
           </div>
 
           <label className="flex items-center gap-2.5 text-[13px] text-ink">

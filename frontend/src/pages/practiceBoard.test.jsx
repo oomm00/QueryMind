@@ -116,6 +116,12 @@ vi.mock('../hooks/usePracticeContext.js', () => ({
   usePracticeContext: () => ({ estimates: {}, answered: {} }),
 }))
 
+// /practice opens on "Pick a topic", whose form reads the student's uploaded
+// topics. These tests are about the board, so the documents are simply none.
+vi.mock('../hooks/useDocuments.js', () => ({
+  useDocumentTopics: () => ({ data: [], isSuccess: false, isLoading: false }),
+}))
+
 vi.mock('../content/practiceBank.js', () => ({
   resolveQuestions: (ids = []) => ids.map((id) => board.questionById[id]).filter(Boolean),
   questionIndex: () => new Map(Object.entries(board.questionById)),
@@ -140,6 +146,15 @@ function renderApp(path) {
   )
 }
 
+/**
+ * /practice opens on "Pick a topic"; the board is the second tab. Every test
+ * here is about the board, so it is opened in one step.
+ */
+async function openBoard(user, path = '/practice') {
+  renderApp(path)
+  await user.click(await screen.findByRole('tab', { name: 'Question bank' }))
+}
+
 beforeEach(() => {
   counter += 1
   userId = `board-user-${counter}`
@@ -147,8 +162,9 @@ beforeEach(() => {
 })
 
 describe('the board itself', () => {
-  it('lists each subject with its question count and its estimate', () => {
-    renderApp('/practice')
+  it('lists each subject with its question count and its estimate', async () => {
+    const user = userEvent.setup()
+    await openBoard(user)
 
     expect(screen.getByRole('button', { name: /Operating Systems/ })).toHaveTextContent('4 questions')
     expect(screen.getByRole('button', { name: /Databases/ })).toHaveTextContent('2 questions')
@@ -156,8 +172,9 @@ describe('the board itself', () => {
     expect(screen.getByRole('button', { name: /Databases/ })).toHaveTextContent('No estimate')
   })
 
-  it('disables a subject with no questions, and says why', () => {
-    renderApp('/practice')
+  it('disables a subject with no questions, and says why', async () => {
+    const user = userEvent.setup()
+    await openBoard(user)
 
     const networks = screen.getByRole('button', { name: /Networks/ })
     expect(networks).toBeDisabled()
@@ -166,7 +183,7 @@ describe('the board itself', () => {
 
   it('disables a topic with no questions, and ticks the rest', async () => {
     const user = userEvent.setup()
-    renderApp('/practice')
+    await openBoard(user)
 
     await user.click(screen.getByRole('button', { name: /Operating Systems/ }))
 
@@ -182,7 +199,7 @@ describe('the board itself', () => {
 describe('starting a session from the board', () => {
   it('asks only the topics left ticked, and stores nothing until the first answer', async () => {
     const user = userEvent.setup()
-    renderApp('/practice')
+    await openBoard(user)
 
     // The board opens on the first subject in the library; pick the one with
     // the topics this test is about.

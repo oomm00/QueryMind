@@ -1,5 +1,5 @@
 /**
- * generateForm — the rules behind the "Any topic" form on /practice.
+ * generateForm — the rules behind the "Pick a topic" form on /practice.
  *
  * The form is deliberately not a pair of dropdowns. A student arrives knowing
  * the topic they want to be asked about, so the topic is free text, helped by
@@ -35,8 +35,28 @@ export const GENERATE_DIFFICULTIES = [
 /** The subject a topic falls back to when no uploaded document matched it. */
 export const GENERAL_SUBJECT = 'general'
 
-/** How many questions one run asks for. */
+/**
+ * How many questions one run asks for. The chips are the quick picks; the form
+ * also takes any whole number between MIN_GENERATE_COUNT and MAX_GENERATE_COUNT,
+ * because "how many" is the student's call and not a preset's.
+ */
 export const GENERATE_COUNT_CHOICES = [6, 10, 15]
+
+/** The run lengths the form accepts outside the quick picks. */
+export const MIN_GENERATE_COUNT = 1
+export const MAX_GENERATE_COUNT = 20
+
+/**
+ * A count brought inside the range a run can actually ask for. Returns null when
+ * the value is not a number at all, so a caller can leave the field alone rather
+ * than snapping it to 1 while it is being typed in.
+ */
+export function clampCount(value) {
+  if (value === '' || value == null) return null
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return Math.min(MAX_GENERATE_COUNT, Math.max(MIN_GENERATE_COUNT, Math.round(number)))
+}
 
 /**
  * How many generation calls are allowed to be in flight at once. The backend

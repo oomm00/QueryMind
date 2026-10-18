@@ -8,6 +8,11 @@
  * share becomes the score, and that score moves mastery the same way an mcq
  * does.
  *
+ * A question the model wrote is not self-marked: it has no rubric to tick and
+ * the model marked it at submit, through the attempt endpoint. That mark is
+ * shown here as the model's, with whatever the marker said about the answer,
+ * and it counts in the score above like any other mark.
+ *
  * The score is based only on questions that have a score so far: an unanswered
  * mcq and a short answer that is not marked yet are excluded from the
  * denominator and reported as unscored. When every short answer is marked the
@@ -54,6 +59,38 @@ function formatAmount(value) {
 /** "1 mark" or "2 marks". */
 function marksLabel(count) {
   return `${count} ${count === 1 ? 'mark' : 'marks'}`
+}
+
+/**
+ * The mark a generated question was given by the model that wrote it. There is
+ * no rubric to tick - the marker's own score is the whole mark - so the block
+ * reports it and repeats what the marker said, and says plainly when no mark
+ * arrived rather than showing a zero the student never earned.
+ */
+function ModelMark({ marks, selfMark }) {
+  if (!selfMark || typeof selfMark.score !== 'number') {
+    return (
+      <p className="rounded-control border border-warning-tint bg-warning-tint px-3 py-2 text-xs text-warning">
+        Not marked yet — left out of the score above
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-muted">Marked by the model</p>
+      <div className="mt-1 rounded-control border border-line bg-surface-raised p-3">
+        <p className="text-sm tabular-nums text-ink">
+          {formatAmount(marks * selfMark.score)} of {marksLabel(marks)}
+        </p>
+        {selfMark.feedback && (
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">
+            {selfMark.feedback}
+          </p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function RubricSelfMark({ userId, sessionId, question, answer, selfMark, onUpdate }) {
@@ -205,6 +242,8 @@ function QuestionReview({ userId, sessionId, question, answer, selfMark, flagged
                     onUpdate={onUpdate}
                   />
                 </div>
+              ) : question.origin === 'generated' ? (
+                <ModelMark marks={marks} selfMark={selfMark} />
               ) : (
                 <p className="rounded-control border border-warning-tint bg-warning-tint px-3 py-2 text-xs text-warning">
                   This question has no rubric. The instructor will grade it manually.

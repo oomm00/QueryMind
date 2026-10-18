@@ -1,5 +1,5 @@
 /**
- * The "Any topic" form, through the screen a student uses, with a fake fetch
+ * The "Pick a topic" form, through the screen a student uses, with a fake fetch
  * standing in for the backend.
  *
  * The point of going through fetch rather than mocking the endpoint is that the
@@ -174,10 +174,10 @@ function renderApp(path = '/practice') {
   )
 }
 
-/** Open /practice on the "Any topic" tab. */
+/** Open /practice, which opens on the "Pick a topic" tab. */
 async function openAnyTopic(user) {
   renderApp()
-  await user.click(await screen.findByRole('tab', { name: 'Any topic' }))
+  await user.click(await screen.findByRole('tab', { name: 'Pick a topic' }))
   return screen.getByRole('textbox', { name: 'Topic' })
 }
 

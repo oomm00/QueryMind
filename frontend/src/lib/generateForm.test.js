@@ -1,5 +1,5 @@
 /**
- * The rules behind the "Any topic" form, without a browser: which Bloom levels
+ * The rules behind the "Pick a topic" form, without a browser: which Bloom levels
  * a difficulty starts with, how a typed topic becomes an id, how it is matched
  * against what the student uploaded, and how a backend score becomes a share.
  */

@@ -24,10 +24,16 @@ import { normaliseScore } from './generateRun.js'
 /**
  * Ask the backend to mark one written answer.
  *
+ * The mark comes back whole - the share of one it earned and whatever the
+ * marker wrote about it - because both are shown to the student on the results
+ * page. `null` means nothing was marked at all: no id, no answer, a refused
+ * call, or a response with no score in it. That is reported as unscored rather
+ * than as zero.
+ *
  * @param {{question_id: string}} question
  * @param {string} answerText
  * @param {string} userId
- * @returns {Promise<number|null>} the score as a share of one, or null
+ * @returns {Promise<{score: number, feedback: string}|null>}
  */
 export async function gradeGeneratedAnswer(question, answerText, userId) {
   if (!question?.question_id) return null
@@ -39,7 +45,9 @@ export async function gradeGeneratedAnswer(question, answerText, userId) {
       { question_id: question.question_id, answer_text: text },
       userId
     )
-    return normaliseScore(result?.score)
+    const score = normaliseScore(result?.score)
+    if (score == null) return null
+    return { score, feedback: String(result?.feedback_text ?? '').trim() }
   } catch {
     return null
   }

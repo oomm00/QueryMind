@@ -26,6 +26,7 @@ import {
   getSession,
   holdDraft,
   recordAnswer,
+  recordSelfMark,
   releaseDraft,
   saveSession,
   submitSession,
@@ -213,12 +214,24 @@ export default function SessionPage() {
         const answer = session.answers?.[question.question_id]
 
         if (question.origin === 'generated' && question.type !== 'mcq') {
-          const score = await gradeGeneratedAnswer(question, answer?.text, userId)
-          if (score == null) continue
+          // A mark already on the session is the one it was given. Asking again
+          // would only spend a call to replace a result the student has seen.
+          if (session.selfMarks?.[question.question_id]) continue
+          const grade = await gradeGeneratedAnswer(question, answer?.text, userId)
+          if (grade == null) continue
+          // The mark is kept on the session, not only in the mastery store: it
+          // is what the results page shows back, and it is the same mark
+          // `scoreOf` reads, so the question counts in the session's score the
+          // moment it has one.
+          recordSelfMark(userId, sessionId, question.question_id, {
+            score: grade.score,
+            markedBy: 'model',
+            feedback: grade.feedback,
+          })
           recordScore(userId, {
             conceptId: question.conceptId,
             bloom: question.bloom_level,
-            score,
+            score: grade.score,
             sessionId,
             questionId: question.question_id,
           })

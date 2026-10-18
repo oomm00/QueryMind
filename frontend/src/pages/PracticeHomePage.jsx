@@ -53,12 +53,13 @@ const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
 
 /**
  * The two ways to practise. "Question bank" is the board below - the authored
- * questions, chosen by subject and topic. "Any topic" is the generate form,
- * which used to be a page of its own at /generate.
+ * questions, chosen by subject and topic. "Pick a topic" is the generate form,
+ * which used to be a page of its own at /generate; it is what the page opens on,
+ * because naming what you are stuck on is the plainest way in.
  */
 const TABS = [
+  { value: 'topic', label: 'Pick a topic' },
   { value: 'bank', label: 'Question bank' },
-  { value: 'topic', label: 'Any topic' },
 ]
 
 const SCOPE_LABELS = {
@@ -68,6 +69,7 @@ const SCOPE_LABELS = {
   mixed: 'Mixed',
   retry: 'Retry',
   custom: 'Chosen topics',
+  generated: 'Generated',
 }
 
 const LEVEL_LABELS = {
@@ -86,7 +88,12 @@ function questionCountOf(count) {
 }
 
 function SessionRow({ session, title, onResume }) {
-  const questions = useMemo(() => resolveQuestions(session.questionIds ?? []), [session.questionIds])
+  // A generated session carries its own questions, so its row is read from them
+  // as well; a session drawn from the bank keeps resolving against the content.
+  const questions = useMemo(
+    () => resolveQuestions(session.questionIds ?? [], session.questions ?? []),
+    [session.questionIds, session.questions]
+  )
   const score = useMemo(
     () => scoreSession(questions, session.answers ?? {}, session.selfMarks ?? {}),
     [questions, session.answers, session.selfMarks]
@@ -239,7 +246,7 @@ export default function PracticeHomePage() {
   const [level, setLevel] = useState('mixed')
   const [count, setCount] = useState(BOARD_DEFAULT_COUNT)
   const [label, setLabel] = useState('')
-  const [tab, setTab] = useState('bank')
+  const [tab, setTab] = useState('topic')
 
   useBreadcrumbs([WORKSPACE_CRUMB, { label: 'Practice' }])
 
@@ -315,8 +322,8 @@ export default function PracticeHomePage() {
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Practice</p>
       <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">Practice, and see it add up</h1>
       <p className="mt-1 max-w-2xl text-sm text-muted">
-        Every session is drawn from the questions in your courses. Marks and mastery come from what
-        you answer, and nothing is measured until you do.
+        Name a topic and the questions are written for it, or draw them from the courses you have.
+        Marks and mastery come from what you answer, and nothing is measured until you do.
       </p>
 
       <Tabs className="mt-5" tabs={TABS} value={tab} onChange={setTab} />

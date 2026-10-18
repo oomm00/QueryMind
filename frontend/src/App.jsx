@@ -9,7 +9,7 @@
  *          /learn/:courseId/:topicId/:lessonId,
  *          /map/:courseId/:topicId (topic knowledge graph)
  * Moved:   /generate and /upload redirected - the generate form is the
- *          "Any topic" tab on /practice, upload is the Documents tab on /notes.
+ *          "Pick a topic" tab on /practice, upload is the Documents tab on /notes.
  * Stubs:   everything else renders <ComingSoon/>.
  */
 
@@ -89,7 +89,7 @@ export default function App() {
             </Protected>
           }
         />
-        {/* Moved: the form lives on /practice as "Any topic", the upload page
+        {/* Moved: the form lives on /practice as "Pick a topic", the upload page
             on /notes as "Documents". Old links and bookmarks still land. */}
         <Route path="/generate" element={<Navigate to="/practice" replace />} />
         <Route path="/upload" element={<Navigate to="/notes" replace />} />

@@ -10,12 +10,22 @@
  * A session stores the ids of the questions it drew, not the questions
  * themselves: the content files are the source of truth, so a session can be
  * resolved against them and the stored record stays small. The last 20 sessions
- * are kept, newest first.
+ * are kept, newest first. A generated session is the exception the field
+ * `questions` exists for: the model wrote its questions and they are nowhere
+ * else, so it carries them.
  *
- * It is not written at all until its first answer is: an empty session has
- * nothing to resume, and the recent list must never show "0 answered". Until
- * then the practice page holds it (see holdDraft) and saves the whole record
- * with that first answer. Each answer carries the moment it was given.
+ * A session drawn from the bank is not written at all until its first answer
+ * is: an empty session has nothing to resume, and the recent list must never
+ * show "0 answered". Until then the practice page holds it (see holdDraft) and
+ * saves the whole record with that first answer. A generated session is written
+ * the moment it is started, because its questions cannot be rebuilt from the
+ * content - a refresh before the first answer would otherwise throw the run
+ * away. Each answer carries the moment it was given.
+ *
+ * `selfMarks` holds the mark for a written answer, whoever gave it: the student
+ * checking off the author's rubric, or the model for a question it wrote (see
+ * generateGrading.js). Both are a share of one, which is what makes `scoreOf`
+ * read them the same way.
  *
  * Mastery is not written here. Only scored answers move it, and the results
  * page is what turns a submitted mcq (or a marked short answer) into a score —
