@@ -57,6 +57,24 @@ describe('the sentence for each code', () => {
     expect(isRetryableGenerationError(error)).toBe(false)
   })
 
+  it('NO_CONTEXT points at the upload page, and is not retryable', () => {
+    const error = backendFailure('NO_CONTEXT', { status: 404 })
+
+    expect(generationErrorMessage(error)).toBe(
+      'No study material for that topic yet. Upload a document, then try again.',
+    )
+    expect(isRetryableGenerationError(error)).toBe(false)
+  })
+
+  it('TIMEOUT — raised by the client when the deadline fires — is retryable', () => {
+    const error = new ApiError(0, 'The request timed out. Try again.', { code: 'TIMEOUT' })
+
+    expect(generationErrorMessage(error)).toBe(
+      'That took too long. Check your connection and try again.',
+    )
+    expect(isRetryableGenerationError(error)).toBe(true)
+  })
+
   it('an unknown code falls back, and is not retryable', () => {
     const error = backendFailure('SOMETHING_NEW_FROM_THE_BACKEND', { status: 500 })
 
@@ -82,18 +100,24 @@ describe('the sentence for each code', () => {
     })
   })
 
-  it('knows only the codes the backend still returns', () => {
+  it('knows only the codes the endpoint can still answer with', () => {
+    // NO_CONTEXT is raised by generation_service (NoContextError); TIMEOUT is
+    // client-made when apiFetch's deadline fires — every other key verbatim
+    // matches a `code` the backend returns.
     expect(Object.keys(GENERATION_ERROR_MESSAGES).sort()).toEqual([
       'DUPLICATE_QUESTION',
       'LLM_NOT_CONFIGURED',
       'LLM_QUOTA_EXHAUSTED',
       'LLM_UNAVAILABLE',
+      'NO_CONTEXT',
+      'TIMEOUT',
     ])
     expect(Object.keys(GENERATION_ERROR_MESSAGES)).not.toContain('LLM_CALL_FAILED')
     expect(Object.keys(GENERATION_ERROR_MESSAGES)).not.toContain('LLM_MODELS_EXHAUSTED')
     expect([...RETRYABLE_GENERATION_CODES].sort()).toEqual([
       'LLM_QUOTA_EXHAUSTED',
       'LLM_UNAVAILABLE',
+      'TIMEOUT',
     ])
   })
 

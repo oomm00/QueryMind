@@ -60,6 +60,8 @@ describe('a successful generation', () => {
         num_questions: 2,
         document_id: null,
       }),
+      // The deadline travels with every generation.
+      signal: expect.anything(),
     })
     expect(result).toEqual({
       questions: [
