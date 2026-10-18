@@ -1,15 +1,15 @@
 /**
  * Enrolment, through the pages a student uses.
  *
- * Adding a course to My courses is a deliberate act with two ways in: the
- * Enroll button, which asks the two optional questions first, and any Start
- * practice button on a course that is not in My courses yet, which enrols as it
- * starts and says so. Removing it is deliberate too, and it keeps every answer.
+ * Adding a course to My courses is one click and asks nothing: the Add button,
+ * or any Start practice button on a course that is not in My courses yet, which
+ * enrols as it starts and says so. Removing it is deliberate too, and it keeps
+ * every answer.
  *
  * The content loader is mocked with the obviously-fake fixture tree.
  */
 
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -89,16 +89,14 @@ beforeEach(() => {
 })
 
 describe('enrolling', () => {
-  it('adds the course to My courses from the Enroll dialog, with the goal', async () => {
+  it('adds the course to My courses in one click', async () => {
     const user = userEvent.setup()
     renderApp('/course/fake-course')
 
-    await user.click(await screen.findByRole('button', { name: 'Enroll' }))
-    await user.type(await screen.findByLabelText('Goal (optional)'), 'Pass the fake exam')
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Enroll' }))
+    await user.click(await screen.findByRole('button', { name: 'Add to My courses' }))
 
     expect(await screen.findByText('Enrolled')).toBeInTheDocument()
-    expect(storedEnrollments()['fake-course'].goal).toBe('Pass the fake exam')
+    expect(storedEnrollments()['fake-course'].enrolledAt).toEqual(expect.any(String))
   })
 
   it('enrols from Start practice on a course that is not in My courses yet', async () => {
@@ -112,15 +110,15 @@ describe('enrolling', () => {
     expect(storedEnrollments()['fake-course']).toBeTruthy()
   })
 
-  it('Skips without enrolling', async () => {
+  it('asks nothing on the way in', async () => {
     const user = userEvent.setup()
     renderApp('/course/fake-course')
 
-    await user.click(await screen.findByRole('button', { name: 'Enroll' }))
-    await user.click(await screen.findByRole('button', { name: 'Skip' }))
+    await user.click(await screen.findByRole('button', { name: 'Add to My courses' }))
 
-    expect(storedEnrollments()).toEqual({})
-    expect(screen.getByRole('button', { name: 'Enroll' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Goal/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Exam date/)).not.toBeInTheDocument()
   })
 })
 

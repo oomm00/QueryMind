@@ -6,12 +6,14 @@
  * answered a question, so enrolling never touches mastery, and unenrolling hides
  * the course from My courses without deleting a single answer.
  *
- * The stored shape is:
+ * Adding a course is one click and one fact: the moment it was added. The
+ * stored shape is:
  *
- *   { version: 1, courses: { [courseId]: { enrolledAt, goal, examDate } } }
+ *   { version: 1, courses: { [courseId]: { enrolledAt } } }
  *
- * `goal` and `examDate` are optional: a student may enrol from a Start button
- * without saying anything, and About offers to fill them in later.
+ * Records written before that shape existed may still carry a `goal` or an
+ * `examDate`. Nothing reads them any more, and enrolling again does not put
+ * them back.
  */
 
 import { useSyncExternalStore } from 'react'
@@ -78,25 +80,16 @@ function emit(userId) {
 // ── Writes ──────────────────────────────────────────────────
 
 /**
- * Add a course to My courses. Enrolling twice is a no-op beyond filling in a
- * goal or an exam date that has since been given.
+ * Add a course to My courses, in one click. Enrolling again changes nothing:
+ * a course is either in My courses or it is not.
  */
-export function enroll(userId, courseId, { goal, examDate } = {}) {
+export function enroll(userId, courseId) {
   if (!courseId) return null
   const enrollments = readEnrollments(userId)
   const existing = enrollments.courses[courseId]
-  const record = existing
-    ? {
-        ...existing,
-        ...(goal !== undefined ? { goal: String(goal) } : {}),
-        ...(examDate !== undefined ? { examDate: String(examDate) } : {}),
-      }
-    : {
-        enrolledAt: new Date().toISOString(),
-        goal: goal !== undefined ? String(goal) : '',
-        examDate: examDate !== undefined ? String(examDate) : '',
-      }
+  if (existing) return existing
 
+  const record = { enrolledAt: new Date().toISOString() }
   writeEnrollments(userId, {
     version: VERSION,
     courses: { ...enrollments.courses, [courseId]: record },
@@ -113,24 +106,6 @@ export function unenroll(userId, courseId) {
   delete courses[courseId]
   writeEnrollments(userId, { version: VERSION, courses })
   emit(userId)
-}
-
-/** Change the goal or the exam date of a course already in My courses. */
-export function updateEnrollment(userId, courseId, { goal, examDate } = {}) {
-  const enrollments = readEnrollments(userId)
-  const existing = enrollments.courses[courseId]
-  if (!existing) return null
-
-  const record = { ...existing }
-  if (goal !== undefined) record.goal = String(goal)
-  if (examDate !== undefined) record.examDate = String(examDate)
-
-  writeEnrollments(userId, {
-    version: VERSION,
-    courses: { ...enrollments.courses, [courseId]: record },
-  })
-  emit(userId)
-  return record
 }
 
 export function isEnrolled(userId, courseId) {

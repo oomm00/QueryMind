@@ -1,17 +1,10 @@
 /**
- * enrollment — adding a course to My courses, changing its goal, and removing
- * it without touching anything else. One key per user.
+ * enrollment — adding a course to My courses, and removing it again without
+ * touching anything else. One key per user.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  enroll,
-  isEnrolled,
-  listEnrolled,
-  readEnrollments,
-  unenroll,
-  updateEnrollment,
-} from './enrollment.js'
+import { enroll, isEnrolled, listEnrolled, readEnrollments, unenroll } from './enrollment.js'
 
 const USER = 'test-user'
 
@@ -21,31 +14,37 @@ describe('enroll', () => {
   })
 
   it('adds a course to My courses, with the moment it was added', () => {
-    enroll(USER, 'os', { goal: 'Pass the exam', examDate: '2026-12-01' })
+    enroll(USER, 'os')
 
     expect(isEnrolled(USER, 'os')).toBe(true)
-    expect(listEnrolled(USER)).toEqual([
-      {
-        courseId: 'os',
-        enrolledAt: expect.any(String),
-        goal: 'Pass the exam',
-        examDate: '2026-12-01',
-      },
-    ])
-  })
-
-  it('enrols without a goal or an exam date', () => {
-    enroll(USER, 'os')
-    expect(listEnrolled(USER)[0]).toMatchObject({ courseId: 'os', goal: '', examDate: '' })
+    expect(listEnrolled(USER)).toEqual([{ courseId: 'os', enrolledAt: expect.any(String) }])
   })
 
   it('keeps one record per course when enrolled twice', () => {
-    enroll(USER, 'os', { goal: 'First goal' })
-    enroll(USER, 'os', { goal: 'A better goal' })
+    const first = enroll(USER, 'os')
+    const second = enroll(USER, 'os')
 
-    const enrolled = listEnrolled(USER)
-    expect(enrolled).toHaveLength(1)
-    expect(enrolled[0].goal).toBe('A better goal')
+    expect(listEnrolled(USER)).toHaveLength(1)
+    expect(second).toEqual(first)
+  })
+
+  it('ignores a goal and an exam date an older record still carries', () => {
+    window.localStorage.setItem(
+      `qm_enrolled_${USER}`,
+      JSON.stringify({
+        version: 1,
+        courses: {
+          os: { enrolledAt: '2026-01-01T00:00:00.000Z', goal: 'Old goal', examDate: '2026-06-01' },
+        },
+      })
+    )
+
+    enroll(USER, 'os')
+
+    expect(listEnrolled(USER)[0]).toMatchObject({
+      courseId: 'os',
+      enrolledAt: '2026-01-01T00:00:00.000Z',
+    })
   })
 
   it('keeps one user per key', () => {
@@ -78,29 +77,6 @@ describe('unenroll', () => {
   it('does nothing when the course was never enrolled', () => {
     unenroll(USER, 'os')
     expect(readEnrollments(USER).courses).toEqual({})
-  })
-})
-
-describe('updateEnrollment', () => {
-  beforeEach(() => {
-    window.localStorage.clear()
-  })
-
-  it('changes the goal and the exam date in place', () => {
-    enroll(USER, 'os', { goal: 'Old', examDate: '2026-01-01' })
-    updateEnrollment(USER, 'os', { goal: 'New', examDate: '2026-06-01' })
-
-    expect(listEnrolled(USER)[0]).toMatchObject({ goal: 'New', examDate: '2026-06-01' })
-  })
-
-  it('clears a field when given an empty value', () => {
-    enroll(USER, 'os', { goal: 'Something' })
-    updateEnrollment(USER, 'os', { goal: '' })
-    expect(listEnrolled(USER)[0].goal).toBe('')
-  })
-
-  it('refuses to update a course that is not in My courses', () => {
-    expect(updateEnrollment(USER, 'os', { goal: 'Nope' })).toBeNull()
   })
 })
 

@@ -12,7 +12,7 @@
  * is a topic to continue with.
  */
 
-import React, { useState } from 'react'
+import React from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useCatalog } from '../../hooks/useCatalog'
 import { usePracticeData } from '../../hooks/usePracticeData.js'
@@ -31,7 +31,6 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { CourseTabs } from '../../components/practice/CourseTabs.jsx'
 import { StartPracticeButton } from '../../components/practice/StartPracticeButton.jsx'
-import { EnrollDialog } from '../../components/practice/EnrollDialog.jsx'
 import { flashState } from '../../components/routing/FlashHost.jsx'
 import { IconLearning, IconSearch } from '../../components/ui/Icons'
 
@@ -54,7 +53,6 @@ export default function CoursePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { userId } = useAuth()
-  const [dialogOpen, setDialogOpen] = useState(false)
 
   const { data: catalog, isLoading: catalogLoading } = useCatalog()
   const { data: trees = [], isLoading: treeLoading } = usePracticeData([id])
@@ -77,10 +75,10 @@ export default function CoursePage() {
   const topics = tree?.topics ?? []
   const nextTopic = tree ? nextTopicOf(tree, context) : null
 
-  const openDialog = () => setDialogOpen(true)
-  const handleEnroll = ({ goal, examDate }) => {
-    saveEnrollment(userId, id, { goal, examDate })
-    setDialogOpen(false)
+  // One click, one fact. There is nothing to ask about a course being in My
+  // courses, so there is no dialog in the way.
+  const addToMyCourses = () => {
+    saveEnrollment(userId, id)
     navigate(`${location.pathname}${location.search}`, {
       replace: true,
       state: flashState('Added to My courses', title),
@@ -106,8 +104,8 @@ export default function CoursePage() {
               </>
             ) : (
               <>
-                <Button variant="secondary" onClick={openDialog}>
-                  Enroll
+                <Button variant="secondary" onClick={addToMyCourses}>
+                  Add to My courses
                 </Button>
                 <StartPracticeButton
                   courseId={id}
@@ -155,13 +153,6 @@ export default function CoursePage() {
           </div>
         </>
       )}
-
-      <EnrollDialog
-        open={dialogOpen}
-        courseTitle={title}
-        onClose={() => setDialogOpen(false)}
-        onEnroll={handleEnroll}
-      />
     </div>
   )
 }

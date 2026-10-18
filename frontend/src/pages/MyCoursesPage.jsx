@@ -3,9 +3,9 @@
  *
  * The courses a student has actually added, and what they know about each one.
  * Nothing is listed here that they did not enroll in, and every figure on a card
- * comes from their own answers: the goal and exam date they set, where they last
- * practised, how much of the course they have covered, and the estimated mastery
- * with the confidence behind it.
+ * comes from their own answers: where they last practised, how much of the
+ * course they have covered, and the estimated mastery with the confidence
+ * behind it.
  *
  * A course with no content yet, or with no answers yet, says so in words rather
  * than showing a zero it cannot back up. The empty state is the honest one: if
@@ -50,7 +50,7 @@ function bucketOf(stats) {
   return 'in_progress'
 }
 
-function CourseCard({ course, entry, stats, last, onOpen }) {
+function CourseCard({ course, stats, last, onOpen }) {
   const status = statusFor(stats?.mastery?.value ?? null)
   const StatusIcon = status.icon
   const coveragePct = stats?.coverage == null ? 0 : Math.round(stats.coverage * 100)
@@ -65,13 +65,6 @@ function CourseCard({ course, entry, stats, last, onOpen }) {
       >
         <h3 className="text-[15px] font-semibold leading-snug text-ink">{course.title}</h3>
       </button>
-
-      {(entry?.goal || entry?.examDate) && (
-        <div className="mt-2 space-y-0.5 text-xs text-muted">
-          {entry?.goal && <p>Goal: <span className="text-ink">{entry.goal}</span></p>}
-          {entry?.examDate && <p>Exam: <span className="text-ink">{entry.examDate}</span></p>}
-        </div>
-      )}
 
       <div className="mt-3 text-xs text-muted">
         {last ? (
@@ -151,13 +144,12 @@ export default function MyCoursesPage() {
             id: courseId,
             title: entry?.title ?? sentenceCase(courseId),
           },
-          entry: enrollments.courses[courseId] ?? {},
           stats,
           last: lastPractised(tree, savedSessions, courseId),
           bucket: bucketOf(stats),
         }
       }),
-    [enrolledIds, courseById, treeById, progress, enrollments, savedSessions]
+    [enrolledIds, courseById, treeById, progress, savedSessions]
   )
 
   const counts = useMemo(
@@ -181,8 +173,7 @@ export default function MyCoursesPage() {
         Your courses and what they know
       </h1>
       <p className="mt-1 max-w-2xl text-sm text-muted">
-        The subjects you have added, with the goal you set and the progress your answers have
-        produced.
+        The subjects you have added, with the progress your answers have produced.
       </p>
 
       {rows.length > 0 && (
@@ -204,7 +195,6 @@ export default function MyCoursesPage() {
                 <CourseCard
                   key={row.course.id}
                   course={row.course}
-                  entry={row.entry}
                   stats={row.stats}
                   last={row.last}
                   onOpen={(id) => navigate(`/course/${id}`)}
