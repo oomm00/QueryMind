@@ -1,10 +1,10 @@
 /**
  * conceptStatus — one vocabulary for how a concept is going.
  *
- * Status is derived only from what the lessonProgress store can measure: the
- * share of check answers in the concept's lessons that were correct. A concept
- * whose lessons have no answered checks has no estimate at all and says
- * "No mastery estimate" rather than inventing a number.
+ * Status is derived only from estimated mastery (lib/mastery.js): the mean of
+ * the concept's Bloom levels that have scored answers behind them. A concept
+ * with no scored answer has no estimate at all, and every surface says "No
+ * estimate" rather than inventing a 0%.
  *
  * Every status carries an icon, a label and a tone, and the icon is never the
  * only signal: callers render the label next to it, so status never depends on
@@ -80,7 +80,7 @@ const BANDS = [
   [0, 'needs-support'],
 ]
 
-/** @param {number|null} mastery share of checks answered correctly, or null */
+/** @param {number|null} mastery estimated mastery 0–1, or null when there is none */
 export function statusFor(mastery) {
   if (mastery == null || Number.isNaN(mastery)) return STATUSES[NOT_STARTED]
   const band = BANDS.find(([floor]) => mastery >= floor)
@@ -89,15 +89,40 @@ export function statusFor(mastery) {
 
 /** "62% estimated mastery", or the sentence used when nothing is measured. */
 export function masteryLabel(mastery) {
-  if (mastery == null || Number.isNaN(mastery)) return 'No mastery estimate'
+  if (mastery == null || Number.isNaN(mastery)) return 'No estimate'
   return `${Math.round(mastery * 100)}% estimated mastery`
 }
 
-/** "Learning · 62% estimated mastery", or "No mastery estimate". */
+/** "Learning · 62% estimated mastery", or "No estimate". */
 export function statusLine(mastery) {
   const status = statusFor(mastery)
-  if (mastery == null || Number.isNaN(mastery)) return 'No mastery estimate'
+  if (mastery == null || Number.isNaN(mastery)) return 'No estimate'
   return `${status.label} · ${masteryLabel(mastery)}`
+}
+
+/**
+ * A topic's or a course's line: the roll-up over the concepts that have an
+ * estimate, always saying how many of how many that is.
+ *
+ * @param {{value: number, basedOn: number, of: number}|null} rollUp
+ */
+export function rollUpLine(rollUp) {
+  if (!rollUp) return 'No estimate'
+  const { value, basedOn, of } = rollUp
+  const based = `based on ${basedOn} of ${of} concept${of === 1 ? '' : 's'}`
+  return value == null ? 'No estimate' : `${statusLine(value)} · ${based}`
+}
+
+/**
+ * The confidence in an estimate, in words, with the evidence behind it:
+ * "Moderate confidence · 5 answers". A concept with nothing scored says so.
+ *
+ * @param {{count?: number, confidence?: {label: string}|null}|null} estimate
+ */
+export function confidenceLine(estimate) {
+  const count = Number(estimate?.count) || 0
+  if (!count || !estimate?.confidence) return 'No answers recorded yet'
+  return `${estimate.confidence.label} confidence · ${count} answer${count === 1 ? '' : 's'}`
 }
 
 const TONE_CLASS = {

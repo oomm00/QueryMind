@@ -5,6 +5,9 @@
  * and is graded here, from the authored `correctIndex`; a `short` answer is
  * written out and self-marked on the feedback page against the authored rubric.
  *
+ * A graded mcq is a scored answer, so it moves the concept's mastery estimate
+ * (lib/mastery.js) once; nothing else on this page does.
+ *
  * Every question carries the "Course bank" badge and names the concept, the
  * Bloom level and the difficulty it came from, so a student can always see where
  * it came from — and so can anyone checking the answer against the content file.
@@ -13,7 +16,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../context/SessionContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
+import { recordScore } from '../lib/masteryStore.js'
 import {
   BANK_SOURCE_LABEL,
   DIFFICULTY_LABELS,
@@ -32,6 +37,7 @@ import { IconArrowLeft, IconArrowRight } from '../components/ui/Icons'
 
 export default function QuestionPage() {
   const navigate = useNavigate()
+  const { userId } = useAuth()
   const {
     hasActiveSession,
     questions,
@@ -83,6 +89,16 @@ export default function QuestionPage() {
       ...result,
       timeTaken: elapsed(),
     })
+    // Mastery moves once per answered question: reading the feedback again, or
+    // re-answering in the same session, replaces the result rather than adding
+    // a second sample.
+    if (!answered) {
+      recordScore(userId, {
+        conceptId: currentQuestion.conceptId,
+        bloom: currentQuestion.bloom_level,
+        score: result.score,
+      })
+    }
     navigate('/practice/feedback')
   }
 

@@ -1,15 +1,17 @@
 /**
- * lessonProgress — per-session lesson completion and check-question results.
+ * lessonProgress — per-session lesson completion and the reader's own check answers.
  *
  * Kept in sessionStorage, so progress is scoped to the browser session and is
- * discarded when the tab closes. Completion and estimated mastery are tracked
- * as separate concerns:
+ * discarded when the tab closes. It holds two separate records:
  *
- *   completion         the lesson was read and marked complete
- *   estimated mastery  the share of check questions answered correctly so far
+ *   completed  the student marked the study note as reviewed
+ *   checks     a check answered inside the reader, so the reader can show the
+ *              verdict again when the lesson is re-opened
  *
- * Mastery is derived from the recorded check results rather than stored
- * alongside them, so the two can never disagree.
+ * Neither is mastery. Estimated mastery lives in lib/mastery.js and is stored per
+ * user by lib/masteryStore.js; only a scored answer in practice moves it, so the
+ * same check answered twice (once while reading, once in a session) cannot be
+ * counted two different ways.
  */
 
 import { useSyncExternalStore } from 'react'
@@ -93,20 +95,6 @@ export function recordCheck(lessonId, blockIndex, correct) {
 export function getCheckResult(lessonId, blockIndex) {
   const result = state.checks[lessonId]?.[String(blockIndex)]
   return typeof result === 'boolean' ? result : null
-}
-
-/** Share of a lesson's answered checks that were correct, or null if none. */
-export function getLessonMastery(lessonId) {
-  const results = Object.values(state.checks[lessonId] ?? {})
-  if (results.length === 0) return null
-  return results.filter(Boolean).length / results.length
-}
-
-/** Mean lesson mastery across a concept's lessons, or null if none answered. */
-export function getConceptMastery(lessonIds = []) {
-  const scores = lessonIds.map(getLessonMastery).filter((score) => score !== null)
-  if (scores.length === 0) return null
-  return scores.reduce((total, score) => total + score, 0) / scores.length
 }
 
 export function resetLessonProgress() {

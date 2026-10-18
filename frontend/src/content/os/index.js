@@ -287,6 +287,9 @@ export function getCourse(courseId = COURSE.id) {
       id: topic.id,
       title: topic.title,
       conceptCount: topic.conceptIds.length,
+      // The ids, so a topic's mastery roll-up can cover its concepts without
+      // loading every concept on an overview screen.
+      conceptIds: topic.conceptIds,
       lessonCount: topic.lessonIds.length,
       lessonIds: topic.lessonIds,
       resourceCount: topic.resourceCount,

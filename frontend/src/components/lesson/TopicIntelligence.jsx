@@ -1,10 +1,11 @@
 /**
  * TopicIntelligence — the right column of the lesson workspace.
  *
- * Only two figures here are measured: estimated mastery and recent practice,
- * both from the lessonProgress store for this browser session. Everything the
- * maths cannot support is shown as "no data yet" rather than invented, and each
- * derived row states the rule it uses in its hint.
+ * Estimated mastery is the only measured figure, and it comes from the answers
+ * given in practice (lib/mastery.js), with the evidence behind it stated. Review
+ * progress is kept separate and labelled as such. Everything the data cannot
+ * support is shown as "No estimate" or "—" rather than invented, and each derived
+ * row states the rule it uses in its hint.
  */
 
 import React, { useMemo } from 'react'
@@ -14,7 +15,11 @@ import { Badge } from '../ui/Badge'
 import { ProgressRing } from '../ui/ProgressRing'
 import { buttonClasses } from '../ui/Button'
 import { IconArrowRight, IconTarget } from '../ui/Icons'
-import { getConceptMastery, getLessonMastery, useLessonProgress } from '../../content/lessonProgress.js'
+import { useLessonProgress } from '../../content/lessonProgress.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { useMastery } from '../../lib/masteryStore.js'
+import { practiceLink } from '../../lib/practiceLink'
+import { confidenceLine } from '../map/conceptStatus'
 import { sentenceCase } from '../../lib/text'
 
 function formatWhen(iso) {
@@ -31,17 +36,6 @@ function formatWhen(iso) {
 
 function percent(value) {
   return value == null ? null : `${Math.round(value * 100)}%`
-}
-
-/**
- * Confidence is derived, not measured: it reports how much of the concept has
- * actually been assessed in this session. Nothing assessed reads as Low.
- */
-function confidenceFor(assessed, total) {
-  if (total === 0) return { label: 'Low', hint: 'This concept has no lessons yet' }
-  if (assessed === 0) return { label: 'Low', hint: 'No check answers recorded yet' }
-  if (assessed >= total) return { label: 'High', hint: `All ${total} lessons assessed` }
-  return { label: 'Medium', hint: `${assessed} of ${total} lessons assessed` }
 }
 
 function Row({ label, value, hint }) {
@@ -67,12 +61,14 @@ function Section({ title, children }) {
 
 export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigate }) {
   const progress = useLessonProgress()
+  const { userId } = useAuth()
+  const estimates = useMastery(userId)
 
   const lessons = concept?.lessons ?? []
-  const lessonIds = lessons.map((lesson) => lesson.id)
-  const mastery = getConceptMastery(lessonIds)
-  const assessed = lessonIds.filter((id) => getLessonMastery(id) !== null).length
-  const confidence = confidenceFor(assessed, lessonIds.length)
+  const estimate = concept ? estimates[concept.id] ?? null : null
+  const mastery = estimate?.value ?? null
+  const answers = Number(estimate?.count) || 0
+  const bloomLevels = estimate?.bloomCount ?? 0
 
   const reviewedAt = lessons
     .map((lesson) => progress.completed[lesson.id])
@@ -82,17 +78,17 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
 
   const concepts = useMemo(() => topic?.concepts ?? [], [topic])
 
-  // Weakest concept in the topic that has actually been assessed.
+  // Weakest concept in the topic that has actually been practised.
   const weakest = useMemo(() => {
     return concepts
       .map((item) => ({
         id: item.id,
         title: item.title,
-        mastery: getConceptMastery(item.lessons.map((lesson) => lesson.id)),
+        mastery: estimates[item.id]?.value ?? null,
       }))
       .filter((item) => item.mastery !== null)
       .sort((a, b) => a.mastery - b.mastery)[0]
-  }, [concepts])
+  }, [concepts, estimates])
 
   const issue =
     weakest && weakest.mastery < 0.6
@@ -127,7 +123,7 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
         <h2 className="text-sm font-semibold text-ink">Topic intelligence</h2>
       </div>
       <p className="mt-0.5 text-[11px] text-muted">
-        Estimates for this concept, from checks answered in this session.
+        Estimates for this concept, from the answers given in practice.
       </p>
 
       <div className="mt-4 flex items-center gap-3">
@@ -140,27 +136,35 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
         <div className="min-w-0">
           <p className="text-xs text-muted">Estimated mastery</p>
           <p className="text-sm font-medium text-ink">
-            {masteryPct == null ? 'Not measured yet' : `${masteryPct}% of checks correct`}
+            {masteryPct == null ? 'No estimate yet' : `${masteryPct}% estimated mastery`}
           </p>
           <p className="text-[11px] leading-snug text-muted">
             {masteryPct == null
-              ? 'Answer a check in this concept to start measuring.'
-              : 'Separate from completion — only check answers move this.'}
+              ? 'Answer a question in practice to start one.'
+              : 'Separate from completion — only scored answers move this.'}
           </p>
         </div>
       </div>
 
       <div className="mt-3">
-        <Row label="Confidence" value={confidence.label} hint={confidence.hint} />
         <Row
-          label="Assessment score"
-          value="—"
-          hint="Needs practice-session data, not connected yet"
+          label="Confidence"
+          value={estimate?.confidence?.label ?? 'None yet'}
+          hint={confidenceLine(estimate)}
         />
         <Row
-          label="Recent practice"
+          label="Answers recorded"
+          value={answers > 0 ? String(answers) : '—'}
+          hint={
+            answers > 0
+              ? `Across ${bloomLevels} Bloom level${bloomLevels === 1 ? '' : 's'}`
+              : 'Nothing answered in practice yet'
+          }
+        />
+        <Row
+          label="Last note reviewed"
           value={reviewedAt ? formatWhen(reviewedAt) : '—'}
-          hint={reviewedAt ? 'Last lesson marked reviewed' : 'Nothing reviewed in this session'}
+          hint={reviewedAt ? 'Completion, not mastery' : 'Nothing reviewed in this session'}
         />
         <Row
           label="Retention / recall"
@@ -168,6 +172,15 @@ export function TopicIntelligence({ courseId, topicId, topic, concept, onNavigat
           hint="Needs spaced-review history, not connected yet"
         />
       </div>
+
+      <Link
+        to={practiceLink({ topic: topicId, concept: concept?.id, count: 5 })}
+        onClick={onNavigate}
+        className={buttonClasses({ size: 'sm', className: 'mt-4 w-full' })}
+      >
+        Practice this concept
+        <IconArrowRight size={15} />
+      </Link>
 
       <div className="mt-4 space-y-4">
         <Section title="Prerequisites">

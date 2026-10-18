@@ -144,8 +144,8 @@ No empty state ever contains an invented question, URL or number.
 | --- | --- |
 | content files | `frontend/src/content/os/**` |
 | content loader (single read API) | `frontend/src/content/os/index.js` |
-| mastery | `frontend/src/lib/mastery.js` + `qm_progress_<userId>` |
-| completion (lessons reviewed, checks) | `frontend/src/content/lessonProgress.js` |
+| mastery | `frontend/src/lib/mastery.js` (pure) + `frontend/src/lib/masteryStore.js` (`qm_progress_<userId>` in localStorage) |
+| completion (lessons reviewed, reader check answers) | `frontend/src/content/lessonProgress.js` |
 | study material opened (completion only) | `frontend/src/content/studyMaterial.js` |
 | session state | `frontend/src/context/SessionContext.jsx` |
 | validator / links / import | `frontend/scripts/{validate-content,check-links,import-content}.mjs` |

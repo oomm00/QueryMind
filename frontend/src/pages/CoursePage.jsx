@@ -7,9 +7,10 @@
  * study material, or opens its knowledge graph. The study-material panel below
  * the topics carries the anchors those rows jump to, one section per topic.
  *
- * Mastery comes from answered questions and study-notes review from the
- * lessonProgress store; the catalog's own completion and mastery figures are not
- * used here, so nothing on this page is invented.
+ * Mastery is the estimate from scored practice answers (lib/mastery.js) and
+ * study-notes review comes from the lessonProgress store; the catalog's own
+ * completion and mastery figures are not used here, so nothing on this page is
+ * invented — a topic with no scored answer says "No estimate".
  *
  * A catalog entry whose content has not been written yet, or an id that is not in
  * the catalog at all, says so instead of rendering an empty course.
@@ -20,7 +21,10 @@ import { Link, useParams } from 'react-router-dom'
 import { useCatalog } from '../hooks/useCatalog'
 import { useCourse } from '../hooks/useCourse'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
-import { getConceptMastery, useLessonProgress } from '../content/lessonProgress.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { useLessonProgress } from '../content/lessonProgress.js'
+import { rollUp } from '../lib/mastery.js'
+import { useMastery } from '../lib/masteryStore.js'
 import { practiceLink } from '../lib/practiceLink'
 import { sentenceCase } from '../lib/text'
 import { Button, buttonClasses } from '../components/ui/Button'
@@ -31,7 +35,7 @@ import { ProgressLine } from '../components/ui/ProgressLine'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorState } from '../components/ui/ErrorState'
 import { Skeleton } from '../components/ui/Skeleton'
-import { statusFor, statusLine, toneClass } from '../components/map/conceptStatus'
+import { rollUpLine, statusFor, toneClass } from '../components/map/conceptStatus'
 import { TopicStudyMaterial } from '../components/content/TopicStudyMaterial'
 import { IconArrowRight, IconLearning, IconMap, IconSearch } from '../components/ui/Icons'
 
@@ -55,15 +59,16 @@ function topicCounts(topic) {
   }
 }
 
-function TopicRow({ courseId, topic, progress }) {
+function TopicRow({ courseId, topic, progress, estimatesById }) {
   const lessonIds = topic.lessonIds ?? []
   const counts = topicCounts(topic)
-  // getConceptMastery takes any set of lesson ids, so a topic reuses it.
-  const mastery = getConceptMastery(lessonIds)
+  // A topic rolls up over the concepts that have an estimate, and says how many.
+  const topicMastery = rollUp(estimatesById, topic.conceptIds ?? [])
+  const mastery = topicMastery?.value ?? null
   const status = statusFor(mastery)
   const StatusIcon = status.icon
   const reviewed = reviewedIn(lessonIds, progress.completed)
-  const started = reviewed > 0 || mastery !== null
+  const started = reviewed > 0 || topicMastery !== null
   const percent = lessonIds.length ? Math.round((reviewed / lessonIds.length) * 100) : 0
 
   return (
@@ -112,7 +117,7 @@ function TopicRow({ courseId, topic, progress }) {
 
       <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
         <StatusIcon size={14} aria-hidden="true" className={`shrink-0 ${toneClass(status.tone)}`} />
-        {statusLine(mastery)}
+        {rollUpLine(topicMastery)}
       </p>
     </li>
   )
@@ -133,7 +138,9 @@ function CourseSkeleton() {
 
 export default function CoursePage() {
   const { id } = useParams()
+  const { userId } = useAuth()
   const progress = useLessonProgress()
+  const estimates = useMastery(userId)
   const { data: course, isLoading, isError, error, refetch } = useCourse(id)
   const { data: catalog, isLoading: catalogLoading } = useCatalog()
 
@@ -166,7 +173,9 @@ export default function CoursePage() {
   const courseId = course?.id ?? id
   const lessonIds = topics.flatMap((topic) => topic.lessonIds ?? [])
   const reviewed = reviewedIn(lessonIds, progress.completed)
-  const mastery = getConceptMastery(lessonIds)
+  const conceptIds = topics.flatMap((topic) => topic.conceptIds ?? [])
+  const courseMastery = rollUp(estimates, conceptIds)
+  const mastery = courseMastery?.value ?? null
   const status = statusFor(mastery)
   const StatusIcon = status.icon
   const completionPct = lessonIds.length ? Math.round((reviewed / lessonIds.length) * 100) : 0
@@ -176,7 +185,7 @@ export default function CoursePage() {
   // Practice starts where the course does: its first topic that has questions.
   const practiceTopic =
     topics.find((topic) => topicCounts(topic).questions > 0) ?? topics[0] ?? null
-  const started = reviewed > 0 || mastery !== null
+  const started = reviewed > 0 || courseMastery !== null
   const primary = practiceTopic
     ? {
         to: practiceLink({ topic: practiceTopic.id }),
@@ -248,11 +257,12 @@ export default function CoursePage() {
               <ProgressLine className="mt-1.5" percentage={completionPct} />
               <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
                 <StatusIcon size={14} aria-hidden="true" className={`shrink-0 ${toneClass(status.tone)}`} />
-                {statusLine(mastery)}
+                {rollUpLine(courseMastery)}
               </p>
               <p className="mt-1 text-[11px] leading-snug text-muted">
-                Mastery is the share of answered checks that were correct, so a course with no
-                answered checks has no estimate yet — reviewing a study note never changes it.
+                Mastery is estimated from the answers given in practice, one score per answered
+                question. A topic or the course as a whole only covers the concepts that have been
+                answered — reviewing a study note never changes any of it.
               </p>
             </div>
           </PanelLarge>
@@ -264,7 +274,13 @@ export default function CoursePage() {
             </p>
             <ol className="mt-2 divide-y divide-line">
               {topics.map((topic) => (
-                <TopicRow key={topic.id} courseId={courseId} topic={topic} progress={progress} />
+                <TopicRow
+                  key={topic.id}
+                  courseId={courseId}
+                  topic={topic}
+                  progress={progress}
+                  estimatesById={estimates}
+                />
               ))}
             </ol>
           </PanelLarge>

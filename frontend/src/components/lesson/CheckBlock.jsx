@@ -2,9 +2,10 @@
  * CheckBlock — "Check your understanding".
  *
  * Radio options, a "Check answer" action, then the verdict and the explanation.
- * The result is recorded through the lessonProgress store, which feeds the
- * estimated-mastery figures in the Topic intelligence panel. Marking a lesson
- * reviewed is a separate action on the reader and does not touch mastery.
+ * The result is kept in the lessonProgress store so the reader can show it again
+ * when the lesson is re-opened. It does not move mastery: mastery comes from the
+ * scored answers of a practice session (lib/mastery.js), so the same check
+ * answered here and later in a session is never counted twice.
  */
 
 import React, { useState } from 'react'

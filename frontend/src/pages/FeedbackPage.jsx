@@ -13,7 +13,8 @@
  * attempt endpoint instead, and its evaluation is shown as the backend's.
  *
  * The page ends with the concept's study material, because the next useful thing
- * after a wrong answer is usually the reading behind it.
+ * after a wrong answer is usually the reading behind it. Marking a short answer
+ * is what turns it into a scored answer, so that is the moment mastery moves.
  */
 
 import React, { useEffect, useState } from 'react'
@@ -23,6 +24,7 @@ import { isMocked } from '../api/mocks/config.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
+import { recordScore } from '../lib/masteryStore.js'
 import { BANK_SOURCE_LABEL, rubricScore } from '../content/questionBank.js'
 import { sentenceCase } from '../lib/text'
 import { Badge } from '../components/ui/Badge'
@@ -124,6 +126,15 @@ export default function FeedbackPage() {
       total: mark.total,
       metIndexes,
     })
+    // The first mark of this answer is the scored sample; adjusting it later
+    // does not count as new evidence.
+    if (!result?.selfMarked) {
+      recordScore(userId, {
+        conceptId: currentQuestion.conceptId,
+        bloom: currentQuestion.bloom_level,
+        score: mark.score,
+      })
+    }
   }
 
   const submitToBackend = async () => {
@@ -148,6 +159,13 @@ export default function FeedbackPage() {
         selfMarked: false,
         gradedBy: 'backend',
       })
+      if (!result?.gradedBy) {
+        recordScore(userId, {
+          conceptId: currentQuestion.conceptId,
+          bloom: currentQuestion.bloom_level,
+          score: Number(data?.score) || 0,
+        })
+      }
     } catch (err) {
       setRemoteState('error')
       setError(err.message ?? 'The submission could not be evaluated')

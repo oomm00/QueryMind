@@ -1,12 +1,12 @@
 /**
  * SelectedConceptPanel — the "Selected concept" column beside the graph.
  *
- * Only two figures here are measured: estimated mastery and the most recent
- * assessment, both from the lessonProgress store for this browser session.
- * Everything the data cannot support reads as "No mastery estimate" or "—"
- * rather than an invented number, and the panel says which of the two it is
- * showing, because mastery and completion are separate concerns: finishing a
- * lesson never moves mastery, only answered checks do.
+ * The one figure that is measured here is estimated mastery, and it comes from
+ * the answers the student has given in practice (lib/mastery.js): the mean of
+ * the concept's Bloom levels with scored answers. Everything the data cannot
+ * support reads as "No estimate" or "—" rather than an invented number, and the
+ * panel says how much evidence is behind the figure, because mastery and
+ * completion are separate concerns: reading a study note never moves mastery.
  *
  * Study material sits at the bottom, after the next steps: it is optional
  * reading, and a concept with no links says so instead of looking broken.
@@ -16,9 +16,8 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { Panel } from '../ui/Panel'
 import { Badge } from '../ui/Badge'
-import { getLessonMastery, useLessonProgress } from '../../content/lessonProgress.js'
 import { sentenceCase } from '../../lib/text'
-import { badgeTone, statusFor, toneClass } from './conceptStatus'
+import { badgeTone, confidenceLine, statusFor, toneClass } from './conceptStatus'
 import { ConceptActions } from './ConceptActions'
 import { StudyMaterial } from '../content/StudyMaterial'
 
@@ -60,33 +59,25 @@ export function SelectedConceptPanel({
   topicId,
   topic,
   concept,
-  mastery = null,
-  masteryById = {},
+  estimate = null,
+  estimatesById = {},
   onSelect,
   className,
 }) {
-  const progress = useLessonProgress()
-
-  const lessons = concept?.lessons ?? []
+  const mastery = estimate?.value ?? null
   const status = statusFor(mastery)
   const StatusIcon = status.icon
   const percent = mastery == null || Number.isNaN(mastery) ? null : Math.round(mastery * 100)
 
-  // The newest answered check in this concept is the "recent assessment"; the
-  // timestamp is the lesson's own completion time, which is all we record.
-  const assessed = lessons
-    .map((lesson) => ({ lesson, mastery: getLessonMastery(lesson.id) }))
-    .filter((row) => row.mastery !== null)
-  const recent =
-    [...assessed].sort((a, b) =>
-      String(progress.completed[b.lesson.id] ?? '').localeCompare(
-        String(progress.completed[a.lesson.id] ?? '')
-      )
-    )[0] ?? null
+  // How many answers, and when the last one landed: the evidence behind the
+  // figure, kept next to it so a percentage is never read as more than it is.
+  const answers = Number(estimate?.count) || 0
+  const answeredAt = estimate?.updatedAt ? formatWhen(estimate.updatedAt) : null
+  const bloomLevels = estimate?.bloomCount ?? 0
 
   const prerequisites = (concept?.prerequisites ?? []).map((item) => ({
     ...item,
-    mastery: masteryById[item.id] ?? null,
+    mastery: estimatesById[item.id]?.value ?? null,
   }))
 
   const related = (topic?.concepts ?? []).filter(
@@ -130,24 +121,18 @@ export function SelectedConceptPanel({
           <div className="mt-3">
             <Row
               label="Estimated mastery"
-              value={percent == null ? 'No mastery estimate' : `${percent}%`}
-              hint={
-                percent == null
-                  ? 'No checks answered in this concept yet'
-                  : 'Share of answered checks that were correct'
-              }
+              value={percent == null ? 'No estimate' : `${percent}%`}
+              hint={percent == null ? 'Nothing answered in practice yet' : confidenceLine(estimate)}
             />
             <Row
-              label="Recent assessment"
-              value={recent ? `${Math.round(recent.mastery * 100)}% correct` : '—'}
+              label="Answers recorded"
+              value={answers > 0 ? String(answers) : '—'}
               hint={
-                recent
-                  ? `${sentenceCase(recent.lesson.title)}${
-                      formatWhen(progress.completed[recent.lesson.id])
-                        ? ` · ${formatWhen(progress.completed[recent.lesson.id])}`
-                        : ''
+                answers > 0
+                  ? `Across ${bloomLevels} Bloom level${bloomLevels === 1 ? '' : 's'}${
+                      answeredAt ? ` · last ${answeredAt}` : ''
                     }`
-                  : 'Nothing assessed in this session'
+                  : 'Practice answers are what mastery is built from'
               }
             />
             <Row
@@ -199,9 +184,9 @@ export function SelectedConceptPanel({
                       >
                         {sentenceCase(item.title)}
                         <span className="ml-1 text-[11px] text-muted">
-                          {masteryById[item.id] == null
+                          {estimatesById[item.id]?.value == null
                             ? 'no estimate'
-                            : `${Math.round(masteryById[item.id] * 100)}%`}
+                            : `${Math.round(estimatesById[item.id].value * 100)}%`}
                         </span>
                       </button>
                     </li>
@@ -240,9 +225,9 @@ export function SelectedConceptPanel({
           </div>
 
           <p className="mt-4 border-t border-line pt-3 text-[11px] leading-snug text-muted">
-            Mastery is the share of checks answered correctly in this session — marking a lesson as
-            reviewed never changes it. A concept whose lessons are still to be written stays at no
-            estimate.
+            Mastery is estimated from the answers you give in practice, one score per answered
+            question — reading a study note never changes it. A concept with nothing answered yet
+            has no estimate, and a topic's figure only covers the concepts that have one.
           </p>
         </>
       )}

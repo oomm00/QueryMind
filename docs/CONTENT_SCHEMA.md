@@ -101,9 +101,9 @@ concept = {
 }
 ```
 
-`getCourse()` also reports per-topic `conceptCount`, `lessonCount`,
+`getCourse()` also reports per-topic `conceptCount`, `conceptIds`, `lessonCount`,
 `resourceCount` and `questionCount` so overview screens never have to load every
-concept to count things.
+concept to count things or to roll up mastery over the concepts a topic covers.
 
 ### Resource (study material, optional)
 

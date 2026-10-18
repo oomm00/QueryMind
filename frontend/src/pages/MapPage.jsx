@@ -12,8 +12,8 @@
  * the reading-order footnote. Beside it sits the selected concept.
  *
  * Positions come from dagre (lib/graphLayout) — nothing is hand-placed — and
- * mastery is the measured share of check answers, so a concept whose lessons
- * have no answered checks reads "No mastery estimate" rather than a number.
+ * mastery is the estimate from scored practice answers (lib/mastery.js), so a
+ * concept with no scored answers reads "No estimate" rather than a number.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -36,7 +36,8 @@ import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { useDocumentTheme } from '../hooks/useDocumentTheme'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTopic } from '../hooks/useTopic'
-import { getConceptMastery, useLessonProgress } from '../content/lessonProgress.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { useMastery } from '../lib/masteryStore.js'
 import { NODE_HEIGHT, NODE_WIDTH, layoutGraph } from '../lib/graphLayout'
 import { sentenceCase } from '../lib/text'
 import { ConceptList } from '../components/map/ConceptList'
@@ -174,7 +175,8 @@ function StatusLegend() {
 
 function TopicGraph({ courseId, topicId, topic }) {
   const concepts = topic.concepts
-  const progress = useLessonProgress()
+  const { userId } = useAuth()
+  const estimates = useMastery(userId)
   const theme = useDocumentTheme()
   const isNarrow = !useMediaQuery('(min-width: 768px)')
 
@@ -205,10 +207,10 @@ function TopicGraph({ courseId, topicId, topic }) {
   const masteryByConcept = useMemo(() => {
     const map = {}
     for (const concept of concepts) {
-      map[concept.id] = getConceptMastery(concept.lessons.map((lesson) => lesson.id))
+      map[concept.id] = estimates[concept.id]?.value ?? null
     }
     return map
-  }, [concepts, progress])
+  }, [concepts, estimates])
 
   // Edges come from the concepts' own prerequisites. A prerequisite living in
   // another topic is not a node here, so it is left out of the graph (the side
@@ -559,8 +561,8 @@ function TopicGraph({ courseId, topicId, topic }) {
               topicId={topicId}
               topic={topic}
               concept={selectedConcept}
-              mastery={selectedConcept ? masteryByConcept[selectedConcept.id] ?? null : null}
-              masteryById={masteryByConcept}
+              estimate={selectedConcept ? estimates[selectedConcept.id] ?? null : null}
+              estimatesById={estimates}
               onSelect={selectConcept}
             />
           </aside>
