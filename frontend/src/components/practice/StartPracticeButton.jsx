@@ -20,7 +20,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { usePracticeData } from '../../hooks/usePracticeData.js'
 import { usePracticeContext } from '../../hooks/usePracticeContext.js'
 import { buildSession, scopeQuestionCount, DEFAULT_SESSION_COUNT } from '../../lib/buildSession.js'
-import { newSession, saveSession } from '../../lib/sessions.js'
+import { newSession, holdDraft } from '../../lib/sessions.js'
 import { enroll, isEnrolled, useEnrollments } from '../../lib/enrollment.js'
 import { contentCourseIds } from '../../content/practiceBank.js'
 import { flashState } from '../routing/FlashHost.jsx'
@@ -78,7 +78,9 @@ export function StartPracticeButton({
       questionIds: built.questions.map((question) => question.question_id),
       note: built.note,
     })
-    saveSession(userId, session)
+    // Drawn, not yet stored: the session reaches storage with its first answer,
+    // so the recent list never holds a row that says "0 answered".
+    holdDraft(session)
     navigate(
       `/practice/${session.id}`,
       added ? { state: flashState(flashTitle, flashDescription) } : undefined

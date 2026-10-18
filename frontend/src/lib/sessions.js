@@ -12,6 +12,11 @@
  * resolved against them and the stored record stays small. The last 20 sessions
  * are kept, newest first.
  *
+ * It is not written at all until its first answer is: an empty session has
+ * nothing to resume, and the recent list must never show "0 answered". Until
+ * then the practice page holds it (see holdDraft) and saves the whole record
+ * with that first answer. Each answer carries the moment it was given.
+ *
  * Mastery is not written here. Only scored answers move it, and the results
  * page is what turns a submitted mcq (or a marked short answer) into a score —
  * see recordScore in masteryStore.js.
@@ -126,6 +131,33 @@ export function saveSession(userId, session) {
   return session
 }
 
+// ── Sessions with no answer yet ─────────────────────────────
+
+/**
+ * A session is not written until its first answer is: the recent list should
+ * never offer a row that reads "0 answered". Until then the practice page holds
+ * it here, in memory, and saves the whole record (flags and all) with the first
+ * answer. A refresh before that loses only an empty session.
+ */
+const drafts = new Map()
+
+export function holdDraft(session) {
+  if (!session?.id) return null
+  drafts.delete(session.id)
+  drafts.set(session.id, session)
+  // Hold at most twenty, the same as the store keeps.
+  while (drafts.size > LIMIT) drafts.delete(drafts.keys().next().value)
+  return session
+}
+
+export function getDraft(id) {
+  return drafts.get(id) ?? null
+}
+
+export function releaseDraft(id) {
+  drafts.delete(id)
+}
+
 export function getSession(userId, id) {
   return readSessions(userId).sessions.find((session) => session.id === id) ?? null
 }
@@ -147,8 +179,11 @@ export function patchSession(userId, id, patch) {
 
 export function recordAnswer(userId, id, questionId, answer) {
   if (!questionId) return null
+  // An answer carries the moment it was given, so the session keeps its own
+  // timeline rather than only the order the questions were asked in.
+  const stamped = { ...answer, at: new Date().toISOString() }
   return patchSession(userId, id, (session) => ({
-    answers: { ...session.answers, [questionId]: answer },
+    answers: { ...session.answers, [questionId]: stamped },
   }))
 }
 

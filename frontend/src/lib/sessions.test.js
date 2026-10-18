@@ -80,9 +80,18 @@ describe('writes to one session', () => {
     recordAnswer(USER, 's1', 'q2', { text: 'hello' })
 
     expect(getSession(USER, 's1').answers).toEqual({
-      q1: { selected: 1 },
-      q2: { text: 'hello' },
+      q1: { selected: 1, at: expect.any(String) },
+      q2: { text: 'hello', at: expect.any(String) },
     })
+  })
+
+  it('stamps each answer with the moment it was given', () => {
+    recordAnswer(USER, 's1', 'q1', { selected: 1 })
+    recordAnswer(USER, 's1', 'q2', { text: 'hello' })
+    const [q1, q2] = ['q1', 'q2'].map((id) => getSession(USER, 's1').answers[id])
+
+    expect(Number.isNaN(Date.parse(q1.at))).toBe(false)
+    expect(Date.parse(q2.at)).toBeGreaterThanOrEqual(Date.parse(q1.at))
   })
 
   it('clears one answer without touching the rest', () => {
@@ -90,7 +99,7 @@ describe('writes to one session', () => {
     recordAnswer(USER, 's1', 'q2', { text: 'hello' })
     clearAnswer(USER, 's1', 'q1')
 
-    expect(getSession(USER, 's1').answers).toEqual({ q2: { text: 'hello' } })
+    expect(getSession(USER, 's1').answers).toEqual({ q2: { text: 'hello', at: expect.any(String) } })
   })
 
   it('toggles a flag on and off', () => {

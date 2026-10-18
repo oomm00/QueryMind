@@ -6,10 +6,10 @@
  * figures. Everything that could give the game away is held back until the
  * results page on purpose.
  *
- * The session is stored, not held in the tab, so every answer, flag and word of
- * a short answer is written the moment it changes, and opening the same URL
- * again - after a refresh, or tomorrow - resumes at the first question that has
- * no answer yet.
+ * The session reaches storage with its first answer, so the recent list never
+ * lists an empty one; from then on every answer, flag and word of a short answer
+ * is written the moment it changes, and opening the same URL again - after a
+ * refresh, or tomorrow - resumes at the first question that has no answer yet.
  *
  * Mastery moves at submit: an mcq is scored then, once, keyed by the session and
  * the question (see masteryStore.js). A short answer is scored later, when the
@@ -22,7 +22,12 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import {
   clearAnswer,
+  getDraft,
+  getSession,
+  holdDraft,
   recordAnswer,
+  releaseDraft,
+  saveSession,
   submitSession,
   toggleFlag,
   useStoredSession,
@@ -58,7 +63,11 @@ export default function SessionPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
   const { userId } = useAuth()
-  const session = useStoredSession(userId, sessionId)
+  const storedSession = useStoredSession(userId, sessionId)
+  const [draft, setDraft] = useState(() => getDraft(sessionId))
+  // The session reaching storage is the first answer's job: until then it lives
+  // here, so the recent list never offers a row that says "0 answered".
+  const session = storedSession ?? draft
 
   const questions = useMemo(
     () => resolveQuestions(session?.questionIds ?? []),
@@ -91,8 +100,18 @@ export default function SessionPage() {
     isAnswered(question, session?.answers?.[question.question_id])
   ).length
 
+  // The first answer is what writes the session; before that it is only held in
+  // memory, so the recent list never shows a session with nothing in it.
+  const startIfUnstored = () => {
+    if (getSession(userId, sessionId)) return
+    const held = getDraft(sessionId)
+    if (held) saveSession(userId, held)
+    releaseDraft(sessionId)
+  }
+
   const choose = (optionIndex) => {
     if (!current) return
+    startIfUnstored()
     recordAnswer(userId, sessionId, current.question_id, {
       type: 'mcq',
       selected: optionIndex,
@@ -101,17 +120,45 @@ export default function SessionPage() {
 
   const setText = (text) => {
     if (!current) return
+    startIfUnstored()
     recordAnswer(userId, sessionId, current.question_id, { type: 'short', text })
+  }
+
+  // Clearing and flagging before the first answer edit the held record; they are
+  // written with that answer rather than starting a session on their own.
+  const updateDraft = (updater) => {
+    setDraft((value) => {
+      const next = updater(value ?? getDraft(sessionId))
+      holdDraft(next)
+      return next
+    })
   }
 
   const clear = () => {
     if (!current) return
-    clearAnswer(userId, sessionId, current.question_id)
+    if (storedSession) {
+      clearAnswer(userId, sessionId, current.question_id)
+      return
+    }
+    updateDraft((value) => {
+      const answers = { ...value.answers }
+      delete answers[current.question_id]
+      return { ...value, answers }
+    })
   }
 
   const flag = () => {
     if (!current) return
-    toggleFlag(userId, sessionId, current.question_id)
+    if (storedSession) {
+      toggleFlag(userId, sessionId, current.question_id)
+      return
+    }
+    updateDraft((value) => ({
+      ...value,
+      flagged: value.flagged.includes(current.question_id)
+        ? value.flagged.filter((id) => id !== current.question_id)
+        : [...value.flagged, current.question_id],
+    }))
   }
 
   const goPrevious = () => setIndex((value) => Math.max(0, value - 1))
@@ -146,6 +193,14 @@ export default function SessionPage() {
   })
 
   const submit = () => {
+    // A session only reaches storage with its first answer, so an unanswered one
+    // has nothing to submit and nothing to keep.
+    if (!storedSession) {
+      setConfirmOpen(false)
+      navigate('/practice')
+      return
+    }
+
     // Score the mcqs now, once each: the store remembers the (session, question)
     // pair, so submitting twice cannot count an answer twice.
     for (const question of questions) {

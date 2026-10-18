@@ -22,6 +22,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { addScore, estimatesFrom } from './mastery.js'
+import { recordMasterySnapshot, resetHistory } from './masteryHistory.js'
 
 const STORAGE_KEY_PREFIX = 'qm_progress_'
 const VERSION = 1
@@ -124,6 +125,8 @@ export function recordScore(
     applied,
   }
   writeProgress(userId, next)
+  // The day's snapshot is rewritten here, beside the write it describes.
+  recordMasterySnapshot(userId, next.concepts)
   emit(userId)
   return entry
 }
@@ -136,6 +139,7 @@ export function resetMastery(userId) {
       // Nothing to clean up if storage is unavailable.
     }
   }
+  resetHistory(userId)
   emit(userId)
 }
 
