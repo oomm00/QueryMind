@@ -17,9 +17,10 @@
  */
 
 import React from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCatalog } from '../hooks/useCatalog'
 import { useCourse } from '../hooks/useCourse'
+import { useTopic } from '../hooks/useTopic'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLessonProgress } from '../content/lessonProgress.js'
@@ -35,7 +36,8 @@ import { ProgressLine } from '../components/ui/ProgressLine'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorState } from '../components/ui/ErrorState'
 import { Skeleton } from '../components/ui/Skeleton'
-import { rollUpLine, statusFor, toneClass } from '../components/map/conceptStatus'
+import { REVIEW_BAND, confidenceLine, rollUpLine, statusFor, statusLine, toneClass } from '../components/map/conceptStatus'
+import { ConceptMiniMap } from '../components/map/ConceptMiniMap'
 import { TopicStudyMaterial } from '../components/content/TopicStudyMaterial'
 import { IconArrowRight, IconLearning, IconMap, IconSearch } from '../components/ui/Icons'
 
@@ -56,6 +58,35 @@ function topicCounts(topic) {
     concepts: topic.conceptCount ?? 0,
     resources: topic.resourceCount ?? 0,
     questions: topic.questionCount ?? 0,
+  }
+}
+
+/**
+ * The concept to practise next in a topic: the weakest estimate first, then one
+ * that has never been practised, and only then the first in the bank. Each case
+ * comes with the reason it was chosen, so the card never guesses silently.
+ */
+function nextConceptOf(concepts = [], estimatesById = {}) {
+  const withQuestions = concepts.filter(
+    (concept) => (concept.questions ?? []).length + (concept.lessonQuestions ?? []).length > 0
+  )
+  const pool = withQuestions.length > 0 ? withQuestions : concepts
+  if (pool.length === 0) return null
+
+  const weakest = pool
+    .filter((concept) => {
+      const value = estimatesById[concept.id]?.value
+      return value != null && value < REVIEW_BAND
+    })
+    .sort((a, b) => estimatesById[a.id].value - estimatesById[b.id].value)[0]
+  if (weakest) return { concept: weakest, reason: 'Your lowest estimate in this topic.' }
+
+  const unpractised = pool.find((concept) => estimatesById[concept.id] == null)
+  if (unpractised) return { concept: unpractised, reason: 'Not practised yet.' }
+
+  return {
+    concept: pool[0],
+    reason: 'Every concept with questions already has an estimate — keep it fresh.',
   }
 }
 
@@ -138,11 +169,21 @@ function CourseSkeleton() {
 
 export default function CoursePage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { userId } = useAuth()
   const progress = useLessonProgress()
   const estimates = useMastery(userId)
   const { data: course, isLoading, isError, error, refetch } = useCourse(id)
   const { data: catalog, isLoading: catalogLoading } = useCatalog()
+
+  // The topic practice starts from, loaded ahead of the guards below so the
+  // graph layout can be fetched with the course itself. `enabled` inside
+  // useTopic keeps this idle until there is an id to ask for.
+  const practiceTopicId =
+    (course?.topics ?? []).find((topic) => (topic.questionCount ?? 0) > 0)?.id ??
+    course?.topics?.[0]?.id ??
+    null
+  const { data: practiceTopicData } = useTopic(practiceTopicId, course?.id ?? id)
 
   const entry = Array.isArray(catalog) ? catalog.find((item) => item.id === id) ?? null : null
   const title = course?.title ?? entry?.title ?? sentenceCase(id)
@@ -193,6 +234,17 @@ export default function CoursePage() {
       }
     : null
 
+  // The concept the course suggests working on next, with its neighbourhood so
+  // the suggestion comes with context instead of a bare name.
+  const nextConcept = nextConceptOf(practiceTopicData?.concepts ?? [], estimates)
+  const nextConceptQuestions = nextConcept
+    ? (nextConcept.concept.questions ?? []).length +
+      (nextConcept.concept.lessonQuestions ?? []).length
+    : 0
+  const nextConceptEstimate = nextConcept ? estimates[nextConcept.concept.id] ?? null : null
+  const nextConceptStatus = statusFor(nextConceptEstimate?.value ?? null)
+  const NextConceptIcon = nextConceptStatus.icon
+
   return (
     <div>
       <PageHeader
@@ -230,13 +282,76 @@ export default function CoursePage() {
         </PanelLarge>
       ) : (
         <div className="space-y-4">
+          {nextConcept && practiceTopic && (
+            <PanelLarge>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-ink">Next concept to practise</h2>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {sentenceCase(nextConcept.concept.title)} · {sentenceCase(practiceTopic.title)} —{' '}
+                    {nextConcept.reason}
+                  </p>
+                </div>
+                {nextConceptQuestions > 0 && (
+                  <Badge tone="neutral" label={plural(nextConceptQuestions, 'question')} />
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start">
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 text-xs text-muted">
+                    <NextConceptIcon
+                      size={14}
+                      aria-hidden="true"
+                      className={`shrink-0 ${toneClass(nextConceptStatus.tone)}`}
+                    />
+                    {statusLine(nextConceptEstimate?.value ?? null)}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-snug text-muted">
+                    {confidenceLine(nextConceptEstimate)}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Link
+                      to={practiceLink({
+                        topic: practiceTopic.id,
+                        concept: nextConcept.concept.id,
+                        count: 5,
+                      })}
+                      className={buttonClasses({ size: 'sm' })}
+                    >
+                      <IconArrowRight size={15} />
+                      Practice this concept
+                    </Link>
+                    <a
+                      href={`#study-material-${practiceTopic.id}`}
+                      className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+                    >
+                      Study material
+                    </a>
+                  </div>
+                </div>
+
+                <div className="lg:w-[340px] lg:shrink-0">
+                  <ConceptMiniMap
+                    concepts={practiceTopicData?.concepts ?? []}
+                    concept={nextConcept.concept}
+                    estimatesById={estimates}
+                    onSelect={(conceptId) =>
+                      navigate(`/map/${courseId}/${practiceTopic.id}?concept=${conceptId}`)
+                    }
+                    graphTo={`/map/${courseId}/${practiceTopic.id}`}
+                  />
+                </div>
+              </div>
+            </PanelLarge>
+          )}
+
           <PanelLarge>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-sm font-semibold text-ink">Your progress</h2>
                 <p className="mt-0.5 text-xs text-muted">
-                  From the study notes you have reviewed and the checks you have answered in this
-                  session.
+                  Study-note review and estimated mastery, kept as separate measures.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">

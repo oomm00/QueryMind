@@ -17,7 +17,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   Background,
   BackgroundVariant,
@@ -181,7 +181,13 @@ function TopicGraph({ courseId, topicId, topic }) {
   const isNarrow = !useMediaQuery('(min-width: 768px)')
 
   const [view, setView] = useState(() => (isNarrow ? 'list' : 'graph'))
-  const [selectedId, setSelectedId] = useState(null)
+  // ?concept=<id> opens the graph with that concept selected — how the course
+  // overview hands over the concept its card is about.
+  const [searchParams] = useSearchParams()
+  const [selectedId, setSelectedId] = useState(() => {
+    const requested = searchParams.get('concept')
+    return requested && concepts.some((concept) => concept.id === requested) ? requested : null
+  })
   const [statusFilter, setStatusFilter] = useState('all')
   const [focusOn, setFocusOn] = useState(false)
   const [search, setSearch] = useState('')

@@ -67,6 +67,9 @@ export function statusById(id) {
   return STATUSES[id] ?? STATUSES[NOT_STARTED]
 }
 
+/** Estimated mastery at or above this reads as comfortable, not "to review". */
+export const REVIEW_BAND = 0.6
+
 /**
  * Where the bands sit. High to low, first match wins; these are the only
  * judgement call in the status model, kept in one place so they are easy to

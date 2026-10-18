@@ -19,6 +19,7 @@ import { Badge } from '../ui/Badge'
 import { sentenceCase } from '../../lib/text'
 import { badgeTone, confidenceLine, statusFor, toneClass } from './conceptStatus'
 import { ConceptActions } from './ConceptActions'
+import { ConceptMiniMap } from './ConceptMiniMap'
 import { StudyMaterial } from '../content/StudyMaterial'
 
 function formatWhen(iso) {
@@ -143,6 +144,15 @@ export function SelectedConceptPanel({
           </div>
 
           <div className="mt-4 space-y-4">
+            <Section title="Concept map">
+              <ConceptMiniMap
+                concepts={topic?.concepts ?? []}
+                concept={concept}
+                estimatesById={estimatesById}
+                onSelect={onSelect}
+              />
+            </Section>
+
             <Section title="Prerequisites">
               {prerequisites.length ? (
                 <ul className="space-y-1.5">
