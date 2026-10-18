@@ -309,4 +309,13 @@ export function buildSession(request = {}, data = {}) {
   }
 }
 
+/**
+ * How many questions a scope holds, whatever the level. Used to decide whether
+ * a Start button can be pressed at all: "no questions yet" is a fact about the
+ * scope, not about the band that happens to be selected.
+ */
+export function scopeQuestionCount(request = {}, data = {}) {
+  return dedupe(chooseScope(request, data).questions).length
+}
+
 export default buildSession
