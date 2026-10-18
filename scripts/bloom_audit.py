@@ -817,7 +817,6 @@ def main(argv: list[str] | None = None) -> int:
         description="Bloom alignment + quality audit (18 + 1 LLM calls)"
     )
     parser.add_argument("--label", required=True,
-                        choices=["before", "after", "after-fix"],
                         help="run label (also names the output file)")
     parser.add_argument("--output", default=None,
                         help="report path (default: /tmp/bloom_audit_<label>.json)")

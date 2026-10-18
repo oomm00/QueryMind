@@ -96,4 +96,8 @@ chroma_data/
 
 # Bloom audit raw question dumps (scripts/bloom_audit.py markdown output)
 scripts/bloom_audit_*.md
+scripts/bloom_audit_*.json
+# Stray one-off reports that must never be committed
+/BLOOM_AUDIT_REPORT.md
+/FINAL_REPORT.md
 
