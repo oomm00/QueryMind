@@ -15,6 +15,9 @@ Covered here:
    stable, machine-readable ``DUPLICATE_QUESTION`` code plus an actionable
    message ("try a different topic or Bloom level"), while non-duplicate
    validation failures keep the generic ``VALIDATION_ERROR`` code.
+4. ``GET /documents`` and ``GET /documents/topics`` expose exactly the fields
+   the Upload page reads (its document table and its subject/topic
+   suggestions); behavioural coverage lives in ``tests/test_documents_api.py``.
 
 Related contract fixes are covered next to their feature tests:
 - file-only multipart upload -> ``tests/test_ingestion_service.py``
@@ -25,6 +28,7 @@ Related contract fixes are covered next to their feature tests:
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -38,7 +42,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.main import create_app
 from app.models.base import Base
-from app.models.models import Question, User
+from app.models.models import Document, Question, User
 from app.schemas.schemas import GeneratedQuestion
 
 import app.models.models  # noqa: F401 — register models on Base.metadata
@@ -268,3 +272,37 @@ def test_non_duplicate_validation_failure_keeps_generic_code(authed_client, monk
 
     assert resp.status_code == 422
     assert resp.json()["code"] == "VALIDATION_ERROR"
+
+
+def test_document_read_endpoints_expose_the_upload_page_contract(authed_client, db_session):
+    """The Upload page reads these exact keys; renaming any of them breaks it."""
+    client, user = authed_client
+
+    row = Document(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        filename="deadlocks.md",
+        subject="OS",
+        topic="Deadlocks",
+        source_type="college",
+        status="ready",
+        chunk_count=5,
+    )
+    row.created_at = datetime(2026, 1, 1, 12, 0, 0)
+    db_session.add(row)
+    db_session.commit()
+
+    docs = client.get("/documents")
+    assert docs.status_code == 200
+    entry = docs.json()[0]
+    assert set(entry) == {
+        "document_id", "filename", "subject", "topic", "source_type",
+        "course", "status", "chunk_count", "created_at",
+    }
+    assert entry["document_id"] == str(row.id)
+    assert entry["filename"] == "deadlocks.md"
+    assert entry["chunk_count"] == 5
+
+    topics = client.get("/documents/topics")
+    assert topics.status_code == 200
+    assert topics.json() == [{"subject": "OS", "topics": ["Deadlocks"]}]
