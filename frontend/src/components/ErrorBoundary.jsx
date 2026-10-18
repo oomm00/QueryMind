@@ -4,6 +4,9 @@
  */
 
 import React, { Component } from 'react'
+import { Panel } from './ui/Panel'
+import { ErrorState } from './ui/ErrorState'
+import { Button } from './ui/Button'
 
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -29,18 +32,20 @@ export class ErrorBoundary extends Component {
   }
 
   renderFallback() {
+    const detail = this.state.error?.message
     return (
-      <div className="error-state text-center py-8">
-        <h3 className="text-2xl font-semibold text-rust mb-2">Something went wrong</h3>
-        <p className="text-muted mb-4">An unexpected error occurred.</p>
-        <button
-          type="button"
-          className="btn-quiet"
-          onClick={() => window.location.reload()}
-          aria-label="Reload page"
-        >
-          Reload
-        </button>
+      <div className="flex min-h-[60vh] items-center justify-center bg-page px-6 py-10">
+        <Panel className="w-full max-w-md p-5">
+          <ErrorState
+            title="Something went wrong"
+            message={detail || 'An unexpected error occurred.'}
+          />
+          <div className="mt-4 flex justify-center">
+            <Button variant="secondary" onClick={() => window.location.reload()}>
+              Reload
+            </Button>
+          </div>
+        </Panel>
       </div>
     )
   }

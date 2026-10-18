@@ -1,0 +1,21 @@
+{
+  "id": "lesson-page-table-walkthrough",
+  "title": "Page-table walkthrough",
+  "estMinutes": 10,
+  "source": "Official material",
+  "objectives": [
+    "Translate several addresses using one page table",
+    "Recognise an address whose page has no frame"
+  ],
+  "blocks": [
+    { "kind": "paragraph", "text": "Use this page table with a 4 KiB page size. Page 0 maps to frame 7, page 1 to frame 2, page 2 to frame 9, and page 3 to frame 5. Page 4 has no frame." },
+    { "kind": "heading", "text": "Three translations" },
+    { "kind": "paragraph", "text": "Virtual address 3,000 is below 4,096, so it is page 0 with offset 3,000. Frame 7 starts at 7 × 4,096 = 28,672, so the physical address is 28,672 + 3,000 = 31,672." },
+    { "kind": "paragraph", "text": "Virtual address 5,000 = 1 × 4,096 + 904, so it is page 1 with offset 904. Frame 2 starts at 8,192, so the physical address is 8,192 + 904 = 9,096." },
+    { "kind": "paragraph", "text": "Virtual address 9,000 = 2 × 4,096 + 808, so it is page 2 with offset 808. Frame 9 starts at 36,864, so the physical address is 36,864 + 808 = 37,672." },
+    { "kind": "heading", "text": "When the page has no frame" },
+    { "kind": "paragraph", "text": "Virtual address 17,000 = 4 × 4,096 + 616, so it falls in page 4. The table has no frame for page 4, so the hardware cannot finish the translation and raises a page fault. The operating system then decides whether the access is valid and, if so, brings the page into memory." },
+    { "kind": "callout", "tone": "tip", "title": "A check you can always do", "text": "The physical address and the virtual address must have the same offset. If your two offsets differ, you made an arithmetic error." },
+    { "kind": "check", "question": "Using the page table above (4 KiB pages), what is the physical address for virtual address 9,000?", "options": ["9,000", "36,864", "37,672", "31,672"], "correctIndex": 2, "explanation": "9,000 = 2 × 4,096 + 808, so it is page 2 with offset 808. Page 2 maps to frame 9, which starts at 36,864. Adding the offset gives 37,672." }
+  ]
+}

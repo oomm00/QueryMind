@@ -1,0 +1,10 @@
+{
+  "id": "cpu-scheduling",
+  "title": "CPU Scheduling",
+  "subject": "operating-systems",
+  "concepts": [
+    "concept-scheduling-algorithms",
+    "concept-waiting-time"
+  ],
+  "comment": "AI-drafted, needs review"
+}

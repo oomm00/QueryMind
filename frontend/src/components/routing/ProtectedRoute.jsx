@@ -7,20 +7,14 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
+import RouteLoading from './RouteLoading'
 
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--ink)]">
-        <div className="text-center animate-pulse-soft">
-          <div className="text-3xl mb-3">🧠</div>
-          <p className="text-xs font-mono uppercase tracking-widest">Checking session…</p>
-        </div>
-      </div>
-    )
+    return <RouteLoading label="Checking session…" />
   }
 
   if (!isAuthenticated) {

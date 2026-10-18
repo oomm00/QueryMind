@@ -1,0 +1,152 @@
+{
+  "id": "os-fundamentals-user-kernel-mode",
+  "subject": "operating-systems",
+  "title": "User mode and kernel mode",
+  "summary": "Processor privilege modes restrict ordinary application code from executing privileged operations and protect the kernel.",
+  "prerequisiteIds": [
+    "os-fundamentals-kernel-responsibilities"
+  ],
+  "relatedIds": [
+    "os-fundamentals-system-call-interface"
+  ],
+  "resources": [
+    {
+      "title": "Kernel (operating system)",
+      "url": "https://en.wikipedia.org/wiki/Kernel_%28operating_system%29",
+      "type": "article",
+      "provider": "Wikipedia",
+      "license": "CC BY-SA; see page terms",
+      "estMinutes": 12,
+      "why": "Covers kernel responsibilities, protection, resource management, and hardware access."
+    },
+    {
+      "title": "intro(2): Introduction to system calls",
+      "url": "https://man7.org/linux/man-pages/man2/intro.2.html",
+      "type": "docs",
+      "provider": "Linux man-pages project",
+      "license": "Free documentation; see site terms",
+      "estMinutes": 10,
+      "why": "Explains kernel entry points, library wrappers, mode transitions, and error reporting."
+    }
+  ],
+  "questions": [
+    {
+      "id": "os-fundamentals-user-kernel-mode-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "On a typical protected CPU, which mode permits privileged instructions that alter hardware-control state?",
+      "options": [
+        "Kernel mode",
+        "A mode entered by every function call",
+        "Text mode",
+        "User mode"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Kernel mode has elevated privileges; user mode restricts access to privileged instructions.",
+      "rubric": [],
+      "explanation": "Ordinary function calls do not automatically change privilege level.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-user-kernel-mode-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Why does a conventional system call enter kernel mode and later return to user mode?",
+      "options": [
+        "The transition guarantees the requested operation succeeds",
+        "The application executable must be recompiled after every request",
+        "The service needs controlled kernel privileges, but the application should not retain them",
+        "The transition permanently makes the process an administrator"
+      ],
+      "correctIndex": 2,
+      "answerKey": "The controlled entry lets trusted kernel code perform a privileged service, then returns to restricted execution; the request may still fail.",
+      "rubric": [],
+      "explanation": "A system call is not permanent privilege escalation and does not guarantee success.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-user-kernel-mode-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A program adds two integers stored in its own memory and executes no privileged instruction. What normally happens to privilege mode during the addition?",
+      "options": [
+        "It enters kernel mode for each arithmetic instruction",
+        "It stays in user mode",
+        "It enters kernel mode and remains there until process exit",
+        "It switches to disk-controller mode"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Ordinary arithmetic over the process's own memory runs in user mode; a kernel transition is not needed for every instruction.",
+      "rubric": [],
+      "explanation": "Not every instruction passes through the kernel.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-user-kernel-mode-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "A user-mode program attempts to execute a privileged instruction directly. What normally happens on a protected architecture?",
+      "options": [
+        "The OS permanently disables memory protection",
+        "The instruction is automatically converted to read()",
+        "The CPU silently grants kernel privileges",
+        "The CPU raises a protection exception or fault"
+      ],
+      "correctIndex": 3,
+      "answerKey": "Privilege checks reject the instruction in user mode and transfer control through the architecture's exception mechanism.",
+      "rubric": [],
+      "explanation": "A privileged instruction is not automatically a valid system call.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-user-kernel-mode-q5",
+      "type": "mcq",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "An engineer proposes running every application in kernel mode to reduce transition overhead. Which is the most important downside?",
+      "options": [
+        "Every application would become memory-safe",
+        "CPU scheduling would become impossible",
+        "A faulty application could damage kernel state or other processes",
+        "Applications would lose all access to memory"
+      ],
+      "correctIndex": 2,
+      "answerKey": "Kernel-mode code has broad privileges, so application bugs or malicious code can compromise system integrity.",
+      "rubric": [],
+      "explanation": "Possible overhead savings do not eliminate the loss of privilege isolation.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-user-kernel-mode-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Trace the mode changes when a user program calls a conventional system-call wrapper, the kernel performs the request, and control returns normally.",
+      "answerKey": "Execution begins in user mode. The system-call entry mechanism transfers control to a kernel handler in kernel mode; after handling the request, the return path restores user-mode execution. The process does not retain kernel privileges because the entry and return mechanisms control the privilege transition.",
+      "rubric": [
+        {
+          "criterion": "Initial user-mode execution",
+          "points": 3
+        },
+        {
+          "criterion": "Controlled entry into kernel mode",
+          "points": 3
+        },
+        {
+          "criterion": "Return to user mode",
+          "points": 2
+        },
+        {
+          "criterion": "Explains privilege isolation",
+          "points": 2
+        }
+      ],
+      "explanation": "Require the correct sequence and an explanation of why kernel privilege is temporary.",
+      "needsHumanCheck": false
+    }
+  ]
+}

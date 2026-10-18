@@ -1,0 +1,24 @@
+{
+  "id": "lesson-from-virtual-to-physical",
+  "title": "From virtual to physical addresses",
+  "estMinutes": 12,
+  "source": "Official material",
+  "objectives": [
+    "Split a virtual address into a page number and an offset",
+    "Use a page table to find the physical frame",
+    "Explain which part of the address stays unchanged"
+  ],
+  "blocks": [
+    { "kind": "paragraph", "text": "A program sees one continuous address space. Physical memory does not have to be continuous. Paging connects the two." },
+    { "kind": "heading", "text": "One address, two parts" },
+    { "kind": "paragraph", "text": "Virtual memory is divided into fixed-size pages. Physical memory is divided into frames of the same size. A page table maps each virtual page to a physical frame." },
+    { "kind": "paragraph", "text": "For a page size of 4 KiB (4,096 bytes), the lower 12 bits of an address identify a byte within the page. The remaining bits identify the virtual page number." },
+    { "kind": "diagram", "variant": "address-split", "data": { "virtualAddress": 13192, "pageSize": 4096, "page": 3, "offset": 904, "frame": 5, "physicalAddress": 21384, "caption": "The frame changes. The byte offset is preserved." } },
+    { "kind": "heading", "text": "Walk through an address" },
+    { "kind": "paragraph", "text": "Take the virtual address 13,192. Divide by the page size to find the page number, and use the remainder as the offset. Here 13,192 = 3 × 4,096 + 904, so the page number is 3 and the offset is 904." },
+    { "kind": "code", "label": "Pseudocode: address translation", "language": "python", "text": "page_size = 4096\npage = 13192 // page_size    # 3\noffset = 13192 % page_size  # 904\nframe = page_table[page]    # 5\nphysical = frame * page_size + offset\n# 5 * 4096 + 904 = 21384" },
+    { "kind": "paragraph", "text": "The result is 21,384, not 13,192. Only the page number is translated. The offset stays 904." },
+    { "kind": "callout", "tone": "tip", "title": "Keep the units straight", "text": "A page number is an index, not a byte address. Multiply the frame number by the page size before adding the offset." },
+    { "kind": "check", "question": "With a 4 KiB page size and page_table[3] = 5, which physical address corresponds to virtual address 13,192?", "options": ["13,192", "21,384", "20,480", "24,576"], "correctIndex": 1, "explanation": "13,192 = 3 × 4,096 + 904, so the page number is 3 and the offset is 904. Frame 5 starts at 5 × 4,096 = 20,480, and adding the offset gives 21,384. The value 20,480 forgets the offset." }
+  ]
+}
