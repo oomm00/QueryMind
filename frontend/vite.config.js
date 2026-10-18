@@ -15,4 +15,11 @@ export default defineConfig({
       },
     },
   },
+  // The tests run in jsdom; the content pipeline's own tests are plain Node.
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.js'],
+    include: ['src/**/*.test.{js,jsx}', 'scripts/**/*.test.js'],
+    restoreMocks: true,
+  },
 })

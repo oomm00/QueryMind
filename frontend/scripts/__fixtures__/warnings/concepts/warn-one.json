@@ -1,0 +1,95 @@
+{
+  "id": "warn-one",
+  "subject": "operating-systems",
+  "title": "Alpha basics",
+  "summary": "A fixture concept whose answers all sit in the first slot.",
+  "prerequisiteIds": [],
+  "resources": [
+    {
+      "title": "Shared fixture guide",
+      "url": "https://www.example.com/shared-guide/",
+      "type": "article",
+      "provider": "Example Press",
+      "license": "CC BY 4.0",
+      "estMinutes": 5,
+      "why": "The link three fixture concepts point at, which is what one warning is for."
+    }
+  ],
+  "questions": [
+    {
+      "id": "warn-alpha-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Explain alpha basics.",
+      "options": [
+        "The complete and rather long option the fixture marks as right",
+        "Short one",
+        "Short two",
+        "Short three"
+      ],
+      "correctIndex": 0,
+      "explanation": "The fixture points at its first option here.",
+      "needsHumanCheck": true
+    },
+    {
+      "id": "warn-alpha-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Which artefact does the fixture name second?",
+      "options": [
+        "The complete and rather long option the fixture marks as right",
+        "Short one",
+        "Short two",
+        "Short three"
+      ],
+      "correctIndex": 0,
+      "explanation": "The fixture points at its first option here too.",
+      "needsHumanCheck": true
+    },
+    {
+      "id": "warn-alpha-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Which artefact does the fixture name third?",
+      "options": [
+        "The complete and rather long option the fixture marks as right",
+        "Short one",
+        "Short two",
+        "Short three"
+      ],
+      "correctIndex": 0,
+      "explanation": "Still the first option.",
+      "needsHumanCheck": true
+    },
+    {
+      "id": "warn-alpha-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Which artefact does the fixture name fourth?",
+      "options": [
+        "The complete and rather long option the fixture marks as right",
+        "Short one",
+        "Short two",
+        "Short three"
+      ],
+      "correctIndex": 0,
+      "explanation": "Still the first option.",
+      "needsHumanCheck": true
+    },
+    {
+      "id": "warn-alpha-q5",
+      "type": "mcq",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "Which artefact does the fixture name fifth?",
+      "options": ["Tiny", "A longer distractor", "Another longer distractor", "The longest distractor"],
+      "correctIndex": 0,
+      "explanation": "The fixture points at its shortest option here, so this one is not the longest.",
+      "needsHumanCheck": true
+    }
+  ]
+}

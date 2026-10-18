@@ -1,0 +1,16 @@
+{
+  "id": "lesson-practice",
+  "title": "Paging practice",
+  "estMinutes": 8,
+  "source": "Official material",
+  "objectives": [
+    "Apply the page-number and offset split to new sizes",
+    "Check your own translations"
+  ],
+  "blocks": [
+    { "kind": "paragraph", "text": "Five-minute practice. Use pages and frames of the size given in each question." },
+    { "kind": "check", "question": "A 32-bit virtual address space uses 4 KiB pages. How many bits form the virtual page number?", "options": ["12", "16", "20", "22"], "correctIndex": 2, "explanation": "4 KiB = 2^12 bytes, so 12 bits are the offset. The remaining 32 − 12 = 20 bits are the page number." },
+    { "kind": "check", "question": "With 4 KiB pages, which page and offset does virtual address 4,100 have?", "options": ["Page 0, offset 4,100", "Page 1, offset 4", "Page 1, offset 4,100", "Page 4, offset 100"], "correctIndex": 1, "explanation": "4,100 = 1 × 4,096 + 4, so it is page 1 with offset 4." },
+    { "kind": "check", "question": "The page size is 1 KiB (1,024 bytes) and page 2 maps to frame 3. What is the physical address for virtual address 2,500?", "options": ["3,524", "2,500", "3,072", "4,548"], "correctIndex": 0, "explanation": "2,500 = 2 × 1,024 + 452, so it is page 2 with offset 452. Frame 3 starts at 3 × 1,024 = 3,072. Adding the offset gives 3,524." }
+  ]
+}

@@ -1,57 +1,56 @@
 /**
  * Bloom's Revised Taxonomy Constants
- * 6-level cognitive scale with teal hue ramp, no emoji in labels.
+ * 6-level cognitive scale. Labels carry no emoji.
+ *
+ * BLOOM_COLORS is a single mid-teal ramp: every step sits in the teal 400-700
+ * band, so no level drops out against the light surface (#ffffff) or the dark
+ * surface (#1c1f24). These values are used as accent fills and dots, not body
+ * text, so the ramp does not need text-level contrast.
  */
 
 export const BLOOM_COLORS = {
-  remember:   '#CDEFEA',  // very light teal
-  understand: '#9EDDD3',  // light teal
-  apply:      '#6CC8BB',  // medium teal
-  analyze:    '#3FAE9F',  // deep teal
-  evaluate:   '#23867A',  // darker teal
-  create:     '#136058',  // darkest teal
+  remember:   '#2DD4BF', // teal 400
+  understand: '#14B8A6', // teal 500
+  apply:      '#0FA79C', // teal 500-600
+  analyze:    '#0D9488', // teal 600
+  evaluate:   '#0E8578', // teal 600-700
+  create:     '#0F766E', // teal 700
 }
 
 export const BLOOM_LEVELS = [
   {
     value: 'remember',
     label: 'Remember',
-    emoji: '📌',
     desc: 'Recall facts & basic concepts',
     color: BLOOM_COLORS.remember,
   },
   {
     value: 'understand',
     label: 'Understand',
-    emoji: '💡',
     desc: 'Explain ideas or concepts',
     color: BLOOM_COLORS.understand,
   },
   {
     value: 'apply',
     label: 'Apply',
-    emoji: '🔧',
     desc: 'Use information in new situations',
     color: BLOOM_COLORS.apply,
   },
   {
     value: 'analyze',
     label: 'Analyze',
-    emoji: '🔍',
     desc: 'Draw connections among ideas',
     color: BLOOM_COLORS.analyze,
   },
   {
     value: 'evaluate',
     label: 'Evaluate',
-    emoji: '⚖️',
     desc: 'Justify a stand or decision',
     color: BLOOM_COLORS.evaluate,
   },
   {
     value: 'create',
     label: 'Create',
-    emoji: '✨',
     desc: 'Produce new or original work',
     color: BLOOM_COLORS.create,
   },
@@ -64,5 +63,5 @@ export const DIFFICULTIES = [
 ]
 
 export function getBloomColor(level) {
-  return BLOOM_COLORS[level?.toLowerCase()] ?? '#6CC8BB'
+  return BLOOM_COLORS[level?.toLowerCase()] ?? '#14B8A6'
 }

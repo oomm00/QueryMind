@@ -1,0 +1,142 @@
+{
+  "id": "os-fundamentals-kernel-responsibilities",
+  "subject": "operating-systems",
+  "title": "Kernel responsibilities",
+  "summary": "The kernel is the privileged core of an operating system that mediates hardware access and manages shared resources.",
+  "prerequisiteIds": [],
+  "relatedIds": [
+    "os-fundamentals-user-kernel-mode",
+    "os-fundamentals-system-call-interface"
+  ],
+  "resources": [
+    {
+      "title": "Kernel (operating system)",
+      "url": "https://en.wikipedia.org/wiki/Kernel_%28operating_system%29",
+      "type": "article",
+      "provider": "Wikipedia",
+      "license": "CC BY-SA; see page terms",
+      "estMinutes": 12,
+      "why": "Covers kernel responsibilities, protection, resource management, and hardware access."
+    }
+  ],
+  "questions": [
+    {
+      "id": "os-fundamentals-kernel-responsibilities-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Two runnable processes need CPU time. Which OS component decides when each runs?",
+      "options": [
+        "CPU scheduler in the kernel",
+        "File-system directory parser",
+        "C compiler",
+        "Text editor"
+      ],
+      "correctIndex": 0,
+      "answerKey": "The CPU scheduler selects among runnable processes or threads according to the scheduling policy.",
+      "rubric": [],
+      "explanation": "Scheduling is a kernel responsibility; compilation, directory parsing, and editing do not choose CPU execution order.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-kernel-responsibilities-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Why does an OS mediate access to a disk controller instead of allowing every application to program it directly?",
+      "options": [
+        "To make every disk request execute in constant time",
+        "To enforce permissions and coordinate shared device access",
+        "Because disk controllers only work during boot",
+        "Because applications cannot perform file operations"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Kernel mediation protects the device and lets the OS coordinate requests and enforce access rules.",
+      "rubric": [],
+      "explanation": "Applications can request file I/O; direct hardware access is not required and would weaken isolation.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-kernel-responsibilities-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A process requests a new virtual-memory mapping. Which subsystem checks and manages the process's address-space mapping?",
+      "options": [
+        "Source-code formatter",
+        "Shell command history",
+        "Kernel memory-management subsystem",
+        "Network name resolver"
+      ],
+      "correctIndex": 2,
+      "answerKey": "The kernel manages process address spaces and enforces mapping permissions; details vary by OS and allocator.",
+      "rubric": [],
+      "explanation": "Address-space mappings are memory-management work, not shell, formatting, or DNS work.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-kernel-responsibilities-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "A buggy user application writes to an invalid address and terminates, while unrelated processes continue. What most directly helps contain this fault?",
+      "options": [
+        "Giving every process unrestricted physical-memory access",
+        "Running all applications with kernel privileges",
+        "Disabling page-fault handling",
+        "Protected address spaces and hardware-enforced access checks"
+      ],
+      "correctIndex": 3,
+      "answerKey": "Memory protection prevents an ordinary process from freely overwriting unrelated address spaces; a fault can be isolated to that process.",
+      "rubric": [],
+      "explanation": "Unrestricted access or kernel-mode applications would make failures more likely to affect the whole system.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-kernel-responsibilities-q5",
+      "type": "mcq",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "A proposed OS lets every process overwrite arbitrary physical memory to avoid copying overhead. What is the strongest objection?",
+      "options": [
+        "It guarantees lower latency for all workloads",
+        "It prevents the CPU from executing arithmetic",
+        "It makes access permissions unnecessary but preserves security",
+        "It breaks isolation and can corrupt the kernel or other processes"
+      ],
+      "correctIndex": 3,
+      "answerKey": "Unrestricted physical-memory writes defeat protection and allow accidental or malicious corruption; any performance claim needs evidence and does not remove this risk.",
+      "rubric": [],
+      "explanation": "The central trade-off is not simply speed: memory isolation is a core reliability and security property.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "os-fundamentals-kernel-responsibilities-q6",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Name three kernel responsibilities. Then explain one concrete way the kernel helps isolate two processes.",
+      "answerKey": "Valid responsibilities include CPU scheduling, memory management, device/I/O management, and process management. Isolation can be enforced through separate virtual address spaces and access permissions, so one process cannot ordinarily read or overwrite another process's private memory.",
+      "rubric": [
+        {
+          "criterion": "Three distinct responsibilities",
+          "points": 3
+        },
+        {
+          "criterion": "Concrete isolation mechanism",
+          "points": 3
+        },
+        {
+          "criterion": "Effect on cross-process access",
+          "points": 2
+        },
+        {
+          "criterion": "Clear technical wording",
+          "points": 2
+        }
+      ],
+      "explanation": "Credit specific responsibilities and a real isolation mechanism, not a vague statement that the kernel 'runs the computer'.",
+      "needsHumanCheck": false
+    }
+  ]
+}

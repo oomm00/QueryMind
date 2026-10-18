@@ -1,42 +1,60 @@
 /**
- * App — Root router with ProtectedRoute/PublicRoute and new AppShell layout.
- * Routes are protected; unauthed users go to /login.
- * Authenticated users see the new shell (top bar + left rail / bottom tab bar).
+ * App — root router.
+ *
+ * Public:  /login
+ * Default: /explore (redirect target after sign-in)
+ * Built:   /dashboard, /explore, /courses, /practice, /practice/:sessionId,
+ *          /practice/:sessionId/results, /history, /notes,
+ *          /course/:id (overview, material, progress, about),
+ *          /learn/:courseId/:topicId/:lessonId,
+ *          /map/:courseId/:topicId (topic knowledge graph)
+ * Moved:   /generate and /upload redirected - the generate form is the
+ *          "Pick a topic" tab on /practice, upload is the Documents tab on /notes.
+ * Stubs:   everything else renders <ComingSoon/>.
  */
 
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
-import SetupPage from './pages/SetupPage'
-import QuestionPage from './pages/QuestionPage'
-import FeedbackPage from './pages/FeedbackPage'
+import SessionPage from './pages/SessionPage'
+import ResultsPage from './pages/ResultsPage'
+import MyCoursesPage from './pages/MyCoursesPage'
+import PracticeHomePage from './pages/PracticeHomePage'
 import DashboardPage from './pages/DashboardPage'
+import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
+import NotesPage from './pages/NotesPage'
 import NotFoundPage from './pages/NotFoundPage'
+import ComingSoon from './pages/ComingSoon'
+import LessonPage from './pages/LessonPage'
+import MapPage from './pages/MapPage'
+import CoursePage from './pages/course/CoursePage'
+import CoursePracticeTab from './pages/course/CoursePracticeTab'
+import CourseMaterialTab from './pages/course/CourseMaterialTab'
+import CourseProgressTab from './pages/course/CourseProgressTab'
+import CourseAboutTab from './pages/course/CourseAboutTab'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import PublicRoute from './components/routing/PublicRoute'
 import AppShell from './AppShell'
 
-function AppLayout({ children }) {
-  return (
-    <div className="pt-0">
-      {children}
-    </div>
-  )
+function Protected({ children }) {
+  return <ProtectedRoute>{children}</ProtectedRoute>
 }
 
-// ---------------------------------------------------------------------------
-// Top‑bar search/ theme stub (moved to AppShell but kept here for standalone)
-// ---------------------------------------------------------------------------
+const soon = (title, description) => (
+  <Protected>
+    <ComingSoon title={title} description={description} />
+  </Protected>
+)
 
 export default function App() {
   return (
     <AppShell>
       <Routes>
-        {/* Root redirect */}
-        <Route path="/" element={<Navigate to="/setup" replace />} />
+        {/* Default landing */}
+        <Route path="/" element={<Navigate to="/explore" replace />} />
 
-        {/* Public route — login accessible when logged out */}
+        {/* Public */}
         <Route
           path="/login"
           element={
@@ -46,63 +64,117 @@ export default function App() {
           }
         />
 
-        {/* Protected routes — require authentication */}
+        {/* Built destinations */}
         <Route
-          path="/setup"
+          path="/explore"
           element={
-            <ProtectedRoute>
-              <AppLayout>
-                <SetupPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <Protected>
+              <ExplorePage />
+            </Protected>
           }
         />
-
-        <Route
-          path="/question"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <QuestionPage />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/feedback"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <FeedbackPage />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
-
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
-              <AppLayout>
-                <DashboardPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <Protected>
+              <DashboardPage />
+            </Protected>
           }
         />
-
         <Route
           path="/history"
           element={
-            <ProtectedRoute>
-              <AppLayout>
-                <HistoryPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <Protected>
+              <HistoryPage />
+            </Protected>
+          }
+        />
+        {/* Moved: the form lives on /practice as "Pick a topic", the upload page
+            on /notes as "Documents". Old links and bookmarks still land. */}
+        <Route path="/generate" element={<Navigate to="/practice" replace />} />
+        <Route path="/upload" element={<Navigate to="/notes" replace />} />
+        <Route
+          path="/practice"
+          element={
+            <Protected>
+              <PracticeHomePage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice/:sessionId"
+          element={
+            <Protected>
+              <SessionPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/practice/:sessionId/results"
+          element={
+            <Protected>
+              <ResultsPage />
+            </Protected>
           }
         />
 
-        {/* 404 catch‑all */}
+        {/* Legacy path alias */}
+        <Route path="/learning" element={<Navigate to="/courses" replace />} />
+
+        {/* Wired but not yet built */}
+        <Route
+          path="/courses"
+          element={
+            <Protected>
+              <MyCoursesPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/interview"
+          element={soon('Interview Prep', 'Timed mock interviews tailored to your weak areas.')}
+        />
+        <Route
+          path="/analytics"
+          element={soon('Analytics', 'Deeper insight into your mastery over time.')}
+        />
+        <Route
+          path="/weak-areas"
+          element={soon('Weak Areas', 'Topics that need attention, ranked by mastery.')}
+        />
+        <Route path="/notes" element={<Protected><NotesPage /></Protected>} />
+        <Route path="/settings" element={soon('Settings', 'Account, theme and study preferences.')} />
+        <Route
+          path="/course/:id"
+          element={
+            <Protected>
+              <CoursePage />
+            </Protected>
+          }
+        >
+          <Route index element={<CoursePracticeTab />} />
+          <Route path="material" element={<CourseMaterialTab />} />
+          <Route path="progress" element={<CourseProgressTab />} />
+          <Route path="about" element={<CourseAboutTab />} />
+        </Route>
+        <Route
+          path="/learn/:courseId/:topicId/:lessonId"
+          element={
+            <Protected>
+              <LessonPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/map/:courseId/:topicId"
+          element={
+            <Protected>
+              <MapPage />
+            </Protected>
+          }
+        />
+
+        {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AppShell>

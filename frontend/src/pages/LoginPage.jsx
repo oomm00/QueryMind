@@ -2,6 +2,7 @@
  * LoginPage — /login
  * Authenticates user credentials or registers a new account using AuthContext.
  * Bounded to real backend auth by default, or mock auth if VITE_MOCK_AUTH=true.
+ * Renders without the app shell, so it is a full-screen centered card.
  */
 
 import React, { useState } from 'react'
@@ -9,6 +10,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { PanelLarge } from '../components/ui/Panel'
+import { Tabs } from '../components/ui/Tabs'
+import { ErrorState } from '../components/ui/ErrorState'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -20,7 +24,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const from = location.state?.from?.pathname || '/setup'
+  const from = location.state?.from?.pathname || '/explore'
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -52,110 +56,83 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-8 bg-[var(--bg)]">
-      <div className="w-full max-w-md animate-slide-up bg-white rounded-md p-8 shadow-sm">
-        {/* Brand Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-md bg-[var(--surface)] shadow-sm mb-3">
-            <span className="text-2xl">QM</span>
-          </div>
-          <h1 className="text-3xl font-display font-bold text-[var(--ink)] tracking-tight">QueryMind</h1>
-          <p className="text-[var(--muted)] mt-1 text-sm">
-            AI-powered adaptive learning & cognitive evaluation
+    <div className="flex min-h-screen items-center justify-center bg-page p-4">
+      <div className="w-full max-w-md">
+        {/* Brand mark + wordmark */}
+        <div className="mb-6 flex flex-col items-center text-center">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-2xl font-semibold text-primary-fg">
+            q
+          </span>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-ink">QueryMind</h1>
+          <p className="mt-1 text-sm text-muted">
+            AI-powered adaptive learning &amp; cognitive evaluation
           </p>
         </div>
 
-        {/* Auth Card */}
-        <div className="panel lg:panel-lg mt-6">
-          {/* Tab Switcher */}
-          <div className="flex rounded-md overflow-hidden mb-4">
-            {['login', 'register'].map((t) => (
-              <button
-                key={t}
-                id={`tab-${t}`}
-                type="button"
-                onClick={() => {
-                  setTab(t)
-                  setError(null)
-                }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-md capitalize transition-all duration-150 ${
-                  tab === t
-                    ? 'bg-[var(--moss)] text-white shadow-sm'
-                    : 'text-[var(--muted)] hover:text-[var(--moss)]'
-                }`}
-              >
-                {t === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            ))}
-          </div>
+        {/* Auth card */}
+        <PanelLarge>
+          <Tabs
+            className="mb-5"
+            tabs={[
+              { label: 'Sign in', value: 'login' },
+              { label: 'Create account', value: 'register' },
+            ]}
+            value={tab}
+            onChange={(value) => {
+              setTab(value)
+              setError(null)
+            }}
+          />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {tab === 'register' && (
-              <div>
-                <label htmlFor="full_name" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
-                  Full Name
-                </label>
-                <Input
-                  id="full_name"
-                  name="full_name"
-                  type="text"
-                  placeholder="Ada Lovelace"
-                  value={form.full_name}
-                  onChange={handleChange}
-                  className="input"
-                />
-              </div>
+              <Input
+                id="full_name"
+                name="full_name"
+                type="text"
+                label="Full name"
+                placeholder="Ada Lovelace"
+                value={form.full_name}
+                onChange={handleChange}
+              />
             )}
 
-            <div>
-              <label htmlFor="email" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
-                Email Address
-              </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={handleChange}
-                required
-                className="input"
-              />
-            </div>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              label="Email address"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wider">
-                Password
-              </label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={handleChange}
-                required
-                minLength={8}
-                className="input"
-              />
-            </div>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              label="Password"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={handleChange}
+              required
+              minLength={8}
+            />
 
-            {error && (
-              <div className="mt-2 p-3 rounded-md bg-[var(--rust)/10] border border-[var(--rust)]/50">
-                {error}
-              </div>
-            )}
+            {error && <ErrorState title="Authentication failed" message={error} />}
 
             <Button
               id="btn-submit-auth"
               type="submit"
-              disabled={loading}
-              className="w-full py-2.5 mt-2"
+              fullWidth
+              size="lg"
+              loading={loading}
             >
-              {loading ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
+              {tab === 'login' ? 'Sign in' : 'Create account'}
             </Button>
           </form>
-        </div>
+        </PanelLarge>
       </div>
     </div>
   )

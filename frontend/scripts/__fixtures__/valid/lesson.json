@@ -1,0 +1,16 @@
+{
+  "id": "fixture-lesson",
+  "title": "Fixture lesson",
+  "estMinutes": 8,
+  "blocks": [
+    { "kind": "text", "text": "A paragraph about the fixture." },
+    {
+      "kind": "check",
+      "id": "fixture-check",
+      "prompt": "Which option belongs to the lesson fixture?",
+      "options": ["One", "Two", "Three", "Four"],
+      "correctIndex": 1,
+      "explanation": "The second option is the one the fixture names."
+    }
+  ]
+}
