@@ -1,0 +1,409 @@
+
+> querymind-frontend@0.1.0 test
+> vitest run practiceFlow
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/querymind-frontend/frontend[39m
+
+stderr | src/pages/practiceFlow.test.jsx > starting a session > opens on question one, with nothing to set up in between
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [31mΓ¥»[39m src/pages/practiceFlow.test.jsx [2m([22m[2m9 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 3824[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m starting a session[2m > [22mopens on question one, with nothing to set up in between [33m436[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m answering[2m > [22mclears a choice and counts what is answered [33m306[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m answering[2m > [22msaves a written answer as it is typed [33m640[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m answering[2m > [22msays what is unfinished before submitting [33m430[2mms[22m[39m
+[31m   [31m├ù[31m the results[2m > [22mshows the right answer, scores what was answered, and moves mastery[33m 429[2mms[22m[31m[39m
+[31m     ΓåÆ Unable to find an element with the text: 1 of 1 marks. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"mx-auto max-w-3xl space-y-6"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"rounded-panel border border-line bg-surface p-6 space-y-4"[31m
+      [36m>[31m
+        [36m<div>[31m
+          [36m<h1[31m
+            [33mclass[31m=[32m"text-2xl font-semibold text-ink"[31m
+          [36m>[31m
+            [0mPractice results[0m
+          [36m</h1>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"mt-1 text-sm text-muted"[31m
+          [36m>[31m
+            [0m6[0m
+            [0m [0m
+            [0mquestions[0m
+          [36m</p>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"rounded-panel border border-line bg-surface-raised p-4"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-baseline gap-3"[31m
+          [36m>[31m
+            [36m<p[31m
+              [33mclass[31m=[32m"text-4xl font-semibold tabular-nums text-ink"[31m
+            [36m>[31m
+              [0m1.0[0m
+              [36m<span[31m
+                [33mclass[31m=[32m"text-2xl text-muted"[31m
+              [36m>[31m
+                [0m/[0m
+                [0m1[0m
+              [36m</span>[31m
+            [36m</p>[31m
+            [36m<p[31m
+              [33mclass[31m=[32m"text-xl font-medium tabular-nums text-muted"[31m
+            [36m>[31m
+              [0m100.0[0m
+              [0m%[0m
+            [36m</p>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"mt-1 text-sm text-muted"[31m
+          [36m>[31m
+            [0mMarks earned[0m
+          [36m</p>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"mt-2 text-sm text-muted"[31m
+          [36m>[31m
+            [0m5[0m
+            [0m [0m
+            [0manswers are[0m
+            [0m not in the score: [0m
+            [0m4[0m
+            [0m unanswered[0m
+            [0m, 1 written but not marked yet[0m
+          [36m</p>[31m
+        [36m</div>[31m
+        [36m<div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-sm font-medium text-ink"[31m
+          [36m>[31m
+            [0mBy Bloom level[0m
+          [36m</p>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"mt-2 overflow-x-auto"[31m
+          [36m>[31m
+            [36m<table[31m
+              [33mclass[31m=[32m"w-full text-left text-sm"[31m
+            [36m>[31m
+              [36m<thead>[31m
+                [36m<tr[31m
+                  [33mclass[31m=[32m"border-b border-line"[31m
+                [36m>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"pb-2 pr-4 font-medium text-muted"[31m
+                  [36m>[31m
+                    [0mLevel[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"pb-2 pr-4 text-right font-medium text-muted"[31m
+                  [36m>[31m
+                    [0mEarned[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"pb-2 pr-4 text-right font-medium text-muted"[31m
+                  [36m>[31m
+                    [0mAvailable[0m
+                  [36m</th>[31m
+                  [36m<th[31m
+                    [33mclass[31m=[32m"pb-2 text-right font-medium text-muted"[31m
+                  [36m>[31m
+                    [0mPercent[0m
+                  [36m</th>[31m
+                [36m</tr>[31m
+              [36m</thead>[31m
+              [36m<tbody>[31m
+                [36m<tr[31m
+                  [33mclass[31m=[32m"border-b border-line last:border-0"[31m
+                [36m>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4"[31m
+                  [36m>[31m
+                    [36m<span[31m
+                      [33mclass[31m=[32m"text-ink"[31m
+                    [36m>[31m
+                      [0mRemember L1[0m
+                    [36m</span>[31m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+                    [0m1.0[0m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+                    [0m1[0m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+                    [0m100[0m
+                    [0m%[0m
+                  [36m</td>[31m
+                [36m</tr>[31m
+                [36m<tr[31m
+                  [33mclass[31m=[32m"border-b border-line last:border-0"[31m
+                [36m>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4"[31m
+                  [36m>[31m
+                    [36m<span[31m
+                      [33mclass[31m=[32m"text-ink"[31m
+                    [36m>[31m
+                      [0mAnalyze L4[0m
+                    [36m</span>[31m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+                    [0m0.0[0m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+                    [0m0[0m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+                    [0m0[0m
+                    [0m%[0m
+                  [36m</td>[31m
+                [36m</tr>[31m
+                [36m<tr[31m
+                  [33mclass[31m=[32m"border-b border-line last:border-0"[31m
+                [36m>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4"[31m
+                  [36m>[31m
+                    [36m<span[31m
+                      [33mclass[31m=[32m"text-ink"[31m
+                    [36m>[31m
+                      [0mUnderstand L2[0m
+                    [36m</span>[31m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+                    [0m0.0[0m
+                  [36m</td>[31m
+                  [36m<td[31m
+                    [33mclass[31m=[32m"py-2 pr-4 text-right tabular-nums text-ink"[31m
+                  [36m>[31m
+             ...[39m
+   [33m[2mΓ£ô[22m[39m the results[2m > [22mwaits for a written answer to be marked, and scores it when it is [33m1018[2mms[22m[39m
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 1 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  src/pages/practiceFlow.test.jsx > the results > shows the right answer, scores what was answered, and moves mastery
+TestingLibraryElementError: Unable to find an element with the text: 1 of 1 marks. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="mx-auto max-w-3xl space-y-6"
+    >
+      <div
+        class="rounded-panel border border-line bg-surface p-6 space-y-4"
+      >
+        <div>
+          <h1
+            class="text-2xl font-semibold text-ink"
+          >
+            Practice results
+          </h1>
+          <p
+            class="mt-1 text-sm text-muted"
+          >
+            6
+             
+            questions
+          </p>
+        </div>
+        <div
+          class="rounded-panel border border-line bg-surface-raised p-4"
+        >
+          <div
+            class="flex items-baseline gap-3"
+          >
+            <p
+              class="text-4xl font-semibold tabular-nums text-ink"
+            >
+              1.0
+              <span
+                class="text-2xl text-muted"
+              >
+                /
+                1
+              </span>
+            </p>
+            <p
+              class="text-xl font-medium tabular-nums text-muted"
+            >
+              100.0
+              %
+            </p>
+          </div>
+          <p
+            class="mt-1 text-sm text-muted"
+          >
+            Marks earned
+          </p>
+          <p
+            class="mt-2 text-sm text-muted"
+          >
+            5
+             
+            answers are
+             not in the score: 
+            4
+             unanswered
+            , 1 written but not marked yet
+          </p>
+        </div>
+        <div>
+          <p
+            class="text-sm font-medium text-ink"
+          >
+            By Bloom level
+          </p>
+          <div
+            class="mt-2 overflow-x-auto"
+          >
+            <table
+              class="w-full text-left text-sm"
+            >
+              <thead>
+                <tr
+                  class="border-b border-line"
+                >
+                  <th
+                    class="pb-2 pr-4 font-medium text-muted"
+                  >
+                    Level
+                  </th>
+                  <th
+                    class="pb-2 pr-4 text-right font-medium text-muted"
+                  >
+                    Earned
+                  </th>
+                  <th
+                    class="pb-2 pr-4 text-right font-medium text-muted"
+                  >
+                    Available
+                  </th>
+                  <th
+                    class="pb-2 text-right font-medium text-muted"
+                  >
+                    Percent
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  class="border-b border-line last:border-0"
+                >
+                  <td
+                    class="py-2 pr-4"
+                  >
+                    <span
+                      class="text-ink"
+                    >
+                      Remember L1
+                    </span>
+                  </td>
+                  <td
+                    class="py-2 pr-4 text-right tabular-nums text-ink"
+                  >
+                    1.0
+                  </td>
+                  <td
+                    class="py-2 pr-4 text-right tabular-nums text-ink"
+                  >
+                    1
+                  </td>
+                  <td
+                    class="py-2 text-right tabular-nums text-ink"
+                  >
+                    100
+                    %
+                  </td>
+                </tr>
+                <tr
+                  class="border-b border-line last:border-0"
+                >
+                  <td
+                    class="py-2 pr-4"
+                  >
+                    <span
+                      class="text-ink"
+                    >
+                      Analyze L4
+                    </span>
+                  </td>
+                  <td
+                    class="py-2 pr-4 text-right tabular-nums text-ink"
+                  >
+                    0.0
+                  </td>
+                  <td
+                    class="py-2 pr-4 text-right tabular-nums text-ink"
+                  >
+                    0
+                  </td>
+                  <td
+                    class="py-2 text-right tabular-nums text-ink"
+                  >
+                    0
+                    %
+                  </td>
+                </tr>
+                <tr
+                  class="border-b border-line last:border-0"
+                >
+                  <td
+                    class="py-2 pr-4"
+                  >
+                    <span
+                      class="text-ink"
+                    >
+                      Understand L2
+                    </span>
+                  </td>
+                  <td
+                    class="py-2 pr-4 text-right tabular-nums text-ink"
+                  >
+                    0.0
+                  </td>
+                  <td
+                    class="py-2 pr-4 text-right tabular-nums text-ink"
+                  >
+             ...
+ Γ¥» Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ Γ¥» node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ Γ¥» node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ Γ¥» node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ Γ¥» src/pages/practiceFlow.test.jsx:200:19
+    198|     expect(correct).toHaveTextContent('Fake cache')
+    199| 
+    200|     expect(screen.getByText('1 of 1 marks')).toBeInTheDocument()
+       |                   ^
+    201|     expect(
+    202|       screen.getByText(/5 answers are not in the score: 4 unanswered, ΓÇª
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/1]ΓÄ»
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m8 passed[39m[22m[90m (9)[39m
+[2m   Start at [22m 11:31:29
+[2m   Duration [22m 8.77s[2m (transform 445ms, setup 352ms, collect 1.39s, tests 3.82s, environment 1.78s, prepare 662ms)[22m
+

@@ -250,7 +250,7 @@ export default function SessionPage() {
               <MarksLabel question={current} />
             </div>
 
-            <p className="mt-4 text-base leading-relaxed text-ink">{current.prompt}</p>
+            <p className="mt-4 text-base leading-relaxed text-ink">{current.question_text}</p>
 
             {current.type === 'mcq' ? (
               <fieldset className="mt-4">
