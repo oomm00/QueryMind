@@ -7,8 +7,7 @@
  * titles the library already knows; subject is never asked for, because it is
  * looked up from the document the topic matched (or "general"). Difficulty is a
  * Bloom band, and the six chips under it start from that band and can be moved.
- * The length is the student's to set: three quick picks and any number beside
- * them.
+ * The length is the student's to set: a free number capped at ten.
  *
  * Question generation answers one question per call, so a run of ten is ten
  * calls, two in flight at a time. While it runs the page says how many are
@@ -21,7 +20,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useDocumentTopics } from '../../hooks/useDocuments.js'
@@ -35,7 +34,6 @@ import { BLOOM_COLORS, BLOOM_LEVELS } from '../../constants/bloomTaxonomy.js'
 import { holdDraft, newSession, saveSession } from '../../lib/sessions.js'
 import {
   GENERATE_DIFFICULTIES,
-  GENERATE_COUNT_CHOICES,
   GENERAL_SUBJECT,
   MAX_GENERATE_COUNT,
   MIN_GENERATE_COUNT,
@@ -195,19 +193,20 @@ export function GeneratePanel() {
 
   const generate = async () => {
     const trimmed = topic.trim()
-    if (!trimmed || blooms.length === 0 || running) return
+    if ((!trimmed && !uploadedOnly) || blooms.length === 0 || running) return
 
     reset()
     setRunning(true)
     setElapsed(0)
     startedAtRef.current = Date.now()
 
-    const subject = hasDocuments ? subjectForTopic(trimmed, rows) : GENERAL_SUBJECT
+    const generationTopic = trimmed || 'Uploaded notes'
+    const subject = trimmed && hasDocuments ? subjectForTopic(trimmed, rows) : GENERAL_SUBJECT
 
     // "Use only my uploaded material" is checked before a call is made: if the
     // topic matches nothing the student uploaded, no prompt will find material
     // for it either, and the honest answer is the closest topic they do have.
-    if (uploadedOnly && subject === GENERAL_SUBJECT) {
+    if (uploadedOnly && trimmed && subject === GENERAL_SUBJECT) {
       setRunning(false)
       setNoContext(true)
       return
@@ -219,8 +218,9 @@ export function GeneratePanel() {
     try {
       const outcome = await runGeneration({
         generate: (payload, options) => questionsApi.generate(payload, userId, options),
-        topic: trimmed,
+        topic: generationTopic,
         subject,
+        uploaded_only: uploadedOnly,
         difficulty,
         blooms,
         count,
@@ -241,8 +241,8 @@ export function GeneratePanel() {
       // to its questions move mastery like any other concept's and the number
       // shows up in the library beside the authored ones.
       registerCustomConcept({
-        id: customConceptId(trimmed),
-        title: trimmed,
+        id: customConceptId(generationTopic),
+        title: generationTopic,
         subject,
       })
     } finally {
@@ -267,7 +267,7 @@ export function GeneratePanel() {
       scope: 'generated',
       subject: hasDocuments ? subjectForTopic(trimmed, rows) : GENERAL_SUBJECT,
       level: difficulty,
-      label: trimmed,
+      label: topic.trim() || 'Uploaded notes',
       questionIds: ready.map((question) => question.question_id),
       questions: ready,
     })
@@ -355,31 +355,23 @@ export function GeneratePanel() {
 
           <div>
             <h3 className="text-[13px] font-medium text-ink">Number of questions</h3>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <Segmented
-                label="Number of questions"
-                options={GENERATE_COUNT_CHOICES.map((value) => ({ value, label: String(value) }))}
+            <label className="mt-1.5 flex items-center gap-2 text-xs text-muted">
+              <span>Choose any number</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={MIN_GENERATE_COUNT}
+                max={MAX_GENERATE_COUNT}
+                step={1}
+                aria-label="Number of questions"
                 value={count}
-                onChange={setCount}
+                onChange={(event) => {
+                  const next = clampCount(event.target.value)
+                  if (next != null) setCount(next)
+                }}
+                className="w-20 rounded-control border border-line bg-surface px-2 py-1.5 text-[13px] tabular-nums text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               />
-              <label className="flex items-center gap-1.5 text-xs text-muted">
-                <span>or any number</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={MIN_GENERATE_COUNT}
-                  max={MAX_GENERATE_COUNT}
-                  step={1}
-                  aria-label="Any number of questions"
-                  value={count}
-                  onChange={(event) => {
-                    const next = clampCount(event.target.value)
-                    if (next != null) setCount(next)
-                  }}
-                  className="w-16 rounded-control border border-line bg-surface px-2 py-1.5 text-[13px] tabular-nums text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                />
-              </label>
-            </div>
+            </label>
           </div>
 
           <label className="flex items-center gap-2.5 text-[13px] text-ink">
@@ -395,14 +387,24 @@ export function GeneratePanel() {
           </label>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" loading={running} disabled={!topic.trim() || blooms.length === 0}>
+            <Button
+              type="submit"
+              loading={running}
+              disabled={(!topic.trim() && !uploadedOnly) || blooms.length === 0}
+            >
               Generate questions
             </Button>
-            {!topic.trim() && <p className="text-xs text-muted">Name a topic first.</p>}
+            {!topic.trim() && uploadedOnly && (
+              <p className="text-xs text-muted">Questions will be made from your uploaded notes.</p>
+            )}
+            {!topic.trim() && !uploadedOnly && <p className="text-xs text-muted">Name a topic first.</p>}
             {topic.trim() && blooms.length === 0 && (
               <p className="text-xs text-muted">Keep at least one Bloom level.</p>
             )}
           </div>
+          <p className="text-xs text-muted">
+            Need to add material? <Link className="font-medium text-primary hover:underline" to="/notes">Upload your notes</Link>.
+          </p>
         </form>
       </PanelLarge>
 
@@ -476,8 +478,11 @@ export function GeneratePanel() {
           </div>
 
           <ul className="mt-4 space-y-2">
-            {ready.map((question) => (
-              <li key={question.question_id} className="flex flex-wrap items-center gap-2">
+            {ready.map((question, index) => (
+              <li
+                key={`${question.question_id ?? 'generated-question'}-${index}`}
+                className="flex flex-wrap items-center gap-2"
+              >
                 <BloomChip bloom={question.bloom_level} />
                 <Badge tone="neutral" label={question.originLabel} />
                 <span className="min-w-0 flex-1 truncate text-[13px] text-ink">

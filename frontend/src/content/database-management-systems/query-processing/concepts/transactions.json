@@ -1,0 +1,82 @@
+{
+  "id": "transactions",
+  "title": "Transactions",
+  "subject": "database-management-systems",
+  "summary": "Understand transactions in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "transactions-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which property makes committed transaction effects survive a crash?",
+      "explanation": "The correct answer is Durability.",
+      "needsHumanCheck": false,
+      "options": [
+        "Durability",
+        "Atomicity",
+        "Isolation",
+        "Consistency"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "transactions-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which property makes committed transaction effects survive a crash?",
+      "explanation": "The correct answer is Durability.",
+      "needsHumanCheck": false,
+      "options": [
+        "Durability",
+        "Atomicity",
+        "Isolation",
+        "Consistency"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "transactions-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is atomicity?",
+      "explanation": "A transaction commits all its effects or none of them.",
+      "needsHumanCheck": true,
+      "answerKey": "A transaction commits all its effects or none of them.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "transactions-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is atomicity?",
+      "explanation": "A transaction commits all its effects or none of them.",
+      "needsHumanCheck": true,
+      "answerKey": "A transaction commits all its effects or none of them.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "id": "failure-isolation",
+  "title": "Failure isolation",
+  "subject": "system-design",
+  "summary": "Understand failure isolation in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "failure-isolation-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a bulkhead isolate?",
+      "explanation": "The correct answer is A failure domain or resource pool.",
+      "needsHumanCheck": false,
+      "options": [
+        "A failure domain or resource pool",
+        "A DNS label",
+        "A database column",
+        "A compiler pass"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "failure-isolation-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does a bulkhead isolate?",
+      "explanation": "The correct answer is A failure domain or resource pool.",
+      "needsHumanCheck": false,
+      "options": [
+        "A failure domain or resource pool",
+        "A DNS label",
+        "A database column",
+        "A compiler pass"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "failure-isolation-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why isolate failures?",
+      "explanation": "To stop one overloaded or broken dependency from exhausting the whole service.",
+      "needsHumanCheck": true,
+      "answerKey": "To stop one overloaded or broken dependency from exhausting the whole service.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "failure-isolation-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why isolate failures?",
+      "explanation": "To stop one overloaded or broken dependency from exhausting the whole service.",
+      "needsHumanCheck": true,
+      "answerKey": "To stop one overloaded or broken dependency from exhausting the whole service.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

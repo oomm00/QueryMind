@@ -1,0 +1,12 @@
+{
+  "id": "requirements-capacity",
+  "title": "Requirements and Capacity",
+  "subject": "system-design",
+  "summary": "Core requirements and capacity concepts.",
+  "conceptIds": [
+    "functional-requirements",
+    "capacity-estimation",
+    "reliability-objectives",
+    "api-design"
+  ]
+}

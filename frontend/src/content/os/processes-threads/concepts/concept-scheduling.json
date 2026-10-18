@@ -1,0 +1,131 @@
+{
+  "id": "concept-scheduling",
+  "subject": "operating-systems",
+  "title": "Process creation and scheduling context",
+  "summary": "Process creation establishes an execution context, after which the scheduler chooses among runnable processes or threads.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-scheduling-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a process control block (PCB) primarily store?",
+      "options": [
+        "Only the process source code",
+        "Metadata and saved execution state for a process",
+        "The contents of every disk block",
+        "Only user passwords"
+      ],
+      "correctIndex": 1,
+      "answerKey": "A PCB records identity, state, registers, scheduling information, and resource references.",
+      "rubric": [],
+      "explanation": "Program code is stored separately from the bookkeeping structure.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What is the purpose of a context switch?",
+      "options": [
+        "To change a file name",
+        "To save one execution context and restore another",
+        "To increase page size",
+        "To bypass protection"
+      ],
+      "correctIndex": 1,
+      "answerKey": "A context switch changes the CPU from one runnable context to another.",
+      "rubric": [],
+      "explanation": "It has overhead because registers and scheduler state must be handled.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A parent creates a child and both are runnable. What determines which runs first?",
+      "options": [
+        "A universal rule that children always run first",
+        "The scheduler policy and current system state",
+        "The child PID alone",
+        "The order of source-code declarations"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Scheduling policy, priorities, readiness, and timing determine dispatch.",
+      "rubric": [],
+      "explanation": "Many systems make no portable first-run guarantee.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can frequent context switching reduce throughput?",
+      "options": [
+        "It makes instructions larger",
+        "Switching consumes CPU time without directly advancing application work",
+        "It prevents all interrupts",
+        "It permanently disables caches"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Context-switch work is overhead that could otherwise execute useful instructions.",
+      "rubric": [],
+      "explanation": "The size of the effect depends on workload and implementation.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What information must an OS retain so a preempted process can resume correctly?",
+      "answerKey": "It must retain the process identity and state, program counter, CPU registers, stack pointer, address-space information, and scheduling/resource metadata sufficient to restore execution.",
+      "rubric": [
+        {
+          "criterion": "Names execution state",
+          "points": 4
+        },
+        {
+          "criterion": "Names address-space or resource metadata",
+          "points": 3
+        },
+        {
+          "criterion": "Connects it to resumption",
+          "points": 2
+        }
+      ],
+      "explanation": "A PCB is the usual abstraction for this saved context and metadata.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Explain why process isolation usually costs more for communication than threads sharing one process.",
+      "answerKey": "Separate processes have separate address spaces, so communication generally needs IPC mechanisms and copying or shared-memory setup with explicit synchronization. Threads can directly access shared memory, reducing setup and copying but increasing synchronization and fault-sharing risks.",
+      "rubric": [
+        {
+          "criterion": "Explains separate address spaces",
+          "points": 3
+        },
+        {
+          "criterion": "Explains IPC overhead",
+          "points": 3
+        },
+        {
+          "criterion": "Contrasts thread trade-off",
+          "points": 3
+        }
+      ],
+      "explanation": "Shared memory between processes is possible but must be explicitly established and protected.",
+      "needsHumanCheck": false
+    }
+  ]
+}

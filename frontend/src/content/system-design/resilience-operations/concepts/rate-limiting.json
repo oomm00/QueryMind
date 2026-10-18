@@ -1,0 +1,82 @@
+{
+  "id": "rate-limiting",
+  "title": "Rate limiting",
+  "subject": "system-design",
+  "summary": "Understand rate limiting in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "rate-limiting-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a token bucket control?",
+      "explanation": "The correct answer is Request rate and burst size.",
+      "needsHumanCheck": false,
+      "options": [
+        "Request rate and burst size",
+        "Database normalization",
+        "TLS cipher choice",
+        "Replica lag"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "rate-limiting-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does a token bucket control?",
+      "explanation": "The correct answer is Request rate and burst size.",
+      "needsHumanCheck": false,
+      "options": [
+        "Request rate and burst size",
+        "Database normalization",
+        "TLS cipher choice",
+        "Replica lag"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "rate-limiting-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why rate-limit an API?",
+      "explanation": "To protect capacity and provide fair, predictable access under load.",
+      "needsHumanCheck": true,
+      "answerKey": "To protect capacity and provide fair, predictable access under load.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "rate-limiting-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why rate-limit an API?",
+      "explanation": "To protect capacity and provide fair, predictable access under load.",
+      "needsHumanCheck": true,
+      "answerKey": "To protect capacity and provide fair, predictable access under load.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

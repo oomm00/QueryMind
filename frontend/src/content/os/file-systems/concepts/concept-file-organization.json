@@ -1,0 +1,131 @@
+{
+  "id": "concept-file-organization",
+  "subject": "operating-systems",
+  "title": "Files and file metadata",
+  "summary": "A file system names persistent data, records metadata, and maps logical file offsets to storage blocks.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-file-organization-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which item is file metadata rather than file content?",
+      "options": [
+        "Permissions",
+        "A paragraph in the file",
+        "A video frame",
+        "A source-code comment"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Permissions are metadata describing access to the file.",
+      "rubric": [],
+      "explanation": "Size, owner, timestamps, and block pointers are other metadata examples.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-file-organization-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "Why does a file descriptor usually identify an open-file entry rather than just a path string?",
+      "options": [
+        "It carries per-open state such as current offset and access mode",
+        "Paths cannot contain letters",
+        "It stores the entire file in a register",
+        "It bypasses all permissions"
+      ],
+      "correctIndex": 0,
+      "answerKey": "An open-file description can track offset, flags, and references to the underlying file object.",
+      "rubric": [],
+      "explanation": "Path lookup and open-file state are distinct abstractions.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-file-organization-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A file is opened with append semantics. Where should each write be placed?",
+      "options": [
+        "At the current process instruction",
+        "At the end of the file as defined by the append operation",
+        "At block zero always",
+        "In the directory metadata only"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Append writes are positioned at the end for each write according to the OS semantics.",
+      "rubric": [],
+      "explanation": "Concurrent append behavior depends on the filesystem and API guarantees.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-file-organization-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can sequential access outperform random access on a disk-backed file?",
+      "options": [
+        "It reduces seek/positioning overhead and benefits from read-ahead",
+        "It always uses less logical data",
+        "Random access skips permission checks",
+        "Sequential files have no metadata"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Adjacent or predicted blocks can be read efficiently and with fewer positioning costs.",
+      "rubric": [],
+      "explanation": "The gap depends on storage technology and cache state.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-file-organization-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Distinguish a file name, an open file descriptor, and the underlying file object.",
+      "answerKey": "A name is a directory entry used to locate a file. An open file descriptor is a per-process handle referring to an open-file description with flags and offset. The underlying file object holds persistent metadata and data-block mappings and may have multiple names or descriptors.",
+      "rubric": [
+        {
+          "criterion": "Distinguishes name",
+          "points": 2
+        },
+        {
+          "criterion": "Explains descriptor state",
+          "points": 3
+        },
+        {
+          "criterion": "Explains underlying object",
+          "points": 3
+        }
+      ],
+      "explanation": "The exact object names differ across operating systems, but the layers are distinct.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-file-organization-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Explain why flushing a user-space buffer is not always the same as durable storage.",
+      "answerKey": "Flushing a library buffer may only issue data to the kernel. The kernel and storage device can still cache writes, so an explicit synchronization operation and device-specific guarantees may be needed before claiming persistence after a crash.",
+      "rubric": [
+        {
+          "criterion": "Distinguishes user buffer from kernel/device cache",
+          "points": 4
+        },
+        {
+          "criterion": "Mentions synchronization/durability guarantee",
+          "points": 3
+        },
+        {
+          "criterion": "Avoids absolute guarantee",
+          "points": 2
+        }
+      ],
+      "explanation": "Durability is a storage-stack property, not just a language-library flush.",
+      "needsHumanCheck": false
+    }
+  ]
+}

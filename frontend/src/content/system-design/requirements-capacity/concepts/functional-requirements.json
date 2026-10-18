@@ -1,0 +1,82 @@
+{
+  "id": "functional-requirements",
+  "title": "Functional requirements",
+  "subject": "system-design",
+  "summary": "Understand functional requirements in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "functional-requirements-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What is a functional requirement?",
+      "explanation": "The correct answer is A behavior the system must provide.",
+      "needsHumanCheck": false,
+      "options": [
+        "A behavior the system must provide",
+        "A latency percentile",
+        "A deployment region",
+        "A CPU model"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "functional-requirements-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What is a functional requirement?",
+      "explanation": "The correct answer is A behavior the system must provide.",
+      "needsHumanCheck": false,
+      "options": [
+        "A behavior the system must provide",
+        "A latency percentile",
+        "A deployment region",
+        "A CPU model"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "functional-requirements-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why clarify requirements before designing?",
+      "explanation": "They define scope and acceptance criteria for the architecture.",
+      "needsHumanCheck": true,
+      "answerKey": "They define scope and acceptance criteria for the architecture.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "functional-requirements-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why clarify requirements before designing?",
+      "explanation": "They define scope and acceptance criteria for the architecture.",
+      "needsHumanCheck": true,
+      "answerKey": "They define scope and acceptance criteria for the architecture.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

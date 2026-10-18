@@ -2,8 +2,8 @@
 QueryMind Backend — App Factory
 ================================
 Creates and configures the FastAPI application instance.
-All routers are registered here. CORS, lifespan events, structured error handling,
-and request logging middleware are defined in this file.
+All routers are registered here. CORS, lifespan events, and
+global middleware are also defined in this file.
 """
 
 import logging
@@ -20,55 +20,46 @@ from app.core.config import settings
 from app.core.exceptions import QueryMindError
 from app.core.logging import RequestLoggingMiddleware, setup_logging
 from app.core.warmup import warm_up
+from app.db.session import engine
+from app.models import base  # noqa: F401  — triggers model registration
 
 logger = logging.getLogger("querymind.app")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown lifecycle hook.
-
-    The database schema is owned by Alembic (``alembic upgrade head``); the app
-    deliberately does not create or alter tables on startup.
-
-    On startup (unless ``WARMUP_ON_STARTUP`` is disabled) we pre-load the heavy,
-    process-wide resources — the embedding model, the Chroma collection and the
-    structured-output schemas — so the first request is not ~8s slower than the
-    rest. ``warm_up()`` is best-effort and never raises.
-    """
+    """Startup / shutdown lifecycle hook."""
     if not settings.gemini_api_key.strip():
         logger.error(
-            "GEMINI_API_KEY is not set — /health reports llm_configured=false and "
-            "question generation / answer evaluation will return 503 "
-            "LLM_NOT_CONFIGURED. Copy .env.example to .env and set GEMINI_API_KEY."
+            "GEMINI_API_KEY is not set — question generation and evaluation "
+            "will return LLM_NOT_CONFIGURED."
         )
     if settings.warmup_on_startup:
         timings = warm_up()
         if timings:
             logger.info("Startup warm-up paid: %s", timings)
+    try:
+        base.Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"DB table creation warning: {e}")
     yield
-    # On shutdown: close connections, flush queues, etc.
 
 
 def create_app() -> FastAPI:
-    # ── Logging ──────────────────────────────────────────
     setup_logging(level="DEBUG" if settings.debug else "INFO")
 
     app = FastAPI(
         title="QueryMind API",
         description=(
             "AI-based adaptive question generation and answer "
-            "evaluation platform."
+            "evaluation platform — skeleton / stub version."
         ),
         version="0.1.0",
         lifespan=lifespan,
     )
 
-    # ── Exception Handlers ───────────────────────────────
-
     @app.exception_handler(QueryMindError)
     async def querymind_error_handler(request: Request, exc: QueryMindError) -> JSONResponse:
-        """Handle all custom QueryMind exceptions → structured JSON."""
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail, "code": exc.code},
@@ -76,19 +67,13 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        """Handle Pydantic request-validation failures → structured JSON."""
         return JSONResponse(
             status_code=422,
-            content={
-                "detail": "Request validation failed",
-                "code": "VALIDATION_ERROR",
-                "errors": exc.errors(),
-            },
+            content={"detail": "Request validation failed", "code": "VALIDATION_ERROR", "errors": exc.errors()},
         )
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        """Handle standard HTTP exceptions (404, 405, etc.) → structured JSON."""
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail, "code": f"HTTP_{exc.status_code}"},
@@ -96,24 +81,15 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        """Catch-all for unexpected errors — log full traceback, return safe 500."""
-        request_id = getattr(request.state, "request_id", None)
-        logger.exception(
-            "Unhandled exception on %s %s (request_id=%s)",
-            request.method,
-            request.url.path,
-            request_id,
-            extra={"request_id": request_id} if request_id else None,
-        )
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,
             content={"detail": "Internal server error", "code": "INTERNAL_ERROR"},
         )
 
-    # ── Middleware (order matters: first added = outermost) ──
-
     app.add_middleware(RequestLoggingMiddleware)
 
+    # ── CORS ──────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -136,8 +112,6 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["Health"])
     async def health():
-        # llm_configured reflects whether an API key is present so a deploy can
-        # be probed without triggering a paid LLM call.
         return {
             "status": "healthy",
             "llm_configured": bool(settings.gemini_api_key.strip()),

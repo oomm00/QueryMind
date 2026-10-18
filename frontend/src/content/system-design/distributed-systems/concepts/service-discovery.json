@@ -1,0 +1,82 @@
+{
+  "id": "service-discovery",
+  "title": "Service discovery",
+  "subject": "system-design",
+  "summary": "Understand service discovery in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "service-discovery-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does service discovery provide?",
+      "explanation": "The correct answer is A way to find healthy service instances.",
+      "needsHumanCheck": false,
+      "options": [
+        "A way to find healthy service instances",
+        "A database schema",
+        "A user interface",
+        "A backup checksum"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "service-discovery-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does service discovery provide?",
+      "explanation": "The correct answer is A way to find healthy service instances.",
+      "needsHumanCheck": false,
+      "options": [
+        "A way to find healthy service instances",
+        "A database schema",
+        "A user interface",
+        "A backup checksum"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "service-discovery-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why use health-aware discovery?",
+      "explanation": "Clients avoid routing requests to instances that cannot serve traffic.",
+      "needsHumanCheck": true,
+      "answerKey": "Clients avoid routing requests to instances that cannot serve traffic.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "service-discovery-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why use health-aware discovery?",
+      "explanation": "Clients avoid routing requests to instances that cannot serve traffic.",
+      "needsHumanCheck": true,
+      "answerKey": "Clients avoid routing requests to instances that cannot serve traffic.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

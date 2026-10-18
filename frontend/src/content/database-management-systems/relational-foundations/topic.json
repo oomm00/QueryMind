@@ -1,0 +1,12 @@
+{
+  "id": "relational-foundations",
+  "title": "Relational Foundations",
+  "subject": "database-management-systems",
+  "summary": "Core relational foundations concepts.",
+  "conceptIds": [
+    "relational-model",
+    "normalization",
+    "keys-constraints",
+    "sql-relations"
+  ]
+}

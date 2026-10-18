@@ -1,0 +1,131 @@
+{
+  "id": "concept-working-set-simulation",
+  "subject": "operating-systems",
+  "title": "Working sets and page replacement",
+  "summary": "A working set approximates the pages actively used in a recent window and helps reason about locality and thrashing.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-working-set-simulation-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does the working-set window represent?",
+      "options": [
+        "A recent interval of memory references used to estimate active pages",
+        "The size of the disk",
+        "The CPU time quantum",
+        "The number of files in a directory"
+      ],
+      "correctIndex": 0,
+      "answerKey": "The window is a recent reference interval from which the distinct active pages are estimated.",
+      "rubric": [],
+      "explanation": "The window can be defined by time or reference count.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-working-set-simulation-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What is thrashing?",
+      "options": [
+        "Excessive paging that leaves little time for useful execution",
+        "A successful cache hit",
+        "A directory cycle only",
+        "A process finishing early"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Thrashing occurs when page faults and replacement dominate useful computation.",
+      "rubric": [],
+      "explanation": "It often indicates insufficient frames for the workload’s locality.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-working-set-simulation-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Reference string 1,2,1,3 with a window of the last three references has which working set at the end?",
+      "options": [
+        "{1}",
+        "{1,2}",
+        "{1,2,3}",
+        "{2,3}"
+      ],
+      "correctIndex": 2,
+      "answerKey": "The last three references are 2,1,3, so the distinct pages are {1,2,3}.",
+      "rubric": [],
+      "explanation": "The set counts distinct pages, not repeated references.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-working-set-simulation-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can increasing the working-set window increase estimated memory demand?",
+      "options": [
+        "A longer window can include more distinct pages from different phases",
+        "It reduces the number of references to zero",
+        "It deletes page tables",
+        "It forces every page to be executable"
+      ],
+      "correctIndex": 0,
+      "answerKey": "A longer history may span more locality phases and therefore include more distinct pages.",
+      "rubric": [],
+      "explanation": "The estimate depends on the reference pattern.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-working-set-simulation-q5",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "For references 1,2,3,2,4 and a window of 4 ending at the last reference, compute the working set.",
+      "answerKey": "The last four references are 2,3,2,4, so the working set is {2,3,4}, with three distinct pages.",
+      "rubric": [
+        {
+          "criterion": "Selects correct window",
+          "points": 3
+        },
+        {
+          "criterion": "Removes duplicate page",
+          "points": 2
+        },
+        {
+          "criterion": "Reports set and size",
+          "points": 2
+        }
+      ],
+      "explanation": "A working set is a set of pages, not a sequence with repeated entries.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-working-set-simulation-q6",
+      "type": "short",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "A process repeatedly alternates between two phases, each using four pages, but only three frames are allocated. Explain why faults may be high and suggest a response.",
+      "answerKey": "Three frames cannot hold either four-page phase, so references can evict pages that the phase immediately needs, causing repeated faults. Allocate enough frames for the active working set if possible, reduce competing load, or use a policy that detects thrashing and suspends/rebalances processes.",
+      "rubric": [
+        {
+          "criterion": "Relates frames to phase working set",
+          "points": 4
+        },
+        {
+          "criterion": "Explains repeated eviction/faults",
+          "points": 3
+        },
+        {
+          "criterion": "Suggests a sound response",
+          "points": 3
+        }
+      ],
+      "explanation": "The exact fault pattern depends on replacement order, but the capacity mismatch is fundamental.",
+      "needsHumanCheck": false
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "id": "consensus",
+  "title": "Consensus",
+  "subject": "database-management-systems",
+  "summary": "Understand consensus in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "consensus-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What problem does consensus solve in a distributed system?",
+      "explanation": "The correct answer is Agreeing on a value despite failures.",
+      "needsHumanCheck": false,
+      "options": [
+        "Agreeing on a value despite failures",
+        "Compressing tables",
+        "Formatting SQL",
+        "Caching images"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "consensus-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What problem does consensus solve in a distributed system?",
+      "explanation": "The correct answer is Agreeing on a value despite failures.",
+      "needsHumanCheck": false,
+      "options": [
+        "Agreeing on a value despite failures",
+        "Compressing tables",
+        "Formatting SQL",
+        "Caching images"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "consensus-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why is a quorum used?",
+      "explanation": "Overlapping majorities prevent two conflicting decisions from both being committed.",
+      "needsHumanCheck": true,
+      "answerKey": "Overlapping majorities prevent two conflicting decisions from both being committed.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "consensus-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why is a quorum used?",
+      "explanation": "Overlapping majorities prevent two conflicting decisions from both being committed.",
+      "needsHumanCheck": true,
+      "answerKey": "Overlapping majorities prevent two conflicting decisions from both being committed.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

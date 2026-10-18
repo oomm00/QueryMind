@@ -1,0 +1,82 @@
+{
+  "id": "tls",
+  "title": "TLS security",
+  "subject": "computer-networks",
+  "summary": "Understand tls security in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "tls-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a TLS certificate primarily bind to a public key?",
+      "explanation": "The correct answer is A verified server identity.",
+      "needsHumanCheck": false,
+      "options": [
+        "A verified server identity",
+        "A TCP port",
+        "A DNS cache entry",
+        "A compression dictionary"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "tls-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does a TLS certificate primarily bind to a public key?",
+      "explanation": "The correct answer is A verified server identity.",
+      "needsHumanCheck": false,
+      "options": [
+        "A verified server identity",
+        "A TCP port",
+        "A DNS cache entry",
+        "A compression dictionary"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "tls-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "How does TLS provide confidentiality?",
+      "explanation": "It encrypts application data with session keys negotiated during the handshake.",
+      "needsHumanCheck": true,
+      "answerKey": "It encrypts application data with session keys negotiated during the handshake.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "tls-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "How does TLS provide confidentiality?",
+      "explanation": "It encrypts application data with session keys negotiated during the handshake.",
+      "needsHumanCheck": true,
+      "answerKey": "It encrypts application data with session keys negotiated during the handshake.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

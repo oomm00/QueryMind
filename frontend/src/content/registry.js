@@ -37,11 +37,15 @@
  */
 
 import { getCourse, getTopic } from './os/index.js'
+import { COURSE_LOADERS } from './catalog/index.js'
 import { rollUp } from '../lib/mastery.js'
 
 /** Slugs that have a hand-written label; anything else is titled from the slug. */
 export const SUBJECT_LABELS = {
   'operating-systems': 'Operating Systems',
+  'computer-networks': 'Computer Networks',
+  'database-management-systems': 'Database Management Systems',
+  'system-design': 'System Design',
 }
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -216,15 +220,16 @@ export function createRegistry(courses = []) {
 
 /** The real course as the registry wants it: `subject` on the course and topics. */
 function loadCourses() {
-  const course = getCourse('os')
-  if (!course) return []
-  return [
-    {
+  const loaders = [{ getCourse, getTopic }, ...Object.values(COURSE_LOADERS)]
+  return loaders.flatMap((loader) => {
+    const course = loader.getCourse()
+    if (!course) return []
+    return [{
       id: course.id,
       title: course.title,
       subject: course.topics.find((entry) => entry.subject)?.subject ?? null,
       topics: course.topics.map((entry) => {
-        const topic = getTopic(entry.id)
+        const topic = loader.getTopic(entry.id)
         return {
           id: topic.id,
           title: topic.title,
@@ -232,8 +237,8 @@ function loadCourses() {
           concepts: topic.concepts,
         }
       }),
-    },
-  ]
+    }]
+  })
 }
 
 export const registry = createRegistry(loadCourses())

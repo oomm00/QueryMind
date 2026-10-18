@@ -1,0 +1,135 @@
+{
+  "id": "concept-semaphores",
+  "subject": "operating-systems",
+  "title": "Semaphores",
+  "summary": "A semaphore is a synchronization primitive with an integer count changed by atomic wait and signal operations.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-semaphores-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a counting semaphore value commonly represent?",
+      "options": [
+        "Available permits/resources",
+        "Number of source files",
+        "CPU register width",
+        "A process virtual address"
+      ],
+      "correctIndex": 0,
+      "answerKey": "A counting semaphore can represent the number of available identical resources or permits.",
+      "rubric": [],
+      "explanation": "A binary semaphore has only two logical availability states.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-semaphores-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What happens when a thread performs wait/P on a semaphore whose count is zero?",
+      "options": [
+        "It proceeds without synchronization",
+        "It blocks or waits until a signal/V makes a permit available",
+        "It deletes the semaphore",
+        "It increments the count"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Wait consumes a permit or blocks until one is available.",
+      "rubric": [],
+      "explanation": "The decrement and test must be atomic.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-semaphores-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A buffer has capacity 8. Which initial semaphore count represents empty slots?",
+      "options": [
+        "0",
+        "1",
+        "8",
+        "-8"
+      ],
+      "correctIndex": 2,
+      "answerKey": "The empty-slot semaphore starts at the buffer capacity, 8.",
+      "rubric": [],
+      "explanation": "A separate full-slot semaphore typically starts at zero.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-semaphores-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why must semaphore wait and signal operations be atomic?",
+      "options": [
+        "Otherwise concurrent updates can lose permits or admit too many threads",
+        "Atomicity makes all I/O faster",
+        "It prevents all scheduling",
+        "It converts a semaphore into a file"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Non-atomic updates can race and violate the count invariant.",
+      "rubric": [],
+      "explanation": "Atomicity is about the semaphore operation, not about making the protected work indivisible.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-semaphores-q5",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Describe how two semaphores can coordinate a bounded producer-consumer buffer.",
+      "answerKey": "Use an empty semaphore initialized to capacity and a full semaphore initialized to zero, plus mutual exclusion for buffer indices. A producer waits on empty, inserts, then signals full; a consumer waits on full, removes, then signals empty.",
+      "rubric": [
+        {
+          "criterion": "Initializes empty/full correctly",
+          "points": 3
+        },
+        {
+          "criterion": "Describes producer order",
+          "points": 2
+        },
+        {
+          "criterion": "Describes consumer order",
+          "points": 2
+        },
+        {
+          "criterion": "Mentions buffer mutual exclusion",
+          "points": 2
+        }
+      ],
+      "explanation": "Counting semaphores track slots; a mutex or equivalent protects the data structure itself.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-semaphores-q6",
+      "type": "short",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "Contrast a binary semaphore with a mutex and identify one reason a mutex may be preferable for ownership.",
+      "answerKey": "Both can enforce exclusion, but a mutex typically has ownership semantics: the thread that locks it must unlock it, enabling misuse checks and priority-inheritance protocols. A binary semaphore is a signaling primitive and may allow different wait/signal participants depending on the API.",
+      "rubric": [
+        {
+          "criterion": "States common exclusion similarity",
+          "points": 2
+        },
+        {
+          "criterion": "Explains ownership distinction",
+          "points": 4
+        },
+        {
+          "criterion": "Gives a practical consequence",
+          "points": 2
+        }
+      ],
+      "explanation": "Exact semantics vary by OS, so avoid claiming every semaphore has identical behavior.",
+      "needsHumanCheck": false
+    }
+  ]
+}

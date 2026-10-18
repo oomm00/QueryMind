@@ -1,0 +1,82 @@
+{
+  "id": "isolation-levels",
+  "title": "Isolation levels",
+  "subject": "database-management-systems",
+  "summary": "Understand isolation levels in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "isolation-levels-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which isolation level permits dirty reads?",
+      "explanation": "The correct answer is Read uncommitted.",
+      "needsHumanCheck": false,
+      "options": [
+        "Read uncommitted",
+        "Serializable",
+        "Repeatable read",
+        "Read committed"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "isolation-levels-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which isolation level permits dirty reads?",
+      "explanation": "The correct answer is Read uncommitted.",
+      "needsHumanCheck": false,
+      "options": [
+        "Read uncommitted",
+        "Serializable",
+        "Repeatable read",
+        "Read committed"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "isolation-levels-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is a phantom read?",
+      "explanation": "A repeated predicate query sees new or removed rows committed by another transaction.",
+      "needsHumanCheck": true,
+      "answerKey": "A repeated predicate query sees new or removed rows committed by another transaction.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "isolation-levels-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is a phantom read?",
+      "explanation": "A repeated predicate query sees new or removed rows committed by another transaction.",
+      "needsHumanCheck": true,
+      "answerKey": "A repeated predicate query sees new or removed rows committed by another transaction.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

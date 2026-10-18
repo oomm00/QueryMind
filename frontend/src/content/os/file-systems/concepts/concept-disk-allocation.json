@@ -1,0 +1,131 @@
+{
+  "id": "concept-disk-allocation",
+  "subject": "operating-systems",
+  "title": "Block allocation and free space",
+  "summary": "Allocation strategies decide how a file’s logical blocks map to physical storage and how unused blocks are tracked.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-disk-allocation-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which allocation approach stores a file in a run of consecutive blocks?",
+      "options": [
+        "Contiguous allocation",
+        "Linked allocation",
+        "Indexed allocation",
+        "Copy-on-write only"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Contiguous allocation assigns adjacent blocks to a file.",
+      "rubric": [],
+      "explanation": "It provides good sequential performance but can suffer external fragmentation.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-disk-allocation-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What is a benefit of indexed allocation?",
+      "options": [
+        "An index block can point to file data blocks without requiring one contiguous run",
+        "It removes all metadata",
+        "It prevents file growth",
+        "It stores every file in block zero"
+      ],
+      "correctIndex": 0,
+      "answerKey": "An index structure supports non-contiguous block placement and direct lookup.",
+      "rubric": [],
+      "explanation": "Index blocks consume space and add an access level.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-disk-allocation-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A file grows beyond its original contiguous extent. What problem can arise?",
+      "options": [
+        "The filesystem may need to relocate it or find another extent",
+        "The file becomes a process",
+        "Directories stop existing",
+        "The CPU loses its registers"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Growth can require extension, relocation, or another extent, depending on the allocator.",
+      "rubric": [],
+      "explanation": "Extent-based systems mitigate this with multiple runs.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-disk-allocation-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can linked allocation be poor for random access?",
+      "options": [
+        "Following a chain may require reading many pointers before reaching the desired block",
+        "It always duplicates data",
+        "It cannot represent an empty file",
+        "It gives every block the same address"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Random access through a linked chain can require traversing from the beginning.",
+      "rubric": [],
+      "explanation": "Caching or indexed variants can improve this behavior.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-disk-allocation-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Compare contiguous, linked, and indexed allocation on access pattern and growth.",
+      "answerKey": "Contiguous allocation is fast for sequential and random access but can fragment and make growth difficult. Linked allocation grows easily and avoids external contiguity but is poor for random access. Indexed allocation supports non-contiguous growth and direct access through an index, at the cost of index metadata and extra reads.",
+      "rubric": [
+        {
+          "criterion": "Covers contiguous",
+          "points": 3
+        },
+        {
+          "criterion": "Covers linked",
+          "points": 3
+        },
+        {
+          "criterion": "Covers indexed",
+          "points": 3
+        }
+      ],
+      "explanation": "Mention both performance and allocation/growth trade-offs.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-disk-allocation-q6",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why must a file system update allocation metadata carefully after a crash?",
+      "answerKey": "A crash between data and metadata updates can leak blocks, mark live blocks free, or expose stale pointers. Journaling, copy-on-write, or ordered/checksummed metadata protocols preserve invariants and allow recovery to a consistent allocation map.",
+      "rubric": [
+        {
+          "criterion": "Identifies partial-update inconsistency",
+          "points": 4
+        },
+        {
+          "criterion": "Gives a valid recovery technique",
+          "points": 3
+        },
+        {
+          "criterion": "Names a concrete failure mode",
+          "points": 2
+        }
+      ],
+      "explanation": "The exact protocol varies, but metadata consistency is the requirement.",
+      "needsHumanCheck": false
+    }
+  ]
+}

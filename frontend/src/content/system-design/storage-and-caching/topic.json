@@ -1,0 +1,12 @@
+{
+  "id": "storage-and-caching",
+  "title": "Storage and Caching",
+  "subject": "system-design",
+  "summary": "Core storage and caching concepts.",
+  "conceptIds": [
+    "caching",
+    "database-scaling",
+    "object-storage",
+    "data-modeling"
+  ]
+}

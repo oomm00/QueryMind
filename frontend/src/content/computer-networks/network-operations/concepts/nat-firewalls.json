@@ -1,0 +1,82 @@
+{
+  "id": "nat-firewalls",
+  "title": "NAT and firewalls",
+  "subject": "computer-networks",
+  "summary": "Understand nat and firewalls in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "nat-firewalls-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does NAT commonly translate?",
+      "explanation": "The correct answer is Private addresses and ports to public mappings.",
+      "needsHumanCheck": false,
+      "options": [
+        "Private addresses and ports to public mappings",
+        "TLS keys to passwords",
+        "MACs to DNS names",
+        "HTTP to SQL"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "nat-firewalls-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does NAT commonly translate?",
+      "explanation": "The correct answer is Private addresses and ports to public mappings.",
+      "needsHumanCheck": false,
+      "options": [
+        "Private addresses and ports to public mappings",
+        "TLS keys to passwords",
+        "MACs to DNS names",
+        "HTTP to SQL"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "nat-firewalls-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why can a stateful firewall allow return traffic?",
+      "explanation": "It tracks an established flow and permits packets matching that state.",
+      "needsHumanCheck": true,
+      "answerKey": "It tracks an established flow and permits packets matching that state.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "nat-firewalls-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why can a stateful firewall allow return traffic?",
+      "explanation": "It tracks an established flow and permits packets matching that state.",
+      "needsHumanCheck": true,
+      "answerKey": "It tracks an established flow and permits packets matching that state.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

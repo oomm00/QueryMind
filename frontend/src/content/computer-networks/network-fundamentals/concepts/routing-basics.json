@@ -1,0 +1,82 @@
+{
+  "id": "routing-basics",
+  "title": "Routing and forwarding",
+  "subject": "computer-networks",
+  "summary": "Understand routing and forwarding in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "routing-basics-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a router consult to choose a next hop?",
+      "explanation": "The correct answer is Forwarding table.",
+      "needsHumanCheck": false,
+      "options": [
+        "Forwarding table",
+        "ARP payload",
+        "TLS certificate",
+        "HTTP cache"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "routing-basics-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does a router consult to choose a next hop?",
+      "explanation": "The correct answer is Forwarding table.",
+      "needsHumanCheck": false,
+      "options": [
+        "Forwarding table",
+        "ARP payload",
+        "TLS certificate",
+        "HTTP cache"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "routing-basics-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is longest-prefix match?",
+      "explanation": "Choosing the most specific matching route prefix.",
+      "needsHumanCheck": true,
+      "answerKey": "Choosing the most specific matching route prefix.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "routing-basics-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is longest-prefix match?",
+      "explanation": "Choosing the most specific matching route prefix.",
+      "needsHumanCheck": true,
+      "answerKey": "Choosing the most specific matching route prefix.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

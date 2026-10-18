@@ -1,0 +1,82 @@
+{
+  "id": "keys-constraints",
+  "title": "Keys and constraints",
+  "subject": "database-management-systems",
+  "summary": "Understand keys and constraints in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "keys-constraints-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What must a primary key be?",
+      "explanation": "The correct answer is Unique and not null.",
+      "needsHumanCheck": false,
+      "options": [
+        "Unique and not null",
+        "Nullable and duplicated",
+        "Only numeric",
+        "A foreign table"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "keys-constraints-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What must a primary key be?",
+      "explanation": "The correct answer is Unique and not null.",
+      "needsHumanCheck": false,
+      "options": [
+        "Unique and not null",
+        "Nullable and duplicated",
+        "Only numeric",
+        "A foreign table"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "keys-constraints-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What does a foreign key enforce?",
+      "explanation": "That referenced values correspond to a candidate or primary key in another relation.",
+      "needsHumanCheck": true,
+      "answerKey": "That referenced values correspond to a candidate or primary key in another relation.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "keys-constraints-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What does a foreign key enforce?",
+      "explanation": "That referenced values correspond to a candidate or primary key in another relation.",
+      "needsHumanCheck": true,
+      "answerKey": "That referenced values correspond to a candidate or primary key in another relation.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}
