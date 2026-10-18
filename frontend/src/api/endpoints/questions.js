@@ -9,6 +9,7 @@ import {
   adaptGenerateQuestionsRequest,
   adaptGenerateQuestionsResponse,
 } from '../adapter.js'
+import { toFriendlyGenerationError } from '../errorMessages.js'
 
 export const questionsEndpoints = {
   /**
@@ -16,6 +17,11 @@ export const questionsEndpoints = {
    * @param {Object} contractPayload - { topic, subject?, bloom_level, difficulty, question_type?, count? }
    * @param {string} userId - current user id
    * @returns {Promise<{ questions: Array }>}
+   *
+   * A failure is rethrown with the sentence its code maps to (api/errorMessages.js),
+   * so a caller can hand the error straight to ErrorState or Toast without ever
+   * showing a code: the message is friendly, and `retryable` says whether a
+   * Retry button is honest. The backend's status and body stay on the error.
    */
   async generate(contractPayload, userId) {
     if (isMocked('questions')) {
@@ -24,12 +30,17 @@ export const questionsEndpoints = {
     }
 
     const backendPayload = adaptGenerateQuestionsRequest(contractPayload, userId)
-    const backendResponse = await apiFetch('/questions/generate', {
-      method: 'POST',
-      body: JSON.stringify(backendPayload),
-    })
 
-    return adaptGenerateQuestionsResponse(backendResponse)
+    try {
+      const backendResponse = await apiFetch('/questions/generate', {
+        method: 'POST',
+        body: JSON.stringify(backendPayload),
+      })
+
+      return adaptGenerateQuestionsResponse(backendResponse)
+    } catch (error) {
+      throw toFriendlyGenerationError(error)
+    }
   },
 }
 
