@@ -8,14 +8,16 @@
  * point.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   allConcepts,
   coursesContaining,
   createRegistry,
   getConcept,
   getKnowledgeNodes,
+  registerCustomConcept,
   registry,
+  resetCustomConcepts,
   subjectLabel,
   subjects,
   topicsOfSubject,
@@ -214,5 +216,63 @@ describe('the real library', () => {
     expect(untouched.estimate).toBeNull()
     expect(untouched.confidence).toBeNull()
     expect(untouched.lastPractised).toBeNull()
+  })
+})
+
+/**
+ * A topic the student typed on the generate page is not taught by any course,
+ * but the answers to its questions move mastery all the same: mastery is keyed
+ * by (user, concept, bloom) and knows nothing about courses. Registration is
+ * what makes the number visible in the library.
+ */
+describe('a concept the student made by asking for a topic', () => {
+  beforeEach(() => resetCustomConcepts())
+  afterEach(() => resetCustomConcepts())
+
+  it('is not in the library until it is registered', () => {
+    expect(allConcepts().some((concept) => concept.id === 'custom:deadlocks')).toBe(false)
+    expect(getConcept('custom:deadlocks')).toBeNull()
+  })
+
+  it('joins the library under the title the student typed', () => {
+    registerCustomConcept({ id: 'custom:deadlocks', title: 'Deadlocks', subject: 'general' })
+
+    const concept = allConcepts().find((entry) => entry.id === 'custom:deadlocks')
+    expect(concept).toMatchObject({ title: 'Deadlocks', subject: 'general', topicId: null })
+    expect(getConcept('custom:deadlocks')).toMatchObject({ id: 'custom:deadlocks' })
+
+    // The authored selectors leave it out: there is nothing taught behind it.
+    expect(subjects()).not.toContain('general')
+    expect(topicsOfSubject('general')).toEqual([])
+    expect(coursesContaining('custom:deadlocks')).toEqual([])
+  })
+
+  it('shows the mastery its questions earned, flagged as custom', () => {
+    const userId = 'registry-custom-concept'
+    resetMastery(userId)
+    registerCustomConcept({ id: 'custom:deadlocks', title: 'Deadlocks', subject: 'operating-systems' })
+    recordScore(userId, { conceptId: 'custom:deadlocks', bloom: 'understand', score: 0.5 })
+
+    const estimates = estimatesFrom(readProgress(userId).concepts)
+    const node = getKnowledgeNodes(estimates).find((entry) => entry.id === 'custom:deadlocks')
+
+    expect(node).toMatchObject({
+      conceptId: 'custom:deadlocks',
+      title: 'Deadlocks',
+      subject: 'operating-systems',
+      subjectLabel: 'Operating Systems',
+      custom: true,
+      estimate: 0.5,
+    })
+    expect(node.lastPractised).toBeTruthy()
+  })
+
+  it('is refreshed rather than repeated when the same topic comes back', () => {
+    registerCustomConcept({ id: 'custom:deadlocks', title: 'Deadlocks', subject: 'general' })
+    registerCustomConcept({ id: 'custom:deadlocks', title: 'Deadlocks and locks', subject: 'os' })
+
+    const matching = allConcepts().filter((concept) => concept.id === 'custom:deadlocks')
+    expect(matching).toHaveLength(1)
+    expect(matching[0].title).toBe('Deadlocks and locks')
   })
 })
