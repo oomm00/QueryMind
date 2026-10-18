@@ -225,3 +225,49 @@ export const IconLogout = (p) => (
     <path d="M21 12H9" />
   </Svg>
 )
+
+// ── Study material ──────────────────────────────────────────
+// One glyph per resource type, so a list of links reads at a glance.
+
+export const IconArticle = (p) => (
+  <Svg {...p}>
+    <rect x="4" y="4" width="16" height="16" rx="2" />
+    <path d="M8 9h8M8 13h8M8 17h5" />
+  </Svg>
+)
+
+export const IconVideo = (p) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m11 9.5 3.5 2.5-3.5 2.5z" />
+  </Svg>
+)
+
+export const IconBook = (p) => (
+  <Svg {...p}>
+    <rect x="4" y="3" width="16" height="18" rx="2" />
+    <path d="M9 3v18" />
+  </Svg>
+)
+
+export const IconDocs = (p) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 9h18" />
+    <path d="M7 13h7M7 16.5h5" />
+  </Svg>
+)
+
+export const IconInteractive = (p) => (
+  <Svg {...p}>
+    <path d="M6 3l12.5 7.4-5.5 1.3L10 19z" />
+  </Svg>
+)
+
+export const IconExternalLink = (p) => (
+  <Svg {...p}>
+    <path d="M14 4h6v6" />
+    <path d="M20 4 11 13" />
+    <path d="M18 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5" />
+  </Svg>
+)

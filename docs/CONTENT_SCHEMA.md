@@ -91,7 +91,13 @@ concept = {
   questions: Question[],
   // resolved for rendering:
   prerequisites: { id: string, title: string, topicId: string, label: string | null }[],
-  lessons: { id: string, title: string, estMinutes: number, topicId: string, isPlaceholder: boolean }[]
+  lessons: { id: string, title: string, estMinutes: number, topicId: string, isPlaceholder: boolean }[],
+  // the checks this concept's lessons already ask, as questions that can be
+  // practised (each carries lessonId and blockIndex, so an answer lands on the
+  // same record the reader writes to)
+  lessonQuestions: Question[],
+  resourceCount: number,
+  questionCount: number   // questions.length + lessonQuestions.length
 }
 ```
 
@@ -125,6 +131,8 @@ Rules:
   `verifiedOn`.
 - A concept with no resources shows **"No study material added yet."** — that is
   a valid state, not a gap to fill with a guessed URL.
+- Nothing gates practice on a link. A student can mark a link as opened, which is
+  a session log kept in `studyMaterial.js`; it is never mastery.
 
 ### Question (the practice bank)
 
@@ -191,7 +199,9 @@ type Block =
 An older lesson may carry its check as a top-level `check` object instead of a
 `check` block; the loader folds it into `blocks`. Authored checks stay valid, and
 the same question may also live in the concept's `questions[]` bank so it can be
-practised.
+practised. A check block the concept's `questions[]` does not repeat is still
+practisable — the loader turns it into a question (id `check-<lesson-id>-<index>`)
+so a student can be asked it in a session as well as in the reader.
 
 ## File organisation
 

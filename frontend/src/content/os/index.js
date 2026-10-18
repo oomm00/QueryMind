@@ -9,7 +9,7 @@
  *   <topic>/topic.json    full topic: { concepts: { "concept-x": { id, title,
  *                                              prerequisiteIds,
  *                                              prerequisiteLabels: { id: label },
- *                                              lessonIds } } }
+ *                                              lessonIds, resources, questions } } }
  *   <topic>/<lesson>.json lesson:     { id, title, estMinutes, source,
  *                                              objectives, blocks }
  *
@@ -17,6 +17,11 @@
  * references in topic.json (file stems, "lesson-*" ids) are resolved to
  * canonical lesson ids. A lesson's check question may be a block or a
  * top-level `check` object; both are normalised to the block form.
+ *
+ * A concept comes back with what can be practised on it — the authored
+ * `questions` plus the checks its lessons already ask (see checkQuestion) — and
+ * with the study material a human chose for it, which is always allowed to be
+ * empty.
  *
  * prerequisiteLabels names the *link* ("requires", "loads on fault"), not the
  * concept, so the topic graph can label its edges; a link without a label is
@@ -144,12 +149,54 @@ function lessonSummary(lesson) {
 }
 
 /**
+ * A lesson's check block, as a question the practice session can ask. It keeps
+ * the lesson id and the block index, so answering it can be recorded in the same
+ * place the reader records it and the concept's mastery stays one number.
+ *
+ * The envelope a lesson check does not carry (type, bloom, difficulty) uses the
+ * same defaults the content validator applies.
+ */
+function checkQuestion(lesson, block, blockIndex) {
+  return {
+    id: `check-${lesson.id}-${blockIndex}`,
+    type: 'mcq',
+    bloom: block.bloom ?? 'understand',
+    difficulty: block.difficulty ?? 'medium',
+    prompt: block.prompt ?? block.question ?? '',
+    options: Array.isArray(block.options) ? block.options : [],
+    correctIndex: block.correctIndex,
+    explanation: block.explanation ?? '',
+    needsHumanCheck: true,
+    lessonId: lesson.id,
+    blockIndex,
+    source: 'lesson',
+  }
+}
+
+/** The questions a lesson's check blocks contribute to a concept's bank. */
+function lessonQuestions(lessonIds) {
+  const questions = []
+  for (const lessonId of lessonIds) {
+    const lesson = lessonsById.get(lessonId)
+    if (!lesson) continue
+    lesson.blocks.forEach((block, blockIndex) => {
+      if (block?.kind === 'check') questions.push(checkQuestion(lesson, block, blockIndex))
+    })
+  }
+  return questions
+}
+
+/**
  * A concept with its graph resolved: prerequisites as objects (each carrying
- * the label of the link that points at this concept), lessons as summaries.
+ * the label of the link that points at this concept), lessons as summaries, and
+ * the questions it can be practised on (authored `questions`, plus the checks
+ * its lessons already ask).
+ *
  * Both the topic and the concept endpoints return this shape, so a consumer
  * never has to resolve ids itself.
  */
 function conceptWithGraph(concept) {
+  const fromLessons = lessonQuestions(concept.lessonIds)
   return {
     ...concept,
     prerequisites: concept.prerequisiteIds
@@ -162,6 +209,9 @@ function conceptWithGraph(concept) {
         label: concept.prerequisiteLabels?.[id] ?? null,
       })),
     lessons: concept.lessonIds.map((id) => lessonSummary(lessonsById.get(id))),
+    lessonQuestions: fromLessons,
+    resourceCount: concept.resources.length,
+    questionCount: concept.questions.length + fromLessons.length,
   }
 }
 
@@ -174,6 +224,8 @@ for (const { topicId, data } of topicSources) {
 
   const conceptIds = []
   const lessonIds = []
+  let resourceCount = 0
+  let questionCount = 0
 
   for (const [id, seed] of entries) {
     const references = seed.lessonIds ?? []
@@ -190,6 +242,9 @@ for (const { topicId, data } of topicSources) {
       }
     }
 
+    const resources = Array.isArray(seed.resources) ? seed.resources : []
+    const questions = Array.isArray(seed.questions) ? seed.questions : []
+
     const concept = {
       id,
       title: seed.title || titleFromSlug(id),
@@ -197,8 +252,13 @@ for (const { topicId, data } of topicSources) {
       prerequisiteIds: seed.prerequisiteIds ?? [],
       prerequisiteLabels: seed.prerequisiteLabels ?? {},
       lessonIds: [...new Set(resolved)],
+      resources,
+      questions,
       topicId,
     }
+
+    resourceCount += resources.length
+    questionCount += questions.length + lessonQuestions(concept.lessonIds).length
 
     conceptsById.set(id, concept)
     conceptIds.push(id)
@@ -211,6 +271,8 @@ for (const { topicId, data } of topicSources) {
     summary: data.summary || '',
     conceptIds,
     lessonIds: [...new Set(lessonIds)],
+    resourceCount,
+    questionCount,
   })
 }
 
@@ -227,6 +289,8 @@ export function getCourse(courseId = COURSE.id) {
       conceptCount: topic.conceptIds.length,
       lessonCount: topic.lessonIds.length,
       lessonIds: topic.lessonIds,
+      resourceCount: topic.resourceCount,
+      questionCount: topic.questionCount,
     }))
   return { ...COURSE, topics }
 }

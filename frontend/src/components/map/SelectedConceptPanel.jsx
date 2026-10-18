@@ -7,6 +7,9 @@
  * rather than an invented number, and the panel says which of the two it is
  * showing, because mastery and completion are separate concerns: finishing a
  * lesson never moves mastery, only answered checks do.
+ *
+ * Study material sits at the bottom, after the next steps: it is optional
+ * reading, and a concept with no links says so instead of looking broken.
  */
 
 import React from 'react'
@@ -17,6 +20,7 @@ import { getLessonMastery, useLessonProgress } from '../../content/lessonProgres
 import { sentenceCase } from '../../lib/text'
 import { badgeTone, statusFor, toneClass } from './conceptStatus'
 import { ConceptActions } from './ConceptActions'
+import { StudyMaterial } from '../content/StudyMaterial'
 
 function formatWhen(iso) {
   if (!iso) return null
@@ -225,6 +229,13 @@ export function SelectedConceptPanel({
 
             <Section title="Next steps">
               <ConceptActions courseId={courseId} topicId={topicId} concept={concept} />
+            </Section>
+
+            <Section title="Study material (optional)">
+              <p className="mb-1.5 text-[11px] leading-snug text-muted">
+                Reading for this concept. Nothing here is required to practise it.
+              </p>
+              <StudyMaterial resources={concept.resources ?? []} />
             </Section>
           </div>
 

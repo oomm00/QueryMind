@@ -4,8 +4,9 @@
  * One ordered list item per concept, in the topic's own reading order. Each item
  * carries everything the canvas draws (status as text, so it never depends on
  * colour, and the prerequisites) plus the same two next steps the side panel
- * offers. Rows the status filter or the search excludes are dimmed rather than
- * removed, so the order of the topic never changes under the reader.
+ * offers. Study material appears only when the concept has some: on a phone the
+ * list leads with what can be practised, and the course page's study-material
+ * section is where the empty state belongs.
  */
 
 import React from 'react'
@@ -13,6 +14,7 @@ import { Panel } from '../ui/Panel'
 import { sentenceCase } from '../../lib/text'
 import { statusFor, statusLine, toneClass } from './conceptStatus'
 import { ConceptActions } from './ConceptActions'
+import { StudyMaterial } from '../content/StudyMaterial'
 
 export function ConceptList({
   courseId,
@@ -73,6 +75,13 @@ export function ConceptList({
                     concept={concept}
                     className="mt-3"
                   />
+
+                  {(concept.resources ?? []).length > 0 && (
+                    <div className="mt-3 border-t border-line pt-3">
+                      <p className="text-[11px] font-semibold text-ink">Study material (optional)</p>
+                      <StudyMaterial className="mt-1.5" resources={concept.resources} />
+                    </div>
+                  )}
                 </div>
               </div>
             </li>

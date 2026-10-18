@@ -97,7 +97,8 @@ a resource, or marking a note as read never moves it.
 Completion is stored separately from mastery and never feeds it:
 
 - **lessons reviewed** — the student marked a study note as reviewed
-- **resources opened** — the "Mark as opened" toggle on a resource card
+- **resources opened** — the "Mark as opened" toggle on a resource card, kept in
+  `frontend/src/content/studyMaterial.js`
 
 It answers "how much have I read?", not "what do I know?".
 
@@ -145,6 +146,7 @@ No empty state ever contains an invented question, URL or number.
 | content loader (single read API) | `frontend/src/content/os/index.js` |
 | mastery | `frontend/src/lib/mastery.js` + `qm_progress_<userId>` |
 | completion (lessons reviewed, checks) | `frontend/src/content/lessonProgress.js` |
+| study material opened (completion only) | `frontend/src/content/studyMaterial.js` |
 | session state | `frontend/src/context/SessionContext.jsx` |
 | validator / links / import | `frontend/scripts/{validate-content,check-links,import-content}.mjs` |
 | backend contract | `frontend/src/api/**` — the mock dispatcher decides mock vs real |

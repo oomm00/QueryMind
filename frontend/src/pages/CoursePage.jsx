@@ -4,7 +4,8 @@
  * The page behind a catalog card. QueryMind is an assessment platform, so the
  * page leads with practice: what the course covers, how much of it is measured,
  * and a topic list where each row starts practice, jumps to the topic's optional
- * study material, or opens its knowledge graph.
+ * study material, or opens its knowledge graph. The study-material panel below
+ * the topics carries the anchors those rows jump to, one section per topic.
  *
  * Mastery comes from answered questions and study-notes review from the
  * lessonProgress store; the catalog's own completion and mastery figures are not
@@ -31,6 +32,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorState } from '../components/ui/ErrorState'
 import { Skeleton } from '../components/ui/Skeleton'
 import { statusFor, statusLine, toneClass } from '../components/map/conceptStatus'
+import { TopicStudyMaterial } from '../components/content/TopicStudyMaterial'
 import { IconArrowRight, IconLearning, IconMap, IconSearch } from '../components/ui/Icons'
 
 const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
@@ -265,6 +267,19 @@ export default function CoursePage() {
                 <TopicRow key={topic.id} courseId={courseId} topic={topic} progress={progress} />
               ))}
             </ol>
+          </PanelLarge>
+
+          <PanelLarge>
+            <h2 className="text-sm font-semibold text-ink">Study material</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              Optional reading, topic by topic. Practising comes first — no question depends on it,
+              and a topic with nothing here says so.
+            </p>
+            <div className="mt-3 divide-y divide-line">
+              {topics.map((topic) => (
+                <TopicStudyMaterial key={topic.id} courseId={courseId} topic={topic} />
+              ))}
+            </div>
           </PanelLarge>
         </div>
       )}
