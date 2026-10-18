@@ -45,6 +45,17 @@ const FILTERS = [
   { value: 'flagged', label: 'Flagged' },
 ]
 
+/** A count of marks or a percentage: whole where it is whole, one decimal where it is not. */
+function formatAmount(value) {
+  if (value == null) return ''
+  return value === Math.floor(value) ? String(Math.floor(value)) : value.toFixed(1)
+}
+
+/** "1 mark" or "2 marks". */
+function marksLabel(count) {
+  return `${count} ${count === 1 ? 'mark' : 'marks'}`
+}
+
 function RubricSelfMark({ userId, sessionId, question, answer, selfMark, onUpdate }) {
   const rubric = question.rubric ?? []
   const met = new Set(selfMark?.met ?? [])
@@ -101,7 +112,7 @@ function QuestionReview({ userId, sessionId, question, answer, selfMark, flagged
   const marks = marksForQuestion(question)
   const score = scoreOf(question, answer, selfMark)
   const earned = score != null ? marks * score : null
-  const earnedDisplay = earned != null ? (earned === Math.floor(earned) ? Math.floor(earned) : earned.toFixed(1)) : null
+  const earnedDisplay = earned != null ? formatAmount(earned) : null
   const isCorrect = question.type === 'mcq' && score === 1
   const isWrong = question.type === 'mcq' && score === 0
   const isAnswered = question.type === 'mcq'
@@ -116,8 +127,8 @@ function QuestionReview({ userId, sessionId, question, answer, selfMark, flagged
         {flagged && <Badge tone="warning" label="Flagged" />}
         <span className="text-xs tabular-nums text-muted">
           {earnedDisplay != null
-            ? `${earnedDisplay} of ${marks} marks`
-            : `${marks} marks`}
+            ? `${earnedDisplay} of ${marksLabel(marks)}`
+            : marksLabel(marks)}
         </span>
       </div>
 
@@ -301,7 +312,7 @@ export default function ResultsPage() {
     )
   }
 
-  const percent = score.percent != null ? (score.percent * 100).toFixed(1) : null
+  const percent = score.percent != null ? formatAmount(Math.round(score.percent * 1000) / 10) : null
   const hasUnscored = score.unscored.length > 0
   const unscoredUnanswered = score.unscored.filter(item => item.reason === 'unanswered').length
   const unscoredNotMarked = score.unscored.filter(item => item.reason === 'not-marked').length
@@ -319,7 +330,7 @@ export default function ResultsPage() {
             <>
               <div className="flex items-baseline gap-3">
                 <p className="text-4xl font-semibold tabular-nums text-ink">
-                  {score.earned.toFixed(1)}<span className="text-2xl text-muted">/{score.available}</span>
+                  {formatAmount(score.earned)}<span className="text-2xl text-muted">/{score.available}</span>
                 </p>
                 <p className="text-xl font-medium tabular-nums text-muted">{percent}%</p>
               </div>
@@ -356,7 +367,7 @@ export default function ResultsPage() {
                         <td className="py-2 pr-4">
                           <span className="text-ink">{bloomLabel(row.level)}</span>
                         </td>
-                        <td className="py-2 pr-4 text-right tabular-nums text-ink">{row.earned.toFixed(1)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums text-ink">{formatAmount(row.earned)}</td>
                         <td className="py-2 pr-4 text-right tabular-nums text-ink">{row.available}</td>
                         <td className="py-2 text-right tabular-nums text-ink">{pct}%</td>
                       </tr>

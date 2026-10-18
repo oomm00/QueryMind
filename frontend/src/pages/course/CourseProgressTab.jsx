@@ -47,7 +47,7 @@ function bloomBreakdown(concepts, conceptIds) {
     }
     return {
       ...level,
-      value: values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null,
+      mastery: values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null,
       concepts: values.length,
       answers,
     }
@@ -122,10 +122,10 @@ export default function CourseProgressTab() {
             <li key={level.value} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
               <BloomChip bloom={level.value} className="w-32 shrink-0 justify-between" />
               <div className="min-w-[120px] flex-1">
-                <ProgressLine percentage={level.value == null ? 0 : level.value * 100} />
+                <ProgressLine percentage={level.mastery == null ? 0 : level.mastery * 100} />
               </div>
               <span className="w-16 shrink-0 text-right text-[13px] tabular-nums text-ink">
-                {level.value == null ? 'No estimate' : percent(level.value)}
+                {level.mastery == null ? 'No estimate' : percent(level.mastery)}
               </span>
               <span className="w-28 shrink-0 text-right text-[11px] text-muted">
                 {level.answers} answer{level.answers === 1 ? '' : 's'}

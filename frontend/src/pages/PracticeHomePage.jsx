@@ -81,7 +81,7 @@ function SessionRow({ session, title, onResume }) {
         <span className="text-[13px] tabular-nums text-ink">
           {score.available > 0 ? (
             <>
-              {score.earned} of {score.available} marks{' '}
+              {score.earned} of {score.available} {score.available === 1 ? 'mark' : 'marks'}{' '}
               <span className="text-muted">· {percent(score.percent)}</span>
             </>
           ) : (

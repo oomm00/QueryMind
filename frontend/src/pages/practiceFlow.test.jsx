@@ -197,7 +197,7 @@ describe('the results', () => {
     const correct = screen.getAllByText('Correct answer')[0].closest('div')
     expect(correct).toHaveTextContent('Fake cache')
 
-    expect(screen.getByText('1 of 1 marks')).toBeInTheDocument()
+    expect(screen.getByText('1 of 1 mark')).toBeInTheDocument()
     expect(
       screen.getByText(/5 answers are not in the score: 4 unanswered, 1 written but not marked yet/)
     ).toBeInTheDocument()
