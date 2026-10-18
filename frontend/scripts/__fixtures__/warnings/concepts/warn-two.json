@@ -1,0 +1,17 @@
+{
+  "id": "warn-two",
+  "title": "Beta basics",
+  "summary": "A fixture concept that reuses the shared fixture guide.",
+  "prerequisiteIds": [],
+  "resources": [
+    {
+      "title": "Shared fixture guide",
+      "url": "https://example.com/shared-guide",
+      "type": "article",
+      "provider": "Example Press",
+      "license": "CC BY 4.0",
+      "estMinutes": 5,
+      "why": "The same page the other fixture concepts list, written without www."
+    }
+  ]
+}

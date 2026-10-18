@@ -116,7 +116,7 @@ resource = {
   license: string,      // "CC BY-SA 4.0", "All rights reserved", "Public domain"
   estMinutes: number,   // rough time to read/watch, > 0
   why: string,          // one line: why this resource, for this concept
-  verifiedOn: string    // ISO date a human last opened the link
+  verifiedOn?: string   // ISO date a human last opened the link
 }
 ```
 
@@ -126,9 +126,10 @@ Rules:
 - At most **3** resources per concept. A concept is practised, not researched.
 - `why` explains the link's job; it is never "see also" or "for more
   information".
-- `verifiedOn` records the last human check. `npm run check:links` writes a
-  report (`link-report.json`) but never edits content: only a human sets
-  `verifiedOn`.
+- `verifiedOn` records the last human check, and is optional: only a person can
+  say a link was opened, so a topic file authored elsewhere is valid without it.
+  When it is there it must be an ISO date. `npm run check:links` writes a report
+  (`link-report.json`) but never edits content.
 - A concept with no resources shows **"No study material added yet."** — that is
   a valid state, not a gap to fill with a guessed URL.
 - Nothing gates practice on a link. A student can mark a link as opened, which is
@@ -237,6 +238,28 @@ content file and fails on:
 `npm run check:links` is **not** part of the build. It fetches every resource URL
 with a timeout and writes a report; 403, 429 and 999 mean "check by hand", not
 broken.
+
+### Warnings
+
+The same run also prints **warnings**, grouped by topic. They never fail the
+build: they say a topic reads as machine-written or padded, and leave the
+judgement to a person.
+
+| warning | when | why |
+| --- | --- | --- |
+| answers in one place | more than 60% of the topic's MCQs share a `correctIndex` | a question bank written answer-first |
+| the answer is the longest | the correct option is the longest option in more than 60% of the MCQs | distractors written around a finished answer |
+| a reused link | one normalised resource URL is on more than two concepts of the topic | filler rather than study material for each concept |
+| possibly generic | a stem repeats a concept title verbatim with no number, code or scenario | a definition prompt, not a question to think about |
+
+Only the **authored** question bank is measured, not the checks written into a
+lesson's study notes — notes are written by hand and read in place. The two
+share rules need at least four MCQs in the topic before a share means anything.
+
+`normalizeResourceUrl` decides "the same URL": the host drops a leading `www.`
+and a trailing slash is ignored, so `https://www.example.com/guide/` and
+`https://example.com/guide` count as one resource. Nothing else about a URL is
+rewritten.
 
 `node scripts/import-content.mjs <file.json> <course-id>` validates a topic file
 written elsewhere (for example by ChatGPT), then copies it into

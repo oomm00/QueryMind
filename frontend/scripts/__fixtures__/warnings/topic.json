@@ -1,0 +1,6 @@
+{
+  "id": "warn-topic",
+  "title": "Warning fixture",
+  "summary": "A topic written the way a draft comes back: every warning has something to say.",
+  "conceptIds": ["warn-one", "warn-two", "warn-three", "warn-four"]
+}

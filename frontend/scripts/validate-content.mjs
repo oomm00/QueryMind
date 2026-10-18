@@ -30,6 +30,21 @@
  *
  * Exits non-zero when anything is wrong, so CI fails loudly. The pure entry
  * point (validateContent) is exported so tests can run it over a fixture tree.
+ *
+ * Warnings are the other half. They never fail the run: they say a topic reads
+ * as machine-written, or padded, and leave the judgement to a human.
+ *
+ *   - the multiple-choice answers all sit at the same index (> 60%)
+ *   - the correct option is the longest option (> 60%) — an answer written
+ *     first with the other options filled around it
+ *   - one resource URL is reused across more than two concepts of a topic
+ *   - a stem repeats a concept title verbatim with no number, code or scenario
+ *     to make it concrete: "possibly generic"
+ *
+ * Only the authored question bank is measured, not the checks written into a
+ * lesson's study notes: notes are written by hand and read in place, while the
+ * bank is what a session asks. The share rules need at least MCQ_BIAS_MIN
+ * questions before a share means anything.
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
@@ -50,16 +65,55 @@ export const RESOURCE_TYPES = ['article', 'video', 'book', 'docs', 'interactive'
 export const MAX_RESOURCES_PER_CONCEPT = 3
 export const MCQ_OPTION_COUNT = 4
 
-const RESOURCE_FIELDS = [
-  'title',
-  'url',
-  'type',
-  'provider',
-  'license',
-  'estMinutes',
-  'why',
-  'verifiedOn',
+/** Warnings: the lines a topic crosses before it is worth a second look. */
+export const MCQ_BIAS_MIN = 4
+export const MCQ_INDEX_SHARE = 0.6
+export const LONGEST_OPTION_SHARE = 0.6
+export const SHARED_RESOURCE_CONCEPTS = 2
+
+/** Stem words that make a question concrete, so it is not a bare definition. */
+export const SCENARIO_WORDS = [
+  'if',
+  'when',
+  'suppose',
+  'scenario',
+  'given',
+  'consider',
+  'assume',
+  'trace',
+  'worked',
+  'example',
+  'above',
+  'below',
+  'table',
+  'diagram',
+  'figure',
+  'compare',
 ]
+
+const SCENARIO_PATTERN = new RegExp(`\\b(${SCENARIO_WORDS.join('|')})\\b`, 'i')
+
+/** A number, a snippet or an identifier makes a stem concrete on its own. */
+const CODE_PATTERN = /[`{}[\]<>;]|\w+\(\)|\b\w+_\w+\b|->|::/
+
+/**
+ * One URL, one resource: the host is normalised by dropping "www." and a
+ * trailing slash is ignored, so the same page authored twice counts once.
+ * Everything else about the URL is left exactly as authored.
+ */
+export function normalizeResourceUrl(url) {
+  if (typeof url !== 'string') return url
+  let normalised = url.trim()
+  if (normalised === '') return normalised
+  normalised = normalised.replace(/\/+$/, '')
+  normalised = normalised.replace(/^([a-z][a-z0-9+.-]*:\/\/)www\./i, '$1')
+  return normalised
+}
+
+// `verifiedOn` is deliberately not here: only a human can set the date a link
+// was last opened, so a resource authored elsewhere is valid without it. When
+// it is present it must be an ISO date (checked below).
+const RESOURCE_FIELDS = ['title', 'url', 'type', 'provider', 'license', 'estMinutes', 'why']
 
 const QUESTION_FIELDS = ['id', 'type', 'bloom', 'difficulty', 'prompt', 'explanation']
 
@@ -137,11 +191,23 @@ export function readDocuments(rootDir = CONTENT_ROOT) {
   return { files, documents, problems }
 }
 
-/** The kind of document a parsed file is, by the keys it carries. */
-function documentKind(data) {
+/** A concept that lives in its own file: `<topic>/concepts/<concept-id>.json`. */
+function isConceptPath(rel) {
+  return /(^|[/\\])concepts[/\\][^/\\]+\.json$/i.test(String(rel ?? ''))
+}
+
+/**
+ * The kind of document a parsed file is. A folder topic may list its concepts in
+ * topic.json and hold each one in `concepts/<id>.json`, so the path a document
+ * came from is part of what it is.
+ */
+function documentKind(data, rel = '') {
   if (!isObject(data)) return 'unknown'
-  if ('concepts' in data) return 'topic'
+  if ('concepts' in data || 'conceptIds' in data) return 'topic'
   if ('blocks' in data || 'check' in data) return 'lesson'
+  if (isConceptPath(rel) || 'questions' in data || 'resources' in data || 'prerequisiteIds' in data) {
+    return 'concept'
+  }
   return 'unknown'
 }
 
@@ -312,6 +378,179 @@ function checkQuestions(questions, where, report, seenQuestionIds) {
   )
 }
 
+// ── Warnings — never failures ───────────────────────────────
+
+/** The topic a document belongs to: its folder, or its own name for a flat file. */
+function topicOfDocument(rel, kind) {
+  const parts = String(rel ?? '').split(/[\\/]/).filter(Boolean)
+  const file = parts[parts.length - 1] ?? ''
+  const stem = file.replace(/\.json$/i, '')
+  const folders = parts.slice(0, -1)
+  const parent = folders[folders.length - 1] ?? stem
+
+  if (kind === 'concept' && parent === 'concepts') return folders[folders.length - 2] ?? stem
+  if (kind === 'lesson') return parent
+  return stem === 'topic' || stem === '' ? parent : stem
+}
+
+/** Every topic's authored concepts, whichever file shape they arrived in. */
+function conceptRecords(documents) {
+  const byTopic = new Map()
+  const bucket = (topic) => {
+    if (!byTopic.has(topic)) byTopic.set(topic, [])
+    return byTopic.get(topic)
+  }
+
+  for (const { rel, data } of documents) {
+    const kind = documentKind(data, rel)
+    if (kind === 'concept') {
+      bucket(topicOfDocument(rel, kind)).push({ concept: data })
+      continue
+    }
+    if (kind !== 'topic' || !isObject(data.concepts)) continue
+    for (const [key, seed] of Object.entries(data.concepts)) {
+      if (!isObject(seed)) continue
+      bucket(topicOfDocument(rel, kind)).push({ concept: { id: key, ...seed } })
+    }
+  }
+
+  return byTopic
+}
+
+const shareLabel = (share) => `${Math.round(share * 100)}%`
+
+/** The multiple-choice questions a topic's concepts author. */
+function authoredMcqs(concepts) {
+  const mcqs = []
+  for (const { concept } of concepts) {
+    for (const question of Array.isArray(concept.questions) ? concept.questions : []) {
+      if (!isObject(question) || question.type !== 'mcq') continue
+      if (!Array.isArray(question.options) || question.options.length === 0) continue
+      mcqs.push(question)
+    }
+  }
+  return mcqs
+}
+
+/** Where the correct answers sit: a file with them all in one place is a draft. */
+function answerIndexWarnings(mcqs) {
+  const counts = new Map()
+  for (const question of mcqs) {
+    const index = Number(question.correctIndex)
+    if (!Number.isInteger(index) || index < 0 || index >= question.options.length) continue
+    counts.set(index, (counts.get(index) ?? 0) + 1)
+  }
+
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])
+  if (ranked.length === 0) return []
+  const [index, count] = ranked[0]
+  const share = count / mcqs.length
+  if (share <= MCQ_INDEX_SHARE) return []
+
+  return [
+    `${count} of ${mcqs.length} multiple-choice questions put the correct answer at index ${index} ` +
+      `(${shareLabel(share)}, over ${shareLabel(MCQ_INDEX_SHARE)}) — move the answers around, or import the file so the options are shuffled`,
+  ]
+}
+
+/** The correct option being the longest: what an answer-first draft looks like. */
+function longestOptionWarnings(mcqs) {
+  const longest = mcqs.filter((question) => {
+    const index = Number(question.correctIndex)
+    if (!Number.isInteger(index) || index < 0 || index >= question.options.length) return false
+    const lengths = question.options.map((option) => String(option).trim().length)
+    return lengths[index] >= Math.max(...lengths)
+  }).length
+
+  const share = longest / mcqs.length
+  if (share <= LONGEST_OPTION_SHARE) return []
+
+  return [
+    `the correct option is the longest option in ${longest} of ${mcqs.length} multiple-choice questions ` +
+      `(${shareLabel(share)}, over ${shareLabel(LONGEST_OPTION_SHARE)}) — the tell of an answer written before its distractors`,
+  ]
+}
+
+/** One URL used across a topic's concepts: usually filler, not study material. */
+function sharedResourceWarnings(concepts) {
+  const byUrl = new Map()
+  for (const { concept } of concepts) {
+    const id = isFilled(concept.id) ? concept.id : String(concept.title ?? '')
+    for (const resource of Array.isArray(concept.resources) ? concept.resources : []) {
+      if (!isObject(resource) || !isFilled(resource.url)) continue
+      const key = normalizeResourceUrl(resource.url)
+      if (!byUrl.has(key)) byUrl.set(key, new Set())
+      byUrl.get(key).add(id)
+    }
+  }
+
+  const warnings = []
+  for (const [url, seenOn] of [...byUrl.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (seenOn.size > SHARED_RESOURCE_CONCEPTS) {
+      warnings.push(
+        `resource ${url} is on ${seenOn.size} concepts — a link on more than ${SHARED_RESOURCE_CONCEPTS} concepts is usually filler`
+      )
+    }
+  }
+  return warnings
+}
+
+/** The concept title a stem leans on, when the stem is nothing but that title. */
+function genericTitleFor(prompt, titles) {
+  const lower = String(prompt).toLowerCase()
+  const title = titles.find((candidate) => lower.includes(candidate.toLowerCase()))
+  if (!title) return null
+  if (/\d/.test(prompt)) return null
+  if (CODE_PATTERN.test(prompt)) return null
+  if (SCENARIO_PATTERN.test(prompt)) return null
+  return title
+}
+
+/** A stem that names a concept and asks nothing else: possibly generic. */
+function genericStemWarnings(concepts) {
+  const titles = concepts
+    .map(({ concept }) => String(concept.title ?? '').trim())
+    .filter((title) => title.length >= 4)
+
+  const warnings = []
+  for (const { concept } of concepts) {
+    for (const question of Array.isArray(concept.questions) ? concept.questions : []) {
+      if (!isObject(question) || !isFilled(question.prompt)) continue
+      const title = genericTitleFor(question.prompt, titles)
+      if (!title) continue
+      warnings.push(
+        `question "${question.id ?? '?'}" may be generic: it repeats the concept title ` +
+          `"${title}" with no number, code or scenario to pin it down`
+      )
+    }
+  }
+  return warnings
+}
+
+/**
+ * Warnings for the topics that earned one, ordered by topic. Each entry is
+ * `{ topic, messages }`; nothing here ever fails a run.
+ */
+export function topicWarnings(documents) {
+  const groups = []
+
+  for (const [topic, concepts] of [...conceptRecords(documents).entries()].sort((a, b) =>
+    a[0].localeCompare(b[0])
+  )) {
+    const mcqs = authoredMcqs(concepts)
+    const measurable = mcqs.length >= MCQ_BIAS_MIN
+    const messages = [
+      ...(measurable ? answerIndexWarnings(mcqs) : []),
+      ...(measurable ? longestOptionWarnings(mcqs) : []),
+      ...sharedResourceWarnings(concepts),
+      ...genericStemWarnings(concepts),
+    ]
+    if (messages.length > 0) groups.push({ topic, messages })
+  }
+
+  return groups
+}
+
 /** Validate already-parsed documents. Pure: no filesystem, no exit. */
 export function validateDocuments(documents) {
   const report = new Report()
@@ -321,9 +560,12 @@ export function validateDocuments(documents) {
   const conceptSeeds = []
 
   for (const { rel, data } of documents) {
-    const kind = documentKind(data)
+    const kind = documentKind(data, rel)
     if (kind === 'unknown') {
-      report.add(rel, 'is neither a topic (has "concepts") nor a lesson (has "blocks")')
+      report.add(
+        rel,
+        'is neither a topic (has "concepts" or "conceptIds"), a lesson (has "blocks") nor a concept (has "questions")'
+      )
       continue
     }
 
@@ -360,6 +602,25 @@ export function validateDocuments(documents) {
       continue
     }
 
+    // concept — its own file, holding questions and/or study material
+    if (kind === 'concept') {
+      const id = isFilled(data.id) ? data.id : null
+      if (!id) report.add(rel, 'concept is missing an id')
+      else if (seenConceptIds.has(id)) {
+        report.add(rel, `concept id "${id}" is already used by ${seenConceptIds.get(id)}`)
+      } else {
+        seenConceptIds.set(id, rel)
+      }
+      if (!isFilled(data.title)) report.add(rel, 'concept is missing a title')
+      if (data.prerequisiteIds !== undefined && !Array.isArray(data.prerequisiteIds)) {
+        report.add(rel, 'prerequisiteIds must be an array')
+      }
+      checkResources(data.resources, rel, report)
+      checkQuestions(data.questions, rel, report, seenQuestionIds)
+      conceptSeeds.push({ where: rel, seed: data })
+      continue
+    }
+
     // topic
     const { concepts } = data
     if (Array.isArray(concepts)) {
@@ -378,7 +639,14 @@ export function validateDocuments(documents) {
     }
 
     if (!isObject(concepts)) {
-      report.add(rel, 'concepts must be an array or an object')
+      if (concepts !== undefined) {
+        report.add(rel, 'concepts must be an array or an object')
+        continue
+      }
+      // A folder topic whose concepts are each in their own file.
+      if (data.conceptIds !== undefined && !Array.isArray(data.conceptIds)) {
+        report.add(rel, 'conceptIds must be an array of concept ids')
+      }
       continue
     }
 
@@ -414,31 +682,41 @@ export function validateDocuments(documents) {
     }
   }
 
-  return { problems: report.problems, counts: {
-    concepts: seenConceptIds.size,
-    lessons: seenLessonIds.size,
-    questions: seenQuestionIds.size,
-  } }
+  return {
+    problems: report.problems,
+    warnings: topicWarnings(documents),
+    counts: {
+      concepts: seenConceptIds.size,
+      lessons: seenLessonIds.size,
+      questions: seenQuestionIds.size,
+    },
+  }
 }
 
-/** Read + validate a content root. Returns problems and counts; never throws. */
+/** Read + validate a content root. Returns problems, warnings and counts. */
 export function validateContent(rootDir = CONTENT_ROOT) {
   const { files, documents, problems } = readDocuments(rootDir)
 
   if (files.length === 0) {
     return {
       problems: problems.length > 0 ? problems : [`no .json files found under ${rootDir}`],
+      warnings: [],
       counts: {},
       files,
     }
   }
 
   const result = validateDocuments(documents)
-  return { problems: [...problems, ...result.problems], counts: result.counts, files }
+  return {
+    problems: [...problems, ...result.problems],
+    warnings: result.warnings,
+    counts: result.counts,
+    files,
+  }
 }
 
 function runCli() {
-  const { problems, counts, files } = validateContent(CONTENT_ROOT)
+  const { problems, warnings, counts, files } = validateContent(CONTENT_ROOT)
 
   if (problems.length > 0) {
     console.error(`validate-content: ${problems.length} problem(s) across ${files.length} file(s)\n`)
@@ -450,6 +728,17 @@ function runCli() {
     `validate-content: OK - ${files.length} files parsed (` +
       `${counts.concepts} concepts, ${counts.questions} questions, ${counts.lessons} lessons), no problems`
   )
+
+  if (warnings.length > 0) {
+    const lines = warnings.reduce((sum, group) => sum + group.messages.length, 0)
+    console.log(
+      `\nvalidate-content: ${lines} warning(s) in ${warnings.length} topic(s) — not failures, but worth a look`
+    )
+    for (const group of warnings) {
+      console.log(`  ${group.topic}`)
+      for (const message of group.messages) console.log(`    - ${message}`)
+    }
+  }
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : ''
