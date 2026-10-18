@@ -81,7 +81,14 @@ class Settings(BaseSettings):
     # models default to minimal), so "medium" is safe across the shipped model
     # list; Gemini 2.5 models ignore levels and use thinking_budget instead.
     llm_gen_thinking_level: str = "medium"
-    llm_max_output_tokens: int = 2048  # hard cap; thinking tokens count toward it
+    # Generation output cap (env: LLM_GEN_MAX_OUTPUT_TOKENS). Thinking tokens
+    # count toward max_output_tokens, so the shared 2048 evaluation cap starves
+    # the JSON answer once thinking is medium/high — generation gets a roomier
+    # default of its own. The GeminiAdapter additionally retries a
+    # finish_reason=MAX_TOKENS response once with a doubled cap instead of
+    # surfacing truncated JSON as malformed.
+    llm_gen_max_output_tokens: int = 8192
+    llm_max_output_tokens: int = 2048  # evaluation hard cap; thinking tokens count toward it
 
     # LLM reliability (env: LLM_TIMEOUT_SECONDS / LLM_MAX_CONCURRENCY)
     llm_timeout_seconds: float = 45.0   # hard per-call timeout; a slower call is

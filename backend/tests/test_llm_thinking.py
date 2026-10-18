@@ -30,6 +30,10 @@ def test_thinking_defaults():
     assert settings.llm_thinking_level == "low"
     assert settings.llm_thinking_budget is None
     assert settings.llm_max_output_tokens == 2048
+    # Generation gets its own (roomier) cap: thinking tokens count toward
+    # max_output_tokens, and medium thinking alone can eat ~1-2k tokens.
+    assert settings.llm_gen_thinking_level == "medium"
+    assert settings.llm_gen_max_output_tokens == 8192
     assert settings.warmup_on_startup is True
 
 
@@ -37,10 +41,12 @@ def test_thinking_env_overrides(monkeypatch):
     monkeypatch.setenv("LLM_THINKING_LEVEL", "MINIMAL")
     monkeypatch.setenv("LLM_THINKING_BUDGET", "512")
     monkeypatch.setenv("LLM_MAX_OUTPUT_TOKENS", "256")
+    monkeypatch.setenv("LLM_GEN_MAX_OUTPUT_TOKENS", "4096")
     settings = Settings(_env_file=None)
     assert settings.llm_thinking_level == "minimal"  # normalized
     assert settings.llm_thinking_budget == 512
     assert settings.llm_max_output_tokens == 256
+    assert settings.llm_gen_max_output_tokens == 4096
 
 
 def test_blank_budget_is_treated_as_unset(monkeypatch):
@@ -125,16 +131,21 @@ def test_configure_genai_wires_thinking_settings(monkeypatch):
     monkeypatch.setattr(gs.settings, "llm_thinking_level", "low")
     monkeypatch.setattr(gs.settings, "llm_gen_thinking_level", "medium")
     monkeypatch.setattr(gs.settings, "llm_max_output_tokens", 333)
+    monkeypatch.setattr(gs.settings, "llm_gen_max_output_tokens", 444)
     monkeypatch.setattr(genai, "Client", lambda *a, **k: MagicMock())
 
-    # Generation defaults to its own (higher) thinking level...
+    # Generation defaults to its own (higher) thinking level and output cap —
+    # thinking tokens count toward max_output_tokens, so the roomy generation
+    # cap must come from LLM_GEN_MAX_OUTPUT_TOKENS, not the evaluation cap.
     adapter = gs._configure_genai(response_schema=None)
     assert adapter._thinking_level == "medium"
-    assert adapter._max_output_tokens == 333
+    assert adapter._max_output_tokens == 444
 
-    # ...while a validation/judgement caller can pin the low evaluation level.
-    adapter = gs._configure_genai(thinking_level="low")
+    # ...while a validation/judgement caller can pin the low evaluation level
+    # and the small evaluation cap.
+    adapter = gs._configure_genai(thinking_level="low", max_output_tokens=333)
     assert adapter._thinking_level == "low"
+    assert adapter._max_output_tokens == 333
 
 
 def test_configure_judge_client_wires_thinking_settings(monkeypatch):
