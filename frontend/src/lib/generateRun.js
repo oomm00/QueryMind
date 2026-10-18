@@ -62,6 +62,9 @@ export const RATE_LIMIT_ATTEMPTS = 2
  * store both speak.
  */
 export function normaliseScore(value) {
+  // A score that never arrived is not a score of zero: an unmarked answer must
+  // read as unscored, not as wrong.
+  if (value === null || value === undefined || value === '') return null
   const number = Number(value)
   if (!Number.isFinite(number)) return null
   if (number > 1) return Math.min(1, Math.max(0, number / 100))
@@ -201,7 +204,6 @@ export async function runGeneration({
         difficulty,
       })
     )
-    report()
   }
 
   const ask = async (bloom) => {
