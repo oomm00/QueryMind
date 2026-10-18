@@ -10,12 +10,13 @@
  * empty concept is empty — so nothing downstream has to guess.
  */
 
-import { COURSE, getCourse, getTopic } from './os/index.js'
+import { COURSE as OS_COURSE, getCourse as getOSCourse, getTopic as getOSTopic } from './os/index.js'
+import { COURSE_LOADERS } from './catalog/index.js'
 import { conceptBank } from './questionBank.js'
 
 /** The courses that actually have content behind them. */
 export function contentCourseIds() {
-  return [COURSE.id]
+  return [OS_COURSE.id, ...Object.values(COURSE_LOADERS).map((loader) => loader.COURSE.id)]
 }
 
 function conceptQuestions(concept, course, topic) {
@@ -33,11 +34,16 @@ function conceptQuestions(concept, course, topic) {
  * session keeps pointing at the same course the student opened.
  */
 export function practiceCourse(courseId) {
-  const course = getCourse(courseId)
+  const osId = courseId === 'operating-systems' ? 'os' : courseId
+  const loader =
+    osId === OS_COURSE.id
+      ? { COURSE: OS_COURSE, getCourse: getOSCourse, getTopic: getOSTopic }
+      : Object.values(COURSE_LOADERS).find((entry) => entry.COURSE.id === osId)
+  const course = loader?.getCourse(courseId)
   if (!course) return null
 
   const topics = course.topics
-    .map((summary) => getTopic(summary.id))
+    .map((summary) => loader.getTopic(summary.id))
     .filter(Boolean)
     .map((topic) => ({
       id: topic.id,

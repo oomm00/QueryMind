@@ -1,0 +1,82 @@
+{
+  "id": "sockets",
+  "title": "Sockets and ports",
+  "subject": "computer-networks",
+  "summary": "Understand sockets and ports in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "sockets-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "A TCP connection is identified by which tuple?",
+      "explanation": "The correct answer is Source and destination IPs and ports.",
+      "needsHumanCheck": false,
+      "options": [
+        "Source and destination IPs and ports",
+        "Only the server IP",
+        "The DNS name alone",
+        "The Ethernet frame checksum"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "sockets-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "A TCP connection is identified by which tuple?",
+      "explanation": "The correct answer is Source and destination IPs and ports.",
+      "needsHumanCheck": false,
+      "options": [
+        "Source and destination IPs and ports",
+        "Only the server IP",
+        "The DNS name alone",
+        "The Ethernet frame checksum"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "sockets-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is a socket?",
+      "explanation": "An endpoint identified by an address and transport port for application communication.",
+      "needsHumanCheck": true,
+      "answerKey": "An endpoint identified by an address and transport port for application communication.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "sockets-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is a socket?",
+      "explanation": "An endpoint identified by an address and transport port for application communication.",
+      "needsHumanCheck": true,
+      "answerKey": "An endpoint identified by an address and transport port for application communication.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "id": "dns",
+  "title": "Domain Name System",
+  "subject": "computer-networks",
+  "summary": "Understand domain name system in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "dns-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What record maps a hostname to an IPv4 address?",
+      "explanation": "The correct answer is A.",
+      "needsHumanCheck": false,
+      "options": [
+        "A",
+        "AAAA",
+        "MX",
+        "TXT"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "dns-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What record maps a hostname to an IPv4 address?",
+      "explanation": "The correct answer is A.",
+      "needsHumanCheck": false,
+      "options": [
+        "A",
+        "AAAA",
+        "MX",
+        "TXT"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "dns-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why does DNS use caching?",
+      "explanation": "To reduce latency and authoritative-server load for repeated lookups.",
+      "needsHumanCheck": true,
+      "answerKey": "To reduce latency and authoritative-server load for repeated lookups.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "dns-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why does DNS use caching?",
+      "explanation": "To reduce latency and authoritative-server load for repeated lookups.",
+      "needsHumanCheck": true,
+      "answerKey": "To reduce latency and authoritative-server load for repeated lookups.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

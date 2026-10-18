@@ -1,0 +1,82 @@
+{
+  "id": "tcp-reliability",
+  "title": "TCP reliability and flow control",
+  "subject": "computer-networks",
+  "summary": "Understand tcp reliability and flow control in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "tcp-reliability-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which TCP mechanism detects missing data by sequence numbers and acknowledgements?",
+      "explanation": "The correct answer is Retransmission.",
+      "needsHumanCheck": false,
+      "options": [
+        "Retransmission",
+        "Broadcast",
+        "NAT",
+        "Fragmentation"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "tcp-reliability-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which TCP mechanism detects missing data by sequence numbers and acknowledgements?",
+      "explanation": "The correct answer is Retransmission.",
+      "needsHumanCheck": false,
+      "options": [
+        "Retransmission",
+        "Broadcast",
+        "NAT",
+        "Fragmentation"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "tcp-reliability-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "How does TCP provide ordered delivery?",
+      "explanation": "It numbers bytes and reassembles acknowledged segments in sequence.",
+      "needsHumanCheck": true,
+      "answerKey": "It numbers bytes and reassembles acknowledged segments in sequence.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "tcp-reliability-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "How does TCP provide ordered delivery?",
+      "explanation": "It numbers bytes and reassembles acknowledged segments in sequence.",
+      "needsHumanCheck": true,
+      "answerKey": "It numbers bytes and reassembles acknowledged segments in sequence.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

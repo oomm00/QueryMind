@@ -1,0 +1,131 @@
+{
+  "id": "concept-scheduling-algorithms",
+  "subject": "operating-systems",
+  "title": "Scheduling algorithms",
+  "summary": "CPU scheduling algorithms choose which runnable process or thread receives a processor next.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-scheduling-algorithms-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which policy selects the runnable job with the smallest estimated CPU burst?",
+      "options": [
+        "FCFS",
+        "Shortest-job-first",
+        "Round robin",
+        "Multilevel feedback only"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Shortest-job-first (SJF) chooses the shortest estimated next CPU burst.",
+      "rubric": [],
+      "explanation": "FCFS uses arrival order and round robin uses time slices.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-algorithms-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What is the defining mechanism of round-robin scheduling?",
+      "options": [
+        "A fixed time quantum and rotation among ready tasks",
+        "Running the oldest task to completion",
+        "Always selecting the largest memory process",
+        "Disabling timer interrupts"
+      ],
+      "correctIndex": 0,
+      "answerKey": "Round robin gives each runnable task a time quantum before rotating.",
+      "rubric": [],
+      "explanation": "A timer interrupt enables preemption at the quantum boundary.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-algorithms-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A round-robin quantum is made extremely large. Which behavior does it approach?",
+      "options": [
+        "Shortest-job-first",
+        "First-come, first-served",
+        "Priority aging",
+        "Lottery scheduling"
+      ],
+      "correctIndex": 1,
+      "answerKey": "With a very large quantum, tasks usually finish before rotation, resembling FCFS.",
+      "rubric": [],
+      "explanation": "The exact behavior also depends on arrivals and blocking.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-algorithms-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "Why can strict priority scheduling starve low-priority work?",
+      "options": [
+        "Low-priority tasks are never placed in memory",
+        "A continuous stream of higher-priority tasks can always preempt it",
+        "Priority queues cannot contain more than one task",
+        "The CPU cannot execute low-priority instructions"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Without aging or another fairness mechanism, high-priority arrivals can postpone low-priority tasks indefinitely.",
+      "rubric": [],
+      "explanation": "Starvation is a fairness problem, not an inability to execute the code.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-algorithms-q5",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "For jobs A=0/5 ms and B=1/2 ms under non-preemptive FCFS, calculate each waiting time.",
+      "answerKey": "A starts at 0 and waits 0 ms. B starts when A finishes at 5 ms, so B waits 5 - 1 = 4 ms.",
+      "rubric": [
+        {
+          "criterion": "Computes A waiting time",
+          "points": 2
+        },
+        {
+          "criterion": "Computes B waiting time",
+          "points": 3
+        },
+        {
+          "criterion": "Shows arrival-time reasoning",
+          "points": 3
+        }
+      ],
+      "explanation": "Waiting time is start time minus arrival time.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-scheduling-algorithms-q6",
+      "type": "short",
+      "bloom": "evaluate",
+      "difficulty": "hard",
+      "prompt": "Choose a scheduling policy for an interactive terminal and justify two design concerns.",
+      "answerKey": "A preemptive policy such as round robin, often combined with priorities, is appropriate. A bounded quantum improves response time, while fairness/aging prevents background work from starving; context-switch overhead must also be controlled.",
+      "rubric": [
+        {
+          "criterion": "Chooses a suitable preemptive policy",
+          "points": 3
+        },
+        {
+          "criterion": "Justifies response and fairness",
+          "points": 4
+        },
+        {
+          "criterion": "Acknowledges overhead or trade-off",
+          "points": 2
+        }
+      ],
+      "explanation": "There is no single universally best policy; the justification must match interactive goals.",
+      "needsHumanCheck": false
+    }
+  ]
+}

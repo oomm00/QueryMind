@@ -1,0 +1,82 @@
+{
+  "id": "replication-consistency",
+  "title": "Replication and consistency",
+  "subject": "system-design",
+  "summary": "Understand replication and consistency in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "replication-consistency-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Eventual consistency means what?",
+      "explanation": "The correct answer is Replicas converge if updates stop.",
+      "needsHumanCheck": false,
+      "options": [
+        "Replicas converge if updates stop",
+        "Every read is immediately linearizable",
+        "Writes are impossible",
+        "Data is never copied"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "replication-consistency-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Eventual consistency means what?",
+      "explanation": "The correct answer is Replicas converge if updates stop.",
+      "needsHumanCheck": false,
+      "options": [
+        "Replicas converge if updates stop",
+        "Every read is immediately linearizable",
+        "Writes are impossible",
+        "Data is never copied"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "replication-consistency-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is a consistency trade-off?",
+      "explanation": "Stronger visibility guarantees can require more coordination and latency.",
+      "needsHumanCheck": true,
+      "answerKey": "Stronger visibility guarantees can require more coordination and latency.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "replication-consistency-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is a consistency trade-off?",
+      "explanation": "Stronger visibility guarantees can require more coordination and latency.",
+      "needsHumanCheck": true,
+      "answerKey": "Stronger visibility guarantees can require more coordination and latency.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

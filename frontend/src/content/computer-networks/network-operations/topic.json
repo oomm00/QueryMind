@@ -1,0 +1,12 @@
+{
+  "id": "network-operations",
+  "title": "Network Operations",
+  "subject": "computer-networks",
+  "summary": "Core network operations concepts.",
+  "conceptIds": [
+    "nat-firewalls",
+    "load-balancing",
+    "observability",
+    "content-delivery"
+  ]
+}

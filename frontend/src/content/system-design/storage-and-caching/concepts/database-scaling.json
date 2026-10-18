@@ -1,0 +1,82 @@
+{
+  "id": "database-scaling",
+  "title": "Database scaling",
+  "subject": "system-design",
+  "summary": "Understand database scaling in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "database-scaling-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Read replicas primarily scale which workload?",
+      "explanation": "The correct answer is Reads.",
+      "needsHumanCheck": false,
+      "options": [
+        "Reads",
+        "A single write transaction",
+        "TLS handshakes",
+        "DNS authority"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "database-scaling-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Read replicas primarily scale which workload?",
+      "explanation": "The correct answer is Reads.",
+      "needsHumanCheck": false,
+      "options": [
+        "Reads",
+        "A single write transaction",
+        "TLS handshakes",
+        "DNS authority"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "database-scaling-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "When is sharding needed?",
+      "explanation": "When one database node cannot meet data size or throughput requirements.",
+      "needsHumanCheck": true,
+      "answerKey": "When one database node cannot meet data size or throughput requirements.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "database-scaling-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "When is sharding needed?",
+      "explanation": "When one database node cannot meet data size or throughput requirements.",
+      "needsHumanCheck": true,
+      "answerKey": "When one database node cannot meet data size or throughput requirements.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

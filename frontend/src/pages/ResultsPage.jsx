@@ -368,6 +368,11 @@ export default function ResultsPage() {
         </div>
 
         <div className="rounded-panel border border-line bg-surface-raised p-4">
+          {session.evaluationStatus === 'pending' && (
+            <p className="mb-3 rounded-control border border-primary bg-primary-tint px-3 py-2 text-sm text-ink">
+              Evaluating written answers… Your results are shown now and will update when evaluation finishes.
+            </p>
+          )}
           {percent != null ? (
             <>
               <div className="flex items-baseline gap-3">

@@ -49,8 +49,8 @@ describe('difficulty is a Bloom band', () => {
     ])
   })
 
-  it('offers 6, 10 or 15 questions', () => {
-    expect(GENERATE_COUNT_CHOICES).toEqual([6, 10, 15])
+  it('offers no more than 10 questions', () => {
+    expect(GENERATE_COUNT_CHOICES).toEqual([6, 10])
   })
 })
 

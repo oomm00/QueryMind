@@ -1,0 +1,82 @@
+{
+  "id": "locking",
+  "title": "Locking",
+  "subject": "database-management-systems",
+  "summary": "Understand locking in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "locking-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does two-phase locking guarantee when properly applied?",
+      "explanation": "The correct answer is Conflict serializability.",
+      "needsHumanCheck": false,
+      "options": [
+        "Conflict serializability",
+        "Zero latency",
+        "No deadlocks ever",
+        "Automatic replication"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "locking-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does two-phase locking guarantee when properly applied?",
+      "explanation": "The correct answer is Conflict serializability.",
+      "needsHumanCheck": false,
+      "options": [
+        "Conflict serializability",
+        "Zero latency",
+        "No deadlocks ever",
+        "Automatic replication"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "locking-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "How can a database avoid a lock deadlock?",
+      "explanation": "Use a consistent lock order or detect cycles and abort a victim.",
+      "needsHumanCheck": true,
+      "answerKey": "Use a consistent lock order or detect cycles and abort a victim.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "locking-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "How can a database avoid a lock deadlock?",
+      "explanation": "Use a consistent lock order or detect cycles and abort a victim.",
+      "needsHumanCheck": true,
+      "answerKey": "Use a consistent lock order or detect cycles and abort a victim.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

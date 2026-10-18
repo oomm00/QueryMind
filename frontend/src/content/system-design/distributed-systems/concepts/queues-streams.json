@@ -1,0 +1,82 @@
+{
+  "id": "queues-streams",
+  "title": "Queues and streams",
+  "subject": "system-design",
+  "summary": "Understand queues and streams in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "queues-streams-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does a queue decouple?",
+      "explanation": "The correct answer is Producers from consumers in time and rate.",
+      "needsHumanCheck": false,
+      "options": [
+        "Producers from consumers in time and rate",
+        "DNS from IP addresses",
+        "Keys from values",
+        "Users from authentication"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "queues-streams-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does a queue decouple?",
+      "explanation": "The correct answer is Producers from consumers in time and rate.",
+      "needsHumanCheck": false,
+      "options": [
+        "Producers from consumers in time and rate",
+        "DNS from IP addresses",
+        "Keys from values",
+        "Users from authentication"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "queues-streams-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why use a queue for background work?",
+      "explanation": "It absorbs bursts and lets workers process tasks asynchronously with retries.",
+      "needsHumanCheck": true,
+      "answerKey": "It absorbs bursts and lets workers process tasks asynchronously with retries.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "queues-streams-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why use a queue for background work?",
+      "explanation": "It absorbs bursts and lets workers process tasks asynchronously with retries.",
+      "needsHumanCheck": true,
+      "answerKey": "It absorbs bursts and lets workers process tasks asynchronously with retries.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

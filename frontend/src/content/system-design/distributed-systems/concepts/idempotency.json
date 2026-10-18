@@ -1,0 +1,82 @@
+{
+  "id": "idempotency",
+  "title": "Idempotency",
+  "subject": "system-design",
+  "summary": "Understand idempotency in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "idempotency-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "How can a payment API make retries safe?",
+      "explanation": "The correct answer is Store and reuse an idempotency-key result.",
+      "needsHumanCheck": false,
+      "options": [
+        "Store and reuse an idempotency-key result",
+        "Disable timeouts",
+        "Use random effects",
+        "Retry without identifiers"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "idempotency-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "How can a payment API make retries safe?",
+      "explanation": "The correct answer is Store and reuse an idempotency-key result.",
+      "needsHumanCheck": false,
+      "options": [
+        "Store and reuse an idempotency-key result",
+        "Disable timeouts",
+        "Use random effects",
+        "Retry without identifiers"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "idempotency-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is an idempotency key?",
+      "explanation": "A client-supplied identifier that lets a server deduplicate repeated operations.",
+      "needsHumanCheck": true,
+      "answerKey": "A client-supplied identifier that lets a server deduplicate repeated operations.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "idempotency-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is an idempotency key?",
+      "explanation": "A client-supplied identifier that lets a server deduplicate repeated operations.",
+      "needsHumanCheck": true,
+      "answerKey": "A client-supplied identifier that lets a server deduplicate repeated operations.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

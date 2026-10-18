@@ -1,0 +1,82 @@
+{
+  "id": "osi-model",
+  "title": "OSI model and encapsulation",
+  "subject": "computer-networks",
+  "summary": "Understand osi model and encapsulation in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "osi-model-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which OSI layer provides end-to-end delivery between processes?",
+      "explanation": "The correct answer is Transport.",
+      "needsHumanCheck": false,
+      "options": [
+        "Transport",
+        "Network",
+        "Data link",
+        "Presentation"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "osi-model-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Which OSI layer provides end-to-end delivery between processes?",
+      "explanation": "The correct answer is Transport.",
+      "needsHumanCheck": false,
+      "options": [
+        "Transport",
+        "Network",
+        "Data link",
+        "Presentation"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "osi-model-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is encapsulation?",
+      "explanation": "Wrapping data with a protocol header (and sometimes trailer) as it moves down the stack.",
+      "needsHumanCheck": true,
+      "answerKey": "Wrapping data with a protocol header (and sometimes trailer) as it moves down the stack.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "osi-model-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is encapsulation?",
+      "explanation": "Wrapping data with a protocol header (and sometimes trailer) as it moves down the stack.",
+      "needsHumanCheck": true,
+      "answerKey": "Wrapping data with a protocol header (and sometimes trailer) as it moves down the stack.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

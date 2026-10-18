@@ -1,0 +1,82 @@
+{
+  "id": "ethernet-switching",
+  "title": "Ethernet and switching",
+  "subject": "computer-networks",
+  "summary": "Understand ethernet and switching in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "ethernet-switching-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "A learning Ethernet switch forwards a known unicast using which table?",
+      "explanation": "The correct answer is MAC address table.",
+      "needsHumanCheck": false,
+      "options": [
+        "MAC address table",
+        "DNS cache",
+        "ARP route table",
+        "TCP window"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "ethernet-switching-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "A learning Ethernet switch forwards a known unicast using which table?",
+      "explanation": "The correct answer is MAC address table.",
+      "needsHumanCheck": false,
+      "options": [
+        "MAC address table",
+        "DNS cache",
+        "ARP route table",
+        "TCP window"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "ethernet-switching-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What does a switch learn from a frame?",
+      "explanation": "The source MAC address and the ingress port.",
+      "needsHumanCheck": true,
+      "answerKey": "The source MAC address and the ingress port.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "ethernet-switching-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What does a switch learn from a frame?",
+      "explanation": "The source MAC address and the ingress port.",
+      "needsHumanCheck": true,
+      "answerKey": "The source MAC address and the ingress port.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

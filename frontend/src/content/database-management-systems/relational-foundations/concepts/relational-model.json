@@ -1,0 +1,82 @@
+{
+  "id": "relational-model",
+  "title": "Relational model",
+  "subject": "database-management-systems",
+  "summary": "Understand relational model in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "relational-model-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "In the relational model, a tuple corresponds most closely to what?",
+      "explanation": "The correct answer is A row.",
+      "needsHumanCheck": false,
+      "options": [
+        "A row",
+        "A database server",
+        "An index page",
+        "A transaction log"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "relational-model-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "In the relational model, a tuple corresponds most closely to what?",
+      "explanation": "The correct answer is A row.",
+      "needsHumanCheck": false,
+      "options": [
+        "A row",
+        "A database server",
+        "An index page",
+        "A transaction log"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "relational-model-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "What is a relation schema?",
+      "explanation": "The named attributes and their domains that define a relation.",
+      "needsHumanCheck": true,
+      "answerKey": "The named attributes and their domains that define a relation.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "relational-model-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "What is a relation schema?",
+      "explanation": "The named attributes and their domains that define a relation.",
+      "needsHumanCheck": true,
+      "answerKey": "The named attributes and their domains that define a relation.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}

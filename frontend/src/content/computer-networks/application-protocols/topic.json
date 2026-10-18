@@ -1,0 +1,12 @@
+{
+  "id": "application-protocols",
+  "title": "Application Protocols",
+  "subject": "computer-networks",
+  "summary": "Core application protocols concepts.",
+  "conceptIds": [
+    "dns",
+    "http",
+    "tls",
+    "email-protocols"
+  ]
+}

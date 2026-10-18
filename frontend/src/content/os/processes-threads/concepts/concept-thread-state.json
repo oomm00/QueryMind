@@ -1,0 +1,127 @@
+{
+  "id": "concept-thread-state",
+  "subject": "operating-systems",
+  "title": "Threads and process resources",
+  "summary": "Threads are schedulable execution flows that share a process address space and many process-owned resources.",
+  "prerequisiteIds": [],
+  "relatedIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "concept-thread-state-q1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "Which resource is normally private to each thread in a multithreaded process?",
+      "options": [
+        "The code segment",
+        "The process heap",
+        "The thread stack",
+        "The open-file table"
+      ],
+      "correctIndex": 2,
+      "answerKey": "Each thread has its own stack for call frames and local execution state.",
+      "rubric": [],
+      "explanation": "Threads commonly share code, heap, and process-level file descriptors.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-thread-state-q2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "easy",
+      "prompt": "What is a major benefit of using multiple threads in one process?",
+      "options": [
+        "They eliminate all synchronization",
+        "They can share an address space with lower communication overhead",
+        "They guarantee parallel execution on one core",
+        "They give each thread a separate process address space"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Threads can communicate through shared memory without separate process address spaces.",
+      "rubric": [],
+      "explanation": "Synchronization is still required, and one core cannot execute two instructions simultaneously.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-thread-state-q3",
+      "type": "mcq",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "A thread waits for a condition variable while another thread updates shared data. What should the waiting thread do?",
+      "options": [
+        "Spin forever without checking",
+        "Wait and recheck the predicate after notification",
+        "Terminate the whole process",
+        "Modify the predicate before waking"
+      ],
+      "correctIndex": 1,
+      "answerKey": "Condition waits should be enclosed in a loop that rechecks the protected predicate.",
+      "rubric": [],
+      "explanation": "Spurious wakeups and races between notification and reacquisition make a loop necessary.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-thread-state-q4",
+      "type": "mcq",
+      "bloom": "analyze",
+      "difficulty": "medium",
+      "prompt": "If one thread performs an invalid memory access in a typical user process, what is the likely scope of failure?",
+      "options": [
+        "Only that thread is always killed and the process continues",
+        "The process may be terminated because threads share the address space",
+        "Only the kernel thread is affected",
+        "No thread can observe the fault"
+      ],
+      "correctIndex": 1,
+      "answerKey": "A fatal memory fault generally compromises the shared process and may terminate it.",
+      "rubric": [],
+      "explanation": "The exact signal and recovery policy are OS-specific, but threads do not provide address-space isolation.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-thread-state-q5",
+      "type": "short",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "Compare a process and a thread in terms of address space and scheduling.",
+      "answerKey": "A process provides an isolated address space and owns resources; threads are execution paths within a process, share most of its address space and resources, and are scheduled as runnable units by the OS or runtime.",
+      "rubric": [
+        {
+          "criterion": "Explains process isolation",
+          "points": 3
+        },
+        {
+          "criterion": "Explains thread sharing",
+          "points": 3
+        },
+        {
+          "criterion": "Relates threads to scheduling",
+          "points": 2
+        }
+      ],
+      "explanation": "Do not claim that every thread has a separate process address space.",
+      "needsHumanCheck": false
+    },
+    {
+      "id": "concept-thread-state-q6",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "hard",
+      "prompt": "Give two pieces of state a context switch between threads must preserve and explain why.",
+      "answerKey": "Examples include the program counter/instruction pointer, stack pointer, general registers, and scheduling state. They must be saved so the switched-out thread can resume at the same instruction with its call stack and computation intact.",
+      "rubric": [
+        {
+          "criterion": "Names two valid state items",
+          "points": 4
+        },
+        {
+          "criterion": "Explains restoration purpose",
+          "points": 4
+        }
+      ],
+      "explanation": "Kernel details differ, but execution registers and stack context are essential.",
+      "needsHumanCheck": false
+    }
+  ]
+}

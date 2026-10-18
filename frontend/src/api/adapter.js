@@ -16,13 +16,14 @@
  */
 export function adaptGenerateQuestionsRequest(contractBody, userId) {
   return {
-    topic: contractBody.topic,
-    subject: contractBody.subject || contractBody.topic,
+    topic: contractBody.topic || null,
+    subject: contractBody.subject || contractBody.topic || 'General',
     bloom_level: contractBody.bloom_level,
     difficulty: contractBody.difficulty,
     question_type: contractBody.question_type || 'open',
     num_questions: contractBody.count ?? 1,
     document_id: contractBody.document_id || null,
+    ...(contractBody.uploaded_only ? { uploaded_only: true } : {}),
   }
 }
 

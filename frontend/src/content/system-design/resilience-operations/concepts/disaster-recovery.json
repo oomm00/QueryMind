@@ -1,0 +1,82 @@
+{
+  "id": "disaster-recovery",
+  "title": "Disaster recovery",
+  "subject": "system-design",
+  "summary": "Understand disaster recovery in practical systems.",
+  "prerequisiteIds": [],
+  "resources": [],
+  "questions": [
+    {
+      "id": "disaster-recovery-1",
+      "type": "mcq",
+      "bloom": "remember",
+      "difficulty": "easy",
+      "prompt": "What does an RPO specify?",
+      "explanation": "The correct answer is Acceptable data loss measured in time.",
+      "needsHumanCheck": false,
+      "options": [
+        "Acceptable data loss measured in time",
+        "Maximum request latency",
+        "Number of cache keys",
+        "A CPU quota"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "disaster-recovery-2",
+      "type": "mcq",
+      "bloom": "understand",
+      "difficulty": "medium",
+      "prompt": "What does an RPO specify?",
+      "explanation": "The correct answer is Acceptable data loss measured in time.",
+      "needsHumanCheck": false,
+      "options": [
+        "Acceptable data loss measured in time",
+        "Maximum request latency",
+        "Number of cache keys",
+        "A CPU quota"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "id": "disaster-recovery-3",
+      "type": "short",
+      "bloom": "apply",
+      "difficulty": "medium",
+      "prompt": "Why test disaster recovery?",
+      "explanation": "Untested backups and failover procedures may not work when needed.",
+      "needsHumanCheck": true,
+      "answerKey": "Untested backups and failover procedures may not work when needed.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    },
+    {
+      "id": "disaster-recovery-4",
+      "type": "short",
+      "bloom": "analyze",
+      "difficulty": "hard",
+      "prompt": "Why test disaster recovery?",
+      "explanation": "Untested backups and failover procedures may not work when needed.",
+      "needsHumanCheck": true,
+      "answerKey": "Untested backups and failover procedures may not work when needed.",
+      "rubric": [
+        {
+          "criterion": "Names the core idea accurately",
+          "points": 2
+        },
+        {
+          "criterion": "Explains its purpose or trade-off",
+          "points": 1
+        }
+      ]
+    }
+  ]
+}
