@@ -40,4 +40,43 @@ export function courseStats(tree, progress) {
   }
 }
 
+/** Which course is a session id about - the concept title, the topic title, or null. */
+function scopeName(tree, scopeId) {
+  if (!tree || !scopeId) return null
+  for (const topic of tree.topics) {
+    if (topic.id === scopeId) return { title: topic.title, kind: 'topic' }
+    for (const concept of topic.concepts) {
+      if (concept.id === scopeId) return { title: concept.title, kind: 'concept' }
+    }
+  }
+  return null
+}
+
+/**
+ * Where a student last worked in a course.
+ *
+ * The most recent session for the course that has an answer in it names the
+ * topic or concept it drew from; a session with nothing answered is only used as
+ * a fallback. Returns null when nothing has been started, so the page can leave
+ * the line out rather than invent one.
+ */
+export function lastPractised(tree, sessions = [], courseId) {
+  const mine = (sessions ?? []).filter((session) => session?.courseId === courseId)
+  if (mine.length === 0) return null
+
+  const answered = mine.filter((session) => Object.keys(session.answers ?? {}).length > 0)
+  const session = (answered.length > 0 ? answered : mine)[0]
+  const scope = scopeName(tree, session.scopeId)
+
+  return {
+    at: session.submittedAt ?? session.createdAt ?? null,
+    scopeId: session.scopeId ?? null,
+    title: scope?.title ?? null,
+    kind: scope?.kind ?? null,
+    scope: session.scope ?? null,
+    status: session.status ?? null,
+  }
+}
+
+
 export default courseStats

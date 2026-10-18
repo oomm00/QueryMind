@@ -57,3 +57,22 @@ export function sentenceCase(value) {
     })
     .join(' ')
 }
+
+/**
+ * formatWhen('2026-10-18T09:12:00.000Z') -> 'Oct 18, 9:12 AM'
+ *
+ * A stored timestamp in the reader's own locale, or null when there is nothing
+ * usable to show. Callers decide what to say when it is null.
+ */
+export function formatWhen(iso) {
+  if (!iso) return null
+  const when = new Date(iso)
+  if (Number.isNaN(when.getTime())) return null
+  return when.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+

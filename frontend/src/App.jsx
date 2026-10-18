@@ -20,6 +20,7 @@ import QuestionPage from './pages/QuestionPage'
 import FeedbackPage from './pages/FeedbackPage'
 import SessionPage from './pages/SessionPage'
 import ResultsPage from './pages/ResultsPage'
+import MyCoursesPage from './pages/MyCoursesPage'
 import DashboardPage from './pages/DashboardPage'
 import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
@@ -130,14 +131,19 @@ export default function App() {
         />
 
         {/* Legacy path aliases */}
+        <Route path="/learning" element={<Navigate to="/courses" replace />} />
         <Route path="/setup" element={<Navigate to="/practice/new" replace />} />
         <Route path="/question" element={<Navigate to="/practice/session" replace />} />
         <Route path="/feedback" element={<Navigate to="/practice/feedback" replace />} />
 
         {/* Wired but not yet built */}
         <Route
-          path="/learning"
-          element={soon('My courses', 'The courses you have started, with your practice progress.')}
+          path="/courses"
+          element={
+            <Protected>
+              <MyCoursesPage />
+            </Protected>
+          }
         />
         <Route
           path="/interview"
