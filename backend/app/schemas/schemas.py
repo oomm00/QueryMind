@@ -203,6 +203,10 @@ class SubmitAttemptRequest(BaseModel):
     user_answer: Optional[str] = None
     answer_text: Optional[str] = None
     time_taken_seconds: Optional[int] = None
+    submission_id: Optional[str] = Field(
+        default=None,
+        description="Client idempotency key; one Attempt per (user, question, submission_id).",
+    )
 
 
 class AttemptFeedback(BaseModel):
@@ -219,6 +223,8 @@ class AttemptFeedback(BaseModel):
     strengths: list[str] = []
     correct_answer: Optional[str] = None
     stub: bool = False
+    evaluation_mode: Optional[str] = None
+    duplicate_submission: bool = False
 
 
 class AttemptHistoryItem(BaseModel):
@@ -246,6 +252,10 @@ class SubmitAnswerRequest(BaseModel):
     answer: str = Field(
         ..., min_length=1, max_length=MAX_ANSWER_LENGTH,
         examples=["2PL holds exclusive locks until commit, preventing dirty reads."],
+    )
+    submission_id: Optional[str] = Field(
+        default=None,
+        description="Client idempotency key; one Attempt per (user, question, submission_id).",
     )
 
 
@@ -281,6 +291,8 @@ class AnswerEvaluationResponse(BaseModel):
     missing_points: list[str] = []
     strengths: list[str] = []
     reference_answer: Optional[str] = None
+    evaluation_mode: Optional[str] = None
+    duplicate_submission: bool = False
 
 
 # NOTE: `DocumentUploadResponse` is defined once, above (section "Documents").

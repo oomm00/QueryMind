@@ -31,9 +31,12 @@ import math
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import select
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.orm import Session
 
 from app.models.models import Attempt, MasteryRecord, Question
+from app.services.score_utils import normalize_score
 
 logger = logging.getLogger("querymind.mastery")
 
@@ -141,19 +144,36 @@ def update_mastery(
     The record is flushed but **not committed** — the caller owns the
     transaction so it can be grouped with the surrounding writes (the attempt).
     """
-    weighted_score = _clamp(float(score) * _difficulty_weight(difficulty))
+    weighted_score = _clamp(normalize_score(score) * _difficulty_weight(difficulty))
 
-    record = _lookup(db, user_id, subject, topic)
-    if record is None:
-        record = MasteryRecord(
-            user_id=user_id,
-            subject=subject,
-            topic=topic,
-            mastery_score=MASTERY_MIN,
-            attempts_count=0,
-            bloom_breakdown="{}",
+    # Atomic create-or-lock: INSERT ... ON CONFLICT DO NOTHING makes concurrent
+    # first attempts safe, then SELECT ... FOR UPDATE serialises the EMA update.
+    values = {
+        "user_id": user_id,
+        "subject": subject,
+        "topic": topic,
+        "mastery_score": MASTERY_MIN,
+        "attempts_count": 0,
+        "bloom_breakdown": "{}",
+    }
+    dialect = db.get_bind().dialect.name
+    insert = (
+        postgresql.insert(MasteryRecord) if dialect == "postgresql" else sqlite.insert(MasteryRecord)
+    )
+    db.execute(
+        insert.values(**values).on_conflict_do_nothing(
+            index_elements=["user_id", "subject", "topic"]
         )
-        db.add(record)
+    )
+    record = db.execute(
+        select(MasteryRecord)
+        .where(
+            MasteryRecord.user_id == user_id,
+            MasteryRecord.subject == subject,
+            MasteryRecord.topic == topic,
+        )
+        .with_for_update()
+    ).scalar_one()
 
     # Top-level mastery: seed on the first attempt, EMA afterwards.
     if (record.attempts_count or 0) == 0:
