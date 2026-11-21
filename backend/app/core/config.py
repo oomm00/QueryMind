@@ -47,6 +47,19 @@ class Settings(BaseSettings):
     # Chroma
     chroma_host: str = "localhost"
     chroma_port: int = 8001
+    # Remote-first: a configured CHROMA_HOST is retried briefly and reported in
+    # /health. Local persistence is an explicit opt-in, never a silent surprise.
+    chroma_allow_local_fallback: bool = False
+    chroma_connect_timeout_seconds: float = 2.0
+    chroma_retry_attempts: int = 2
+    chroma_retry_backoff_seconds: float = 0.25
+
+    # Database connection / health behaviour
+    db_connect_timeout_seconds: float = 5.0
+    db_statement_timeout_seconds: int = 5
+    db_pool_recycle_seconds: int = 1800
+    sql_echo: bool = False
+    health_db_timeout_seconds: float = 5.0
 
     # LLM
     openai_api_key: str = "sk-placeholder"

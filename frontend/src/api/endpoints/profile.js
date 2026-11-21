@@ -5,7 +5,7 @@
 import { apiFetch } from '../client.js'
 import { isMocked, delay } from '../mocks/config.js'
 import { createMockProfile } from '../mocks/data/profile.mock.js'
-import { createMockProfileGoal, createMockNextParams } from '../mocks/data/extended.mock.js'
+import { createMockProfileGoal } from '../mocks/data/extended.mock.js'
 
 export const profileEndpoints = {
   /**
@@ -51,20 +51,6 @@ export const profileEndpoints = {
     }
 
     return apiFetch(`/profile/goal/${userId}`, {
-      method: 'GET',
-    })
-  },
-
-  /**
-   * Gets adaptive next question parameters: GET /next-question-params/{user_id}
-   */
-  async getNextQuestionParams(userId) {
-    if (isMocked('next_params')) {
-      await delay(250)
-      return createMockNextParams(userId)
-    }
-
-    return apiFetch(`/next-question-params/${userId}`, {
       method: 'GET',
     })
   },
