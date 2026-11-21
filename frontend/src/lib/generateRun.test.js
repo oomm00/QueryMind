@@ -1,19 +1,18 @@
 /**
- * The generation loop, exercised with a fake call instead of a fetch.
+ * The run, exercised with a fake call instead of a fetch.
  *
- * The backend answers one question per call and ignores a count, so the rules
- * worth pinning are the ones a run of ten lives by: how many calls are in
- * flight, which Bloom level each one asks for, when a failure is worth another
- * go and when it is a slot lost, and what Cancel does to the calls still out.
+ * The backend now honours the count and owns duplicates, Bloom gating and the
+ * deadline. The rules worth pinning here are the ones the browser still owns:
+ * ONE call per run, the count and adaptive flag it sends, how the returned
+ * questions land in session shape, and what Cancel and a refusal do to it.
  */
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
-  DUPLICATE_ATTEMPTS,
   GENERATED_ORIGIN_LABEL,
-  MAX_IN_FLIGHT,
   RATE_LIMIT_WAIT_MS,
   generatedToSessionQuestion,
+  normaliseScore,
   retryAfterMs,
   runGeneration,
 } from './generateRun.js'
@@ -25,261 +24,161 @@ function failure(code, extra = {}) {
   })
 }
 
-/** A question the backend might hand back. */
-function question(text, bloom = 'understand') {
+function question(text, bloom = 'understand', extra = {}) {
   return {
     question_id: `q-${text}`,
     question_text: text,
     bloom_level: bloom,
     difficulty: 'medium',
+    ...extra,
   }
 }
 
-/**
- * A fake generate that records what it was asked and how many calls overlap.
- * `handler` decides each outcome.
- */
-function fakeGenerate(handler) {
-  const calls = []
-  let inFlight = 0
-  let peak = 0
-
-  const generate = async (payload) => {
-    inFlight += 1
-    peak = Math.max(peak, inFlight)
-    calls.push(payload)
-    try {
-      // A turn of the event loop, so overlapping calls really do overlap.
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0)
-      })
-      return await handler(payload, calls.length)
-    } finally {
-      inFlight -= 1
-    }
-  }
-
+/** A whole run in one response, as the backend now returns it. */
+function batch(count, bloom = 'apply', extra = {}) {
   return {
-    generate,
-    calls,
-    get peak() {
-      return peak
-    },
-    bloomsAsked: () => calls.map((call) => call.bloom_level),
+    questions: Array.from({ length: count }, (_, index) =>
+      question(`question ${index + 1}`, bloom, {
+        source: 'live',
+        adaptive_reason: 'moving up after strong answers',
+      })
+    ),
+    ...extra,
   }
 }
-
-/** One question back, in the shape the endpoint returns it. */
-const one = (payload) => ({ questions: [question(`a ${payload.bloom_level} question`, payload.bloom_level)] })
 
 describe('a run of N questions', () => {
-  it('asks N times, two at a time, and keeps every question', async () => {
-    const fake = fakeGenerate(one)
+  it('makes exactly ONE call with count and num_questions set to what was wanted', async () => {
+    const generate = vi.fn().mockResolvedValue(batch(6))
 
     const outcome = await runGeneration({
-      generate: fake.generate,
+      generate,
       topic: 'Deadlocks',
       subject: 'OS',
-      difficulty: 'medium',
       blooms: ['apply', 'analyze'],
       count: 6,
     })
 
-    expect(outcome.questions).toHaveLength(6)
-    expect(outcome.skipped).toBe(0)
-    expect(fake.calls).toHaveLength(6)
-    expect(fake.peak).toBeLessThanOrEqual(MAX_IN_FLIGHT)
-    expect(fake.peak).toBe(2)
-    expect(fake.calls.every((call) => call.count === 1)).toBe(true)
-  })
-
-  it('asks the levels it was given in turn, so a run is mixed', async () => {
-    const fake = fakeGenerate(one)
-
-    await runGeneration({
-      generate: fake.generate,
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(generate.mock.calls[0][0]).toMatchObject({
       topic: 'Deadlocks',
       subject: 'OS',
-      blooms: ['remember', 'apply', 'create'],
       count: 6,
+      num_questions: 6,
+      adaptive: true,
     })
-
-    const asked = fake.bloomsAsked()
-    expect(asked.filter((bloom) => bloom === 'remember')).toHaveLength(2)
-    expect(asked.filter((bloom) => bloom === 'apply')).toHaveLength(2)
-    expect(asked.filter((bloom) => bloom === 'create')).toHaveLength(2)
+    expect(outcome.questions).toHaveLength(6)
+    expect(outcome.skipped).toBe(0)
+    expect(outcome.error).toBeNull()
   })
 
-  it('reports as the questions arrive', async () => {
-    const fake = fakeGenerate(one)
-    const seen = []
+  it('passes an explicit manual override through to the single call', async () => {
+    const generate = vi.fn().mockResolvedValue(batch(2))
 
     await runGeneration({
-      generate: fake.generate,
+      generate,
+      topic: 'Deadlocks',
+      subject: 'OS',
+      difficulty: 'hard',
+      blooms: ['evaluate'],
+      count: 2,
+      adaptive: false,
+      uploaded_only: true,
+    })
+
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(generate.mock.calls[0][0]).toMatchObject({
+      adaptive: false,
+      difficulty: 'hard',
+      bloom_level: 'evaluate',
+      uploaded_only: true,
+    })
+  })
+
+  it('reports the ready count once the batch arrives', async () => {
+    const seen = []
+    const generate = vi.fn().mockResolvedValue(batch(4))
+
+    await runGeneration({
+      generate,
       topic: 'Deadlocks',
       subject: 'OS',
       blooms: ['apply'],
       count: 4,
-      onProgress: (progress) => seen.push(progress.ready),
+      onProgress: (progress) => seen.push(progress),
     })
 
-    expect(seen.at(-1)).toBe(4)
-    expect(seen[0]).toBeGreaterThan(0)
-    expect([...seen].sort((a, b) => a - b)).toEqual(seen)
+    expect(seen.at(-1)).toEqual({ ready: 4, target: 4, skipped: 0 })
   })
 
-  it('hands every question the source and the concept it belongs to', async () => {
-    const fake = fakeGenerate(one)
+  it('keeps a short batch and counts the rest as skipped, not as an error', async () => {
+    const generate = vi.fn().mockResolvedValue(batch(2))
 
     const outcome = await runGeneration({
-      generate: fake.generate,
+      generate,
+      topic: 'Deadlocks',
+      subject: 'OS',
+      blooms: ['apply'],
+      count: 6,
+    })
+
+    expect(outcome.questions).toHaveLength(2)
+    expect(outcome.skipped).toBe(4)
+    expect(outcome.error).toBeNull()
+  })
+
+  it('hands every question the source, adaptive reason and concept it belongs to', async () => {
+    const generate = vi.fn().mockResolvedValue(batch(1, 'evaluate'))
+
+    const outcome = await runGeneration({
+      generate,
       topic: 'Deadlock Detection',
       subject: 'OS',
       difficulty: 'hard',
       blooms: ['evaluate'],
       count: 1,
+      adaptive: true,
     })
 
+    expect(generate).toHaveBeenCalledTimes(1)
     const [generated] = outcome.questions
     expect(generated.origin).toBe('generated')
     expect(generated.originLabel).toBe(GENERATED_ORIGIN_LABEL)
     expect(generated.conceptId).toBe('custom:deadlock-detection')
     expect(generated.conceptTitle).toBe('Deadlock Detection')
     expect(generated.bloom_level).toBe('evaluate')
+    expect(generated.source).toBe('live')
+    expect(generated.adaptive_reason).toBe('moving up after strong answers')
+  })
+
+  it('also accepts the legacy single-question response shape', async () => {
+    const generate = vi.fn().mockResolvedValue(
+      question('Explain a deadlock.', 'understand', {
+        source: 'cache',
+        adaptive_reason: 'starting at the first rung',
+      })
+    )
+
+    const outcome = await runGeneration({
+      generate,
+      topic: 'Deadlocks',
+      subject: 'OS',
+      count: 1,
+    })
+
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(outcome.questions).toHaveLength(1)
+    expect(outcome.questions[0].source).toBe('cache')
+    expect(outcome.questions[0].adaptive_reason).toBe('starting at the first rung')
   })
 })
 
-describe('a failure worth another go', () => {
-  it('asks a duplicate again at another Bloom, and keeps the question that came back', async () => {
-    let asked = 0
-    const fake = fakeGenerate((payload) => {
-      asked += 1
-      if (asked === 1) throw failure('DUPLICATE_QUESTION')
-      return one(payload)
-    })
+describe('a failed call that stops the run', () => {
+  it('reports NO_CONTEXT without an error, so the page can suggest a topic', async () => {
+    const generate = vi.fn().mockRejectedValue(failure('NO_CONTEXT'))
 
     const outcome = await runGeneration({
-      generate: fake.generate,
-      topic: 'Deadlocks',
-      subject: 'OS',
-      blooms: ['apply', 'analyze'],
-      count: 1,
-    })
-
-    expect(outcome.questions).toHaveLength(1)
-    expect(outcome.skipped).toBe(0)
-    expect(fake.calls).toHaveLength(2)
-    expect(fake.calls[1].bloom_level).not.toBe(fake.calls[0].bloom_level)
-  })
-
-  it('drops the slot once a duplicate has been asked twice more', async () => {
-    const fake = fakeGenerate(() => {
-      throw failure('DUPLICATE_QUESTION')
-    })
-
-    const outcome = await runGeneration({
-      generate: fake.generate,
-      topic: 'Deadlocks',
-      subject: 'OS',
-      blooms: ['apply'],
-      count: 1,
-    })
-
-    expect(outcome.questions).toHaveLength(0)
-    expect(outcome.skipped).toBe(1)
-    expect(outcome.error).toBeNull()
-    expect(fake.calls).toHaveLength(1 + DUPLICATE_ATTEMPTS)
-  })
-
-  it('asks once more when the model could not hit the Bloom level', async () => {
-    let asked = 0
-    const fake = fakeGenerate((payload) => {
-      asked += 1
-      if (asked === 1) throw failure('BLOOM_ALIGNMENT_MISMATCH')
-      return one(payload)
-    })
-
-    const outcome = await runGeneration({
-      generate: fake.generate,
-      topic: 'Deadlocks',
-      subject: 'OS',
-      blooms: ['create'],
-      count: 1,
-    })
-
-    expect(outcome.questions).toHaveLength(1)
-    expect(fake.calls).toHaveLength(2)
-    expect(fake.calls[1].bloom_level).toBe('create')
-  })
-
-  it('drops the slot when the same level fails twice', async () => {
-    const fake = fakeGenerate(() => {
-      throw failure('BLOOM_ALIGNMENT_MISMATCH')
-    })
-
-    const outcome = await runGeneration({
-      generate: fake.generate,
-      topic: 'Deadlocks',
-      subject: 'OS',
-      blooms: ['create'],
-      count: 1,
-    })
-
-    expect(outcome.questions).toHaveLength(0)
-    expect(outcome.skipped).toBe(1)
-    expect(fake.calls).toHaveLength(2)
-  })
-
-  it('waits out a rate limit and carries on', async () => {
-    let asked = 0
-    const fake = fakeGenerate((payload) => {
-      asked += 1
-      if (asked === 1) throw failure('RATE_LIMIT_EXCEEDED', { retry_after: 0.001 })
-      return one(payload)
-    })
-
-    const outcome = await runGeneration({
-      generate: fake.generate,
-      topic: 'Deadlocks',
-      subject: 'OS',
-      blooms: ['apply'],
-      count: 1,
-    })
-
-    expect(outcome.questions).toHaveLength(1)
-    expect(fake.calls).toHaveLength(2)
-  })
-
-  it('gives up on a rate limit that will not clear, and says so as a sentence', async () => {
-    const fake = fakeGenerate(() => {
-      throw failure('RATE_LIMIT_EXCEEDED', { retry_after: 0.001 })
-    })
-
-    const outcome = await runGeneration({
-      generate: fake.generate,
-      topic: 'Deadlocks',
-      subject: 'OS',
-      blooms: ['apply'],
-      count: 1,
-    })
-
-    expect(outcome.questions).toHaveLength(0)
-    expect(outcome.error).toBeTruthy()
-    expect(outcome.error.data.code).toBe('RATE_LIMIT_EXCEEDED')
-  })
-})
-
-describe('a failure that stops the run', () => {
-  it('stops on NO_CONTEXT, because no retry will find material', async () => {
-    let asked = 0
-    const fake = fakeGenerate((payload) => {
-      asked += 1
-      if (asked === 1) throw failure('NO_CONTEXT')
-      return one(payload)
-    })
-
-    const outcome = await runGeneration({
-      generate: fake.generate,
+      generate,
       topic: 'Quantum computing',
       subject: 'general',
       blooms: ['apply'],
@@ -287,18 +186,16 @@ describe('a failure that stops the run', () => {
     })
 
     expect(outcome.noContext).toBe(true)
-    expect(outcome.questions.length).toBeLessThan(6)
-    // Whatever arrived before the refusal is kept.
-    expect(fake.calls.length).toBeLessThan(6)
+    expect(outcome.error).toBeNull()
+    expect(outcome.questions).toHaveLength(0)
+    expect(generate).toHaveBeenCalledTimes(1)
   })
 
-  it('stops on anything else and keeps the failure for the page to read', async () => {
-    const fake = fakeGenerate(() => {
-      throw failure('LLM_NOT_CONFIGURED')
-    })
+  it('keeps any other failure for the page to read as a sentence', async () => {
+    const generate = vi.fn().mockRejectedValue(failure('LLM_NOT_CONFIGURED'))
 
     const outcome = await runGeneration({
-      generate: fake.generate,
+      generate,
       topic: 'Deadlocks',
       subject: 'OS',
       blooms: ['apply'],
@@ -307,20 +204,23 @@ describe('a failure that stops the run', () => {
 
     expect(outcome.questions).toHaveLength(0)
     expect(outcome.error.data.code).toBe('LLM_NOT_CONFIGURED')
+    expect(outcome.noContext).toBe(false)
   })
 })
 
 describe('Cancel', () => {
-  it('stops the calls still out and keeps what already arrived', async () => {
+  it('stops the one request without inventing questions', async () => {
     const controller = new AbortController()
-    const pending = []
-    let answered = 0
-
-    const generate = (payload, { signal } = {}) =>
-      new Promise((resolve, reject) => {
-        signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
-        pending.push({ payload, resolve: () => resolve(one(payload)) })
-      })
+    const generate = vi.fn(
+      (_payload, { signal } = {}) =>
+        new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => {
+            const error = new Error('The operation was aborted.')
+            error.name = 'AbortError'
+            reject(error)
+          })
+        })
+    )
 
     const run = runGeneration({
       generate,
@@ -331,35 +231,32 @@ describe('Cancel', () => {
       signal: controller.signal,
     })
 
-    // Let the two slots start, answer one of them, then cancel.
     await new Promise((resolve) => {
       setTimeout(resolve, 0)
     })
-    expect(pending).toHaveLength(MAX_IN_FLIGHT)
-    pending[0].resolve()
-    answered += 1
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0)
-    })
-
+    expect(generate).toHaveBeenCalledTimes(1)
     controller.abort()
     const outcome = await run
 
     expect(outcome.cancelled).toBe(true)
-    expect(outcome.questions.length).toBe(answered)
-    expect(outcome.questions.length).toBeLessThan(6)
+    expect(outcome.questions).toHaveLength(0)
   })
 })
 
-describe('a Retry-After as milliseconds', () => {
-  it('reads the body, the error itself, then falls back', () => {
+describe('the helpers', () => {
+  it('reads Retry-After from the body, the error itself, then falls back', () => {
     expect(retryAfterMs(failure('RATE_LIMIT_EXCEEDED', { retry_after: 3 }))).toBe(3000)
     expect(retryAfterMs({ retryAfter: 2 })).toBe(2000)
     expect(retryAfterMs(failure('RATE_LIMIT_EXCEEDED'))).toBe(RATE_LIMIT_WAIT_MS)
+    expect(retryAfterMs(failure('RATE_LIMIT_EXCEEDED', { retry_after: 600 }))).toBe(30_000)
   })
 
-  it('will not sit out an absurd wait', () => {
-    expect(retryAfterMs(failure('RATE_LIMIT_EXCEEDED', { retry_after: 600 }))).toBe(30_000)
+  it('treats a score that never arrived as unscored, not zero', () => {
+    expect(normaliseScore(null)).toBeNull()
+    expect(normaliseScore(undefined)).toBeNull()
+    expect(normaliseScore('')).toBeNull()
+    expect(normaliseScore(0)).toBe(0)
+    expect(normaliseScore(75)).toBe(0.75)
   })
 })
 
@@ -387,7 +284,12 @@ describe('a generated question in the session’s shape', () => {
   it('is a short answer when there is nothing to choose between', () => {
     const mapped = generatedToSessionQuestion(
       { question_text: 'Explain a deadlock.' },
-      { topic: 'Deadlocks', conceptId: 'custom:deadlocks', bloom: 'understand', fallbackId: 'generated:custom:deadlocks:0' }
+      {
+        topic: 'Deadlocks',
+        conceptId: 'custom:deadlocks',
+        bloom: 'understand',
+        fallbackId: 'generated:custom:deadlocks:0',
+      }
     )
 
     expect(mapped.type).toBe('short')
@@ -395,5 +297,19 @@ describe('a generated question in the session’s shape', () => {
     expect(mapped.correctIndex).toBeUndefined()
     // The adapter refuses to invent a backend id; the session still needs a key.
     expect(mapped.question_id).toBe('generated:custom:deadlocks:0')
+  })
+
+  it('carries the source and the adaptive reason through to the session', () => {
+    const mapped = generatedToSessionQuestion(
+      {
+        question_text: 'Explain a deadlock.',
+        source: 'live',
+        adaptive_reason: 'moving up after strong answers',
+      },
+      { topic: 'Deadlocks', fallbackId: 'generated:custom:deadlocks:0' }
+    )
+
+    expect(mapped.source).toBe('live')
+    expect(mapped.adaptive_reason).toBe('moving up after strong answers')
   })
 })
