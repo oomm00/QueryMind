@@ -73,6 +73,10 @@ services:
       DB_STATEMENT_TIMEOUT_SECONDS: ${DB_STATEMENT_TIMEOUT_SECONDS:-5}
       HEALTH_DB_TIMEOUT_SECONDS: ${HEALTH_DB_TIMEOUT_SECONDS:-5}
       SQL_ECHO: ${SQL_ECHO:-false}
+      # The demo frontend may run on 5173 or 5174 when 5173 is occupied.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:3000}
+      # Empty by default in the shell override disables the key for offline demos.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # Demo-day switch: skip all LLM calls and use the deterministic evaluator.
       OFFLINE_DEMO_MODE: ${OFFLINE_DEMO_MODE:-false}
       GENERATION_DEADLINE_SECONDS: ${GENERATION_DEADLINE_SECONDS:-35}
