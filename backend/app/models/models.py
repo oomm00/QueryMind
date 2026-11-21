@@ -123,7 +123,13 @@ class Question(Base):
 
 class Attempt(Base):
     __tablename__ = "attempts"
-    __table_args__ = (Index("ix_attempts_user_created", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_attempts_user_created", "user_id", "created_at"),
+        UniqueConstraint(
+            "user_id", "question_id", "submission_id",
+            name="uq_attempt_user_question_submission",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -137,6 +143,7 @@ class Attempt(Base):
         JSONB().with_variant(JSON, "sqlite"), nullable=True
     )
     evaluation_data: Mapped[str | None] = mapped_column(Text)
+    submission_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     time_taken_seconds: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
