@@ -10,9 +10,12 @@ QueryMind helps learners prepare for topics using AI-generated questions that ad
 1. [Project Overview](#project-overview)
 2. [Folder Structure](#folder-structure)
 3. [Setup Instructions](#setup-instructions)
-4. [Development Workflow](#development-workflow)
-5. [Team](#team)
-6. [License](#license)
+4. [Demo day (two repos)](#demo-day-two-repos)
+5. [Environment flags](#environment-flags)
+6. [Demo-day break/fix table](#demo-day-breakfix-table)
+7. [LLM configuration & resilience](#llm-configuration--resilience)
+8. [Production deployment](#production-deployment)
+9. [License](#license)
 
 ---
 
@@ -152,6 +155,111 @@ make sure `GEMINI_API_KEY` is set in `backend/.env`. The frontend defaults to
 the real API for implemented domains. Mocking can be enabled per domain with
 `VITE_MOCK_<DOMAIN>=true` when working offline; see
 [`frontend/.env.example`](frontend/.env.example).
+
+---
+
+## Demo day (two repos)
+
+The hardened demo uses **two checkouts**, not the legacy `frontend/` folder in
+this repository:
+
+```text
+backend  D:\querymind            branch hardening
+frontend D:\querymind-frontend   branch frontend-redesign
+```
+
+Fresh machine:
+
+```powershell
+# 1. Backend repo
+cd D:\querymind
+git checkout hardening
+cp .env.example .env          # fill GEMINI_API_KEY for the live demo
+docker compose up -d --build db chroma backend
+
+# 2. Frontend repo (separate clone)
+cd D:\querymind-frontend
+git checkout frontend-redesign
+cd frontend
+npm install
+
+# 3. One command starts BOTH repos from D:\querymind
+cd D:\querymind
+.\start-demo.ps1              # live LLM
+.\start-demo.ps1 -Offline     # docker backend with OFFLINE_DEMO_MODE=true
+```
+
+`start-demo.ps1` refuses to start if either repo is on the wrong branch or if
+ports **8000** or **5174** are already taken. It recreates only the `backend`
+container, waits for `/health` to report `healthy`, starts Vite with
+`strictPort` on 5174, and prints:
+
+```text
+Frontend: http://localhost:5174 (also http://127.0.0.1:5174)
+Backend:  http://localhost:8000
+```
+
+Open `http://localhost:5174`, register, go to **Practice**, type a topic (use
+**Deadlocks** for the bank-backed demo), leave **Adaptive** selected, generate,
+answer well, and submit. The next question moves up one rung and the reason is
+shown under the rung. Answer badly and the next question moves back down.
+
+For an LLM-free dry run, stop the demo (`Stop-Process` on the printed frontend
+PID; `docker compose stop backend`) then run `.\start-demo.ps1 -Offline`. The
+script sets `OFFLINE_DEMO_MODE=true` and an empty `GEMINI_API_KEY` on the
+**dockerised backend**; generation comes from the seeded bank and scoring uses
+the deterministic provisional evaluator. No frontend mocks are used.
+
+---
+
+## Environment flags
+
+Copy `.env.example` to `.env`. Never commit `.env`, backups, or API keys.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `APP_ENV`, `DEBUG`, `SECRET_KEY` | `development`, `true`, shipped demo key | Startup fails if `SECRET_KEY` is still the default while `DEBUG=false`. |
+| `POSTGRES_*`, `DATABASE_URL` | repo defaults | PostgreSQL connection. Container service name is `db`. |
+| `BACKEND_HOST`, `BACKEND_PORT` | `0.0.0.0`, `8000` | Uvicorn bind address. |
+| `ALLOWED_ORIGINS` | 5174/5173/3000 on localhost **and** 127.0.0.1 | Exact browser origins allowed by CORS. The demo frontend is pinned to 5174. |
+| `VITE_API_BASE_URL` | `http://localhost:8000` | Frontend → backend base URL. |
+| `VITE_USE_MOCKS`, `VITE_MOCK_*` | see `frontend/.env.example` | `start-demo.ps1` forces `VITE_USE_MOCKS=false`, `VITE_MOCK_QUESTIONS=false`, `VITE_MOCK_ATTEMPTS=false`. |
+| `CHROMA_HOST`, `CHROMA_PORT` | `chroma`, `8001` on host / `8000` in compose | Remote Chroma endpoint. |
+| `CHROMA_ALLOW_LOCAL_FALLBACK` | `false` | Local persistent Chroma is an explicit opt-in, never silent. |
+| `CHROMA_CONNECT_TIMEOUT_SECONDS` | `2` | Per-attempt connect timeout. |
+| `CHROMA_RETRY_ATTEMPTS`, `CHROMA_RETRY_BACKOFF_SECONDS` | `2`, `0.25` | Remote retry policy; failures are logged and memoized collection state is re-resolved. |
+| `ANONYMIZED_TELEMETRY` | `FALSE` | Chroma product telemetry disabled. |
+| `DB_CONNECT_TIMEOUT_SECONDS` | `5` | libpq connect timeout (integer seconds). |
+| `DB_STATEMENT_TIMEOUT_SECONDS` | `5` | Postgres statement timeout. |
+| `DB_POOL_RECYCLE_SECONDS` | `1800` | SQLAlchemy pool recycle. |
+| `SQL_ECHO` | `false` | Log SQL statements without coupling to `DEBUG`. |
+| `HEALTH_DB_TIMEOUT_SECONDS` | `5` | Database probe timeout (capped at 2s for the health endpoint). |
+| `OFFLINE_DEMO_MODE` | `false` | Skip all LLM calls; use bank generation + provisional scoring. |
+| `GENERATION_DEADLINE_SECONDS` | `35` | Hard deadline for one `/questions/generate` request. |
+| `GENERATION_CALL_TIMEOUT_SECONDS` | `15` | Timeout for a single model call. |
+| `GENERATION_MAX_ATTEMPTS` | `2` | Live generation attempts before cache/bank fallback. |
+| `GENERATION_MAX_FALLBACK_MODELS` | `1` | Extra Gemini models tried on quota errors. |
+| `LLM_*`, `WARMUP_ON_STARTUP` | see below | Model selection, quota fallback, and startup warm-up. |
+
+Health endpoints:
+
+- `GET /health` — per-component status (`database`, `chroma`, `llm`, `security`),
+  `llm_configured`, `offline_demo_mode`; returns **503** when the DB is down.
+- `GET /health/live` — process liveness only; no DB, Chroma, or LLM calls.
+
+---
+
+## Demo-day break/fix table
+
+| If this breaks | What you see | Do this |
+| --- | --- | --- |
+| LLM down / quota exhausted | `/health` shows `llm` unavailable; generate stalls or returns an LLM error | Run `stop-process` on the frontend PID, `docker compose stop backend`, then `.\start-demo.ps1 -Offline`. Generation uses the seeded bank; scoring is provisional. |
+| DB down | `/health` returns 503 within ~2–6s with `database.status=unavailable`; `/mastery/me` fails fast with a `request_id` | `docker compose start db`. Wait until `docker ps` says healthy. The backend recovers without a restart; re-run `/health`. |
+| Chroma down | `/health` shows `chroma.status=unavailable`, `source=remote`; no silent local fallback | `docker compose start chroma`. Only set `CHROMA_ALLOW_LOCAL_FALLBACK=true` if intentionally running without the Chroma container. |
+| Slow network / first generation slow | Generate takes up to ~35s | Keep one browser tab only; watch the progress panel. If the deadline expires, the backend serves cache/bank automatically. Confirm `source` in the question payload. |
+| Port 8000 or 5174 in use | `start-demo.ps1` fails loudly with the owning PID | Stop that PID, or choose a different machine. Do not edit CORS by hand: 5174 is pinned in `vite.config.js` and in `ALLOWED_ORIGINS`. |
+| Wrong branch | `start-demo.ps1` prints `expected 'hardening' / 'frontend-redesign'` | `git checkout` the expected branch in that repo. The script never merges or switches branches for you. |
+| 500 with no correlation | Response JSON contains `code=INTERNAL_ERROR` and a `request_id`; the same id appears in `docker compose logs backend` | Search the logs for that `request_id`. |
 
 ---
 
