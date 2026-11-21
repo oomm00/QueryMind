@@ -29,7 +29,7 @@ from app.main import create_app
 from app.models.base import Base
 from app.models.models import Attempt, KnowledgeProfile, MasteryRecord, Question, User
 from app.api import attempts as attempts_module  # noqa: F401
-from app.services import evaluation_service
+from app.services import attempt_service, evaluation_service
 from app.services.evaluation_service import compute_overall_score, evaluate_answer
 
 
@@ -198,19 +198,16 @@ def test_submit_attempt_success_persists_jsonb_and_updates_mastery(
     assert saved_attempt.criteria_scores["conceptual_correctness"] == 9
     assert saved_attempt.criteria_scores["technical_depth"] == 9
 
-    # Verify adaptive engine updated knowledge_profile
-    profile = (
+    # knowledge_profiles is legacy only: the answer path must not write it.
+    assert (
         test_db.query(KnowledgeProfile)
         .filter(
             KnowledgeProfile.user_id == mock_user.id,
             KnowledgeProfile.topic == sample_question.topic,
-            KnowledgeProfile.bloom_level == sample_question.bloom_level,
         )
-        .first()
+        .count()
+        == 0
     )
-    assert profile is not None
-    assert profile.attempt_count == 1
-    assert profile.mastery_score == 0.875
 
 
 def _mock_judge(monkeypatch, scores, *, feedback="ok", missing=None, strengths=None):
@@ -230,15 +227,10 @@ def _mock_judge(monkeypatch, scores, *, feedback="ok", missing=None, strengths=N
     )
 
 
-def test_submit_attempt_updates_both_mastery_stores(
+def test_submit_attempt_sources_mastery_only_from_mastery_records(
     test_db, mock_user, sample_question, monkeypatch
 ):
-    """The frontend's only submit path must feed BOTH mastery stores.
-
-    - ``knowledge_profiles`` (adaptive_service / running average)
-    - ``mastery_records``   (mastery_service / EMA — what ``recommend_next`` and
-      ``adaptive=true`` generation read)
-    """
+    """Only mastery_records is authoritative; knowledge_profiles stays untouched."""
     test_db.add(mock_user)
     test_db.commit()
 
@@ -285,23 +277,22 @@ def test_submit_attempt_updates_both_mastery_stores(
     assert record.mastery_score == 1.0
     assert json.loads(record.bloom_breakdown)[sample_question.bloom_level] == 1.0
 
-    # ── running-average store (knowledge_profiles) — still updated ──
-    profile = (
+    # ── legacy store is deliberately NOT written by the answer path ──
+    assert (
         test_db.query(KnowledgeProfile)
         .filter(
             KnowledgeProfile.user_id == mock_user.id,
             KnowledgeProfile.topic == sample_question.topic,
         )
-        .first()
+        .count()
+        == 0
     )
-    assert profile is not None
-    assert profile.attempt_count == 1
 
 
-def test_submit_attempt_survives_mastery_record_failure(
+def test_submit_attempt_rolls_back_atomically_on_mastery_failure(
     test_db, mock_user, sample_question, monkeypatch
 ):
-    """A failure writing mastery_records must not lose the student's attempt."""
+    """A mastery failure fails the request and persists nothing (no silent success)."""
     test_db.add(mock_user)
     test_db.commit()
 
@@ -323,9 +314,10 @@ def test_submit_attempt_survives_mastery_record_failure(
     def _boom(*args, **kwargs):
         raise RuntimeError("mastery_records store is down")
 
-    monkeypatch.setattr(attempts_module, "update_mastery", _boom, raising=True)
+    # The mastery call moved from the route into the shared attempt core.
+    monkeypatch.setattr(attempt_service, "update_mastery", _boom, raising=True)
 
-    client = TestClient(app)
+    client = TestClient(app, raise_server_exceptions=False)
     response = client.post(
         "/attempts/submit",
         json={
@@ -334,24 +326,10 @@ def test_submit_attempt_survives_mastery_record_failure(
         },
     )
 
-    assert response.status_code == 200
-    data = response.json()
-
-    # The attempt is persisted even though the mastery write blew up.
-    saved = (
-        test_db.query(Attempt)
-        .filter(Attempt.id == uuid.UUID(data["attempt_id"]))
-        .first()
-    )
-    assert saved is not None
-
-    # No mastery_record leaked from the failed write.
-    assert (
-        test_db.query(MasteryRecord)
-        .filter(MasteryRecord.user_id == mock_user.id)
-        .count()
-        == 0
-    )
+    assert response.status_code == 500
+    assert response.json()["code"] == "INTERNAL_ERROR"
+    assert test_db.query(Attempt).count() == 0
+    assert test_db.query(MasteryRecord).count() == 0
 
 
 # ── GET /attempts/history/{user_id} ──────────────────────────────────────────

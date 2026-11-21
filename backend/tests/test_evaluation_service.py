@@ -39,7 +39,7 @@ from app.db.session import get_db
 from app.main import create_app
 from app.models.base import Base
 from app.models.models import Attempt, Question, User
-from app.services import evaluation_service
+from app.services import attempt_service, evaluation_service
 from app.services.evaluation_service import (
     RUBRIC_WEIGHTS,
     compute_overall_score,
@@ -298,7 +298,8 @@ def test_endpoint_200_persists_attempt(db_with_question, monkeypatch):
         "missing_points": ["minor point"],
         "strengths": ["clear structure"],
     }
-    monkeypatch.setattr(questions_module, "evaluate_answer", MagicMock(return_value=canned))
+    # Evaluator now lives in the shared attempt core, not the questions route.
+    monkeypatch.setattr(attempt_service, "evaluate_answer", MagicMock(return_value=canned))
 
     client = _authed_client(db_session)
     resp = client.post(
