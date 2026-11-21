@@ -89,6 +89,32 @@ def test_unhandled_500_has_request_id():
     assert response.headers["X-Request-ID"] == body["request_id"]
 
 
+@pytest.mark.parametrize(
+    "origin",
+    ["http://localhost:5174", "http://127.0.0.1:5174"],
+)
+def test_demo_frontend_origins_pass_preflight(monkeypatch, origin):
+    monkeypatch.setattr(
+        settings,
+        "allowed_origins",
+        [
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ],
+    )
+    client = TestClient(create_app())  # no lifespan: CORS middleware only
+    response = client.options(
+        "/auth/register",
+        headers={"Origin": origin, "Access-Control-Request-Method": "POST"},
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+
+
 def test_chroma_remote_failure_is_not_silently_local(monkeypatch):
     from app.services import retrieval
 
