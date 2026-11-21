@@ -44,6 +44,7 @@ from app.models.base import Base
 from app.models.models import Attempt, MasteryRecord, Question, User
 from app.schemas.schemas import GeneratedQuestion
 from app.services import attempt_service, mastery_service
+from app.services import generation_service, validation_service
 from app.services.mastery_service import (
     EMA_ALPHA,
     get_mastery,
@@ -445,9 +446,9 @@ def _patch_generation(monkeypatch):
         )
 
     mock_gen = MagicMock(side_effect=_fake_generate)
-    monkeypatch.setattr(questions_module, "generate_question", mock_gen)
+    monkeypatch.setattr(generation_service, "generate_question", mock_gen)
     monkeypatch.setattr(
-        questions_module, "validate_question", MagicMock(return_value=_PASS)
+        validation_service, "validate_question", MagicMock(return_value=_PASS)
     )
     return mock_gen
 

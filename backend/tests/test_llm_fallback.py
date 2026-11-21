@@ -34,6 +34,7 @@ from app.core.config import Settings, settings
 from app.core.exceptions import LLMQuotaExhaustedError, QueryMindError, ValidationError
 from app.models.models import Question
 from app.services import evaluation_service as es
+from app.services import generation_service
 from app.services import generation_service as gs
 from app.services import llm_utils
 
@@ -384,7 +385,7 @@ def api_client(monkeypatch):
     engine.dispose()
 
 
-def test_total_model_outage_returns_clean_503_json(api_client, monkeypatch):
+def test_total_model_outage_falls_back_to_a_usable_question(api_client, monkeypatch):
     from app.api import questions as questions_api
 
     monkeypatch.setattr(
@@ -399,7 +400,7 @@ def test_total_model_outage_returns_clean_503_json(api_client, monkeypatch):
             "(primary, fb1). Please try again in a few minutes."
         )
 
-    monkeypatch.setattr(questions_api, "generate_question", _boom)
+    monkeypatch.setattr(generation_service, "generate_question", _boom)
 
     resp = api_client.post(
         "/questions/generate",
@@ -411,9 +412,10 @@ def test_total_model_outage_returns_clean_503_json(api_client, monkeypatch):
             "question_type": "open",
         },
     )
-    assert resp.status_code == 503
+    # A total LLM outage now degrades to the seeded bank instead of a dead end.
+    assert resp.status_code == 200
     body = resp.json()
-    assert body["code"] == "LLM_QUOTA_EXHAUSTED"
-    assert "quota" in body["detail"]
+    assert body["source"] in {"cache", "bank"}
+    assert body["questions"][0]["question_text"]
     assert "Traceback" not in resp.text
     assert "RESOURCE_EXHAUSTED" not in resp.text

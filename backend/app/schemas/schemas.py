@@ -175,6 +175,8 @@ class GeneratedQuestion(BaseModel):
     # adaptive=true; defaults keep the non-adaptive response shape intact.
     adaptive: bool = False
     adaptive_reason: Optional[str] = None      # why this level was chosen
+    # Provenance: live LLM, previously validated cache, or seeded demo bank.
+    source: str = "live"
     # Thin-context guard (Apply+ only): set when the retrieved material is too
     # thin to reliably ground a concrete-scenario question — the caller should
     # surface it instead of trusting a generic question. None everywhere else,
@@ -190,6 +192,15 @@ class GeneratedQuestion(BaseModel):
             self.source_chunk_ids = list(self.source_chunks)
         elif not self.source_chunks and self.source_chunk_ids:
             self.source_chunks = list(self.source_chunk_ids)
+
+
+class GeneratedQuestionsResponse(GeneratedQuestion):
+    """Batch generation response: flattened first item + the full list.
+
+    Keeps the old single-question fields intact for existing clients while the
+    frontend reads ``questions`` and makes exactly one HTTP call per run.
+    """
+    questions: list[GeneratedQuestion] = Field(default_factory=list)
 
 
 

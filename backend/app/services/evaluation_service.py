@@ -308,6 +308,48 @@ def _validate_and_parse(raw: dict) -> dict:
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
+_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "in", "is",
+    "it", "of", "on", "or", "that", "the", "this", "to", "was", "were", "with",
+}
+
+
+def _tokens(text: str) -> set[str]:
+    import re
+    return {t for t in re.findall(r"[a-z0-9]+", (text or "").lower()) if t not in _STOPWORDS}
+
+
+def evaluate_answer_provisional(question: Question, student_answer: str) -> dict:
+    """Deterministic keyword + embedding similarity fallback (no network)."""
+    import numpy as np
+    reference = question.reference_answer or question.question_text or ""
+    a, b = _tokens(student_answer), _tokens(reference)
+    keyword = len(a & b) / max(1, len(b))
+    embedding = 0.0
+    try:
+        from app.services.validation_service import embed_texts
+        vectors = embed_texts([student_answer, reference])
+        if vectors.shape[0] == 2 and vectors.shape[1] > 0:
+            norm = np.linalg.norm(vectors, axis=1)
+            embedding = float(vectors[0] @ vectors[1] / max(1e-9, norm[0] * norm[1]))
+    except Exception as exc:  # embedding model unavailable: keyword signal still works
+        logger.warning("Provisional evaluator embedding unavailable: %s", exc)
+    combined = max(0.0, min(1.0, 0.6 * keyword + 0.4 * max(0.0, embedding)))
+    overall = round(combined * 100.0, 2)
+    score_10 = int(round(combined * 10))
+    return {
+        "scores": {criterion: score_10 for criterion in RUBRIC_CRITERIA},
+        "overall_score": overall,
+        "feedback": (
+            "Provisional offline score (keyword + embedding similarity); "
+            "no LLM was available for a rubric judgement."
+        ),
+        "missing_points": ["Review against the reference answer for full detail."],
+        "strengths": ["An answer was recorded and scored deterministically."],
+        "evaluation_mode": "provisional",
+    }
+
+
 def evaluate_answer(
     question: Question,
     student_answer: str,
@@ -333,6 +375,9 @@ def evaluate_answer(
     """
     if not student_answer or not student_answer.strip():
         raise ValidationError("student answer must not be empty")
+
+    if settings.offline_demo_mode:
+        return evaluate_answer_provisional(question, student_answer)
 
     prompt = _build_prompt(question, student_answer)
     if llm_client is not None:
@@ -362,3 +407,10 @@ def evaluate_answer(
             status_code=502,
             code="EVALUATION_FAILED",
         ) from err
+    except QueryMindError as err:
+        # Demo never dies because the judge is unreachable: fall back to the
+        # deterministic provisional evaluator instead of a hard 503.
+        if getattr(err, "code", "") in {"LLM_UNAVAILABLE", "LLM_QUOTA_EXHAUSTED"}:
+            logger.warning("LLM judge unavailable (%s) — using provisional evaluation", err.code)
+            return evaluate_answer_provisional(question, student_answer)
+        raise

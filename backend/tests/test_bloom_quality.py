@@ -41,6 +41,7 @@ from app.models.base import Base
 from app.models.models import User
 from app.schemas.schemas import GeneratedQuestion
 from app.services import llm_utils, validation_service
+from app.services import generation_service, validation_service
 from app.services.generation_service import (
     BLOOM_FORBIDDEN_VERBS,
     BLOOM_LEVEL_SPECS,
@@ -387,45 +388,44 @@ def _patch_pipeline(monkeypatch, validations):
         MagicMock(return_value=[{"text": "2PL has growing and shrinking phases.", "source_doc": "t.pdf"}]),
     )
     gen = MagicMock(side_effect=lambda **kwargs: _generated())
-    monkeypatch.setattr(questions_module, "generate_question", gen)
+    monkeypatch.setattr(generation_service, "generate_question", gen)
     validate = MagicMock(side_effect=validations)
-    monkeypatch.setattr(questions_module, "validate_question", validate)
+    monkeypatch.setattr(validation_service, "validate_question", validate)
     judge = MagicMock()
     monkeypatch.setattr(questions_module, "_configure_genai", MagicMock(return_value=judge))
     return gen, validate, judge
 
 
-def test_route_feeds_stem_violation_back_into_regeneration(authed_client, monkeypatch):
+def test_route_retries_with_a_different_angle_after_stem_violation(authed_client, monkeypatch):
     client, _ = authed_client
     gen, validate, _judge = _patch_pipeline(monkeypatch, [_STEM_FAIL, _PASS])
 
     response = client.post("/questions/generate", json=_PAYLOAD)
     assert response.status_code == 200
 
-    # The corrective note names the specific stem violation.
+    # The retry explicitly asks for a different angle instead of dropping the run.
     assert gen.call_count == 2
     note = gen.call_args_list[1].kwargs["extra_instruction"]
-    assert "OPENING STEM" in note
-    assert "forbidden lower-level verb 'explain'" in note
+    assert "DIFFERENT angle" in note
 
-    # Both validations ran with the requested level + judge client wired in.
     assert validate.call_count == 2
     for call in validate.call_args_list:
         assert call.kwargs["requested_bloom"] == "analyze"
         assert call.kwargs["llm_client"] is _judge
 
 
-def test_route_alignment_mismatch_returns_distinct_422(authed_client, monkeypatch):
+def test_route_accepts_near_bloom_mismatch_with_actual_level(authed_client, monkeypatch):
     client, _ = authed_client
-    _gen, _validate, _judge = _patch_pipeline(monkeypatch, [_COGNITIVE_FAIL, _COGNITIVE_FAIL])
+    gen, validate, _judge = _patch_pipeline(monkeypatch, [_COGNITIVE_FAIL, _COGNITIVE_FAIL])
 
     response = client.post("/questions/generate", json=_PAYLOAD)
-    assert response.status_code == 422
+    assert response.status_code == 200
     body = response.json()
-    assert body["code"] == "BLOOM_ALIGNMENT_MISMATCH"
-    assert "'understand'" in body["detail"]
-    # One corrective regeneration, then the clean 422.
-    assert questions_module.generate_question.call_count == 2
+    assert body["questions"][0]["bloom_level"] == "understand"
+    assert "classified as understand" in body["questions"][0]["context_warning"]
+    assert gen.call_count == 2  # one strict regeneration, then keep the actual level
+    assert "STRICT BLOOM RETRY" in gen.call_args_list[1].kwargs["extra_instruction"]
+    assert validate.call_count == 2
 
 
 def test_route_alignment_judge_uses_evaluation_thinking(authed_client, monkeypatch):

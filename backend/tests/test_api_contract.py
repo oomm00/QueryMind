@@ -44,6 +44,7 @@ from app.main import create_app
 from app.models.base import Base
 from app.models.models import Document, Question, User
 from app.schemas.schemas import GeneratedQuestion
+from app.services import generation_service, validation_service
 
 import app.models.models  # noqa: F401 — register models on Base.metadata
 
@@ -136,12 +137,12 @@ _ANSWERABILITY_FAIL = {
 
 def _patch_generation(monkeypatch):
     monkeypatch.setattr(
-        questions_module,
+        generation_service,
         "generate_question",
         MagicMock(side_effect=lambda **kwargs: _generated()),
     )
     monkeypatch.setattr(
-        questions_module,
+        validation_service,
         "validate_question",
         MagicMock(return_value=_PASS),
     )
@@ -228,12 +229,12 @@ def _patch_failing_validation(monkeypatch, verdict: dict):
     and the second ``validate_question`` call must return the failing verdict.
     """
     monkeypatch.setattr(
-        questions_module,
+        generation_service,
         "generate_question",
         MagicMock(side_effect=lambda **kwargs: _generated()),
     )
     monkeypatch.setattr(
-        questions_module,
+        validation_service,
         "validate_question",
         MagicMock(return_value=verdict),
     )
@@ -244,34 +245,29 @@ def _patch_failing_validation(monkeypatch, verdict: dict):
     )
 
 
-def test_duplicate_rejection_is_machine_readable(authed_client, monkeypatch):
-    """A persistent near-duplicate must be 422 with code ``DUPLICATE_QUESTION``.
-
-    Contract: clients branch on the stable ``code`` (not the prose) and can show
-    the learner the actionable hint ("try a different topic or Bloom level").
-    """
+def test_persistent_duplicate_falls_back_to_a_usable_question(authed_client, monkeypatch):
+    """A near-duplicate is retried server-side, then degraded — never a dead end."""
     client, _ = authed_client
     _patch_failing_validation(monkeypatch, _DUPLICATE)
 
     resp = client.post("/questions/generate", json=_PAYLOAD)
 
-    assert resp.status_code == 422
+    assert resp.status_code == 200
     body = resp.json()
-    assert body["code"] == "DUPLICATE_QUESTION"
-    assert "try a different topic or bloom level" in body["detail"].lower()
-    # No stack trace or raw SDK text leaks into the detail.
-    assert "traceback" not in body["detail"].lower()
+    assert len(body["questions"]) == 1
+    assert body["source"] in {"cache", "bank"}
+    assert body["questions"][0]["question_text"]
 
 
-def test_non_duplicate_validation_failure_keeps_generic_code(authed_client, monkeypatch):
-    """A non-duplicate validation failure must NOT use the DUPLICATE_QUESTION code."""
+def test_non_duplicate_validation_failure_also_falls_back(authed_client, monkeypatch):
+    """Any persistent validation failure still returns a usable question."""
     client, _ = authed_client
     _patch_failing_validation(monkeypatch, _ANSWERABILITY_FAIL)
 
     resp = client.post("/questions/generate", json=_PAYLOAD)
 
-    assert resp.status_code == 422
-    assert resp.json()["code"] == "VALIDATION_ERROR"
+    assert resp.status_code == 200
+    assert resp.json()["source"] in {"cache", "bank"}
 
 
 def test_document_read_endpoints_expose_the_upload_page_contract(authed_client, db_session):

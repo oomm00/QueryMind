@@ -158,6 +158,8 @@ def submit_attempt_core(
     # ── No DB transaction / row lock is held across the LLM call ─────────────
     judge = evaluator or evaluate_answer  # resolved at call time so tests can patch it
     evaluation = judge(question=question, student_answer=answer_text)
+    # The provisional offline evaluator labels itself; live results stay "llm".
+    evaluation_mode = evaluation.get("evaluation_mode") or evaluation_mode
     score = normalize_score(evaluation["overall_score"] / 100.0)
     db.rollback()  # end the read-only transaction opened by the duplicate check
 

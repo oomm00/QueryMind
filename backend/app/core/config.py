@@ -121,6 +121,18 @@ class Settings(BaseSettings):
     # schemas so the first request does not pay that one-time cost.
     warmup_on_startup: bool = True
 
+    # ── Demo-day generation safety (item 3) ─────────────────────────────────
+    # OFFLINE_DEMO_MODE: never call the LLM for generation or evaluation; use the
+    # seeded bank / cache and a deterministic provisional evaluator instead.
+    offline_demo_mode: bool = False
+    # Hard overall deadline for one /generate request (seconds). Per-call timeout
+    # is shorter so at most two attempts + validation fit inside the budget.
+    generation_deadline_seconds: float = 35.0
+    generation_call_timeout_seconds: float = 15.0
+    generation_max_attempts: int = 2
+    # Cap fallback models tried inside one generation call (quota containment).
+    generation_max_fallback_models: int = 1
+
     @field_validator("llm_thinking_budget", mode="before")
     @classmethod
     def _blank_budget_is_none(cls, value: Any) -> Any:

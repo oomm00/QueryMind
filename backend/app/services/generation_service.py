@@ -654,6 +654,8 @@ def generate_question(
     chroma_collection: Optional[Collection] = None,
     context_chunks: Optional[list[dict]] = None,
     extra_instruction: str = "",
+    timeout: Optional[float] = None,
+    max_models: Optional[int] = None,
 ) -> GeneratedQuestion:
     """Generate a Bloom-taxonomy-aligned question grounded in retrieved context.
 
@@ -758,6 +760,8 @@ def generate_question(
         )
         # LLM_FALLBACK_MODELS: on a quota/503 error, retry against the next model.
         model_chain = llm_utils.resolve_model_chain(settings.llm_model)
+        if max_models is not None and max_models > 0:
+            model_chain = model_chain[:max_models]
 
     # ── Step 4: LLM round-trip ────────────────────────────────────────────────
     # llm_utils handles the transient-error backoff, the cross-model fallback and
@@ -765,13 +769,14 @@ def generate_question(
     # `time.sleep` is threaded through so tests can patch it at the module level.
     def _request(prompt_text: str) -> str:
         return llm_utils.request_text(
-            client, prompt_text, sleep=time.sleep, models=model_chain
+            client, prompt_text, sleep=time.sleep, models=model_chain, timeout=timeout
         )
 
     def _parse(raw: dict) -> GeneratedQuestion:
         generated = _validate_and_parse(raw, question_type, topic=topic)
         if context_warning and not generated.context_warning:
             generated.context_warning = context_warning
+        generated.source = "live"
         return generated
 
     try:
