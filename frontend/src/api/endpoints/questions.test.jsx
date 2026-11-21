@@ -54,11 +54,10 @@ describe('a successful generation', () => {
       body: JSON.stringify({
         topic: 'Paging',
         subject: 'Paging',
-        bloom_level: 'understand',
-        difficulty: 'medium',
         question_type: 'open',
         num_questions: 2,
         document_id: null,
+        adaptive: true,
       }),
       // The deadline travels with every generation.
       signal: expect.anything(),
@@ -77,6 +76,8 @@ describe('a successful generation', () => {
           options: undefined,
           correct_answer: undefined,
           explanation: undefined,
+          source: undefined,
+          adaptive_reason: undefined,
         },
       ],
     })
