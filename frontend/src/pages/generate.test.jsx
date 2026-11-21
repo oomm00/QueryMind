@@ -209,6 +209,20 @@ describe('the form', () => {
     expect(screen.queryByText(/subject/i)).toBeNull()
   })
 
+  it('starts adaptive, with Manual as an explicit override', async () => {
+    const user = userEvent.setup()
+    await openAnyTopic(user)
+
+    const adaptive = screen.getByRole('button', { name: 'Adaptive (recommended)' })
+    const manual = screen.getByRole('button', { name: 'Manual' })
+    expect(adaptive.getAttribute('aria-pressed')).toBe('true')
+    expect(manual.getAttribute('aria-pressed')).toBe('false')
+
+    await user.click(manual)
+    expect(manual.getAttribute('aria-pressed')).toBe('true')
+    expect(adaptive.getAttribute('aria-pressed')).toBe('false')
+  })
+
   it('starts the chips from the difficulty and lets them be moved', async () => {
     const user = userEvent.setup()
     await openAnyTopic(user)
@@ -271,6 +285,43 @@ describe('a run', () => {
     expect(screen.getByRole('button', { name: 'Start practice' })).toBeTruthy()
     expect(screen.getAllByText('Generated')).toHaveLength(6)
     expect(pending).toHaveLength(0)
+  })
+
+  it('shows why the adaptive rung was chosen once the batch is ready', async () => {
+    const user = userEvent.setup()
+    const topic = await openAnyTopic(user)
+
+    await user.type(topic, 'Deadlocks')
+    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
+    await answerWithBatch(2)
+
+    expect(await screen.findByTestId('adaptive-reason')).toHaveTextContent(
+      'moving up after strong answers'
+    )
+  })
+
+  it('sends the chosen levels when the student switches to Manual', async () => {
+    const user = userEvent.setup()
+    const topic = await openAnyTopic(user)
+
+    await user.type(topic, 'Deadlocks')
+    await user.click(screen.getByRole('button', { name: 'Manual' }))
+    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
+
+    const call = await nextCall()
+    expect(call.body).toMatchObject({
+      adaptive: false,
+      bloom_level: 'apply',
+      difficulty: 'medium',
+    })
+    call.resolve(200, {
+      questions: [
+        { question_id: 'gen-1', question_text: 'A manual question.', bloom_level: 'apply' },
+      ],
+    })
+
+    expect(await screen.findByText('1 question ready')).toBeTruthy()
+    expect(screen.queryByTestId('adaptive-reason')).toBeNull()
   })
 
   it('cancels the single request cleanly without inventing questions', async () => {

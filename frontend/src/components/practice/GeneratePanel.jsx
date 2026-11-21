@@ -10,11 +10,12 @@
  * The length is the student's to set: three quick picks and any number beside
  * them.
  *
- * Question generation answers one question per call, so a run of ten is ten
- * calls, two in flight at a time. While it runs the page says how many are
+ * By default the backend chooses the next Bloom rung from real attempts and
+ * tells the student why; Manual sends the choices below instead. One run is one
+ * generate call for the whole batch. While it runs the page says how many are
  * ready, how long it has been, and that an analyze question can take half a
- * minute; Cancel stops the calls that are still out. Whatever arrived is kept -
- * the student can start with fewer questions rather than lose the run.
+ * minute; Cancel stops the request. Whatever arrived is kept - the student can
+ * start with fewer questions rather than lose the run.
  *
  * Nothing technical reaches the screen: a failure arrives from
  * api/errorMessages.js already written as a sentence.
@@ -131,6 +132,7 @@ export function GeneratePanel() {
   const [difficulty, setDifficulty] = useState('medium')
   const [blooms, setBlooms] = useState(() => bloomsForDifficulty('medium'))
   const [count, setCount] = useState(DEFAULT_COUNT)
+  const [adaptive, setAdaptive] = useState(true)
   const [uploadedOnly, setUploadedOnly] = useState(false)
   const [touchedUploadedOnly, setTouchedUploadedOnly] = useState(false)
 
@@ -224,6 +226,7 @@ export function GeneratePanel() {
         difficulty,
         blooms,
         count,
+        adaptive,
         signal: controller.signal,
         onProgress: setProgress,
       })
@@ -326,6 +329,23 @@ export function GeneratePanel() {
           </div>
 
           <div>
+            <h3 className="text-[13px] font-medium text-ink">Level selection</h3>
+            <p className="mt-0.5 text-xs text-muted">
+              Adaptive picks the next level from your answers; manual uses the choices below.
+            </p>
+            <Segmented
+              className="mt-1.5"
+              label="Level selection"
+              options={[
+                { value: true, label: 'Adaptive (recommended)' },
+                { value: false, label: 'Manual' },
+              ]}
+              value={adaptive}
+              onChange={setAdaptive}
+            />
+          </div>
+
+          <div className={adaptive ? 'opacity-50' : undefined}>
             <h3 className="text-[13px] font-medium text-ink">Difficulty</h3>
             <Segmented
               className="mt-1.5"
@@ -336,7 +356,7 @@ export function GeneratePanel() {
             />
           </div>
 
-          <div>
+          <div className={adaptive ? 'opacity-50' : undefined}>
             <h3 className="text-[13px] font-medium text-ink">Bloom levels</h3>
             <p className="mt-0.5 text-xs text-muted">
               {difficultyLabel(difficulty)} starts with these; keep or drop any of them.
@@ -467,6 +487,11 @@ export function GeneratePanel() {
                   ? `Asked for ${count}; the rest did not come back.`
                   : `${sentenceCase(topic.trim())} · ${difficultyLabel(difficulty)}`}
               </p>
+              {ready[0]?.adaptive_reason && (
+                <p data-testid="adaptive-reason" className="mt-1 text-xs text-muted">
+                  {ready[0].adaptive_reason}
+                </p>
+              )}
             </div>
             <Button onClick={startPractice}>
               {ready.length < count
