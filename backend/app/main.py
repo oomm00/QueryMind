@@ -20,7 +20,8 @@ from app.core.config import settings
 from app.core.exceptions import QueryMindError
 from app.core.logging import RequestLoggingMiddleware, setup_logging
 from app.core.warmup import warm_up
-from app.db.session import engine
+from app.db.session import SessionLocal, engine
+from app.services.generation_fallback import seed_bank
 from app.models import base  # noqa: F401  — triggers model registration
 
 logger = logging.getLogger("querymind.app")
@@ -42,6 +43,13 @@ async def lifespan(app: FastAPI):
         base.Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"DB table creation warning: {e}")
+    try:
+        with SessionLocal() as db:
+            added = seed_bank(db)
+            if added:
+                logger.info("Demo question bank seeded: %d rows", added)
+    except Exception as e:
+        logger.warning("Demo bank seeding skipped: %s", e)
     yield
 
 

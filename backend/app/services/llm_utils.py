@@ -281,6 +281,7 @@ def generate_with_retry(
     *,
     sleep: Callable[[float], None] = time.sleep,
     model: Optional[str] = None,
+    timeout: Optional[float] = None,
 ) -> Any:
     """Call ``client.generate_content(prompt)`` with exponential-backoff retries.
 
@@ -305,7 +306,7 @@ def generate_with_retry(
             with _LLM_SEMAPHORE:
                 return _call_with_timeout(
                     lambda: _invoke_generate(client, prompt, model),
-                    LLM_CALL_TIMEOUT_SECONDS,
+                    timeout if timeout is not None else LLM_CALL_TIMEOUT_SECONDS,
                 )
         except Exception as exc:  # noqa: BLE001 — re-raised below if not transient
             if not is_transient_error(exc):
@@ -332,6 +333,7 @@ def request_text(
     *,
     sleep: Callable[[float], None] = time.sleep,
     models: Optional[list[str]] = None,
+    timeout: Optional[float] = None,
 ) -> str:
     """One round-trip: retry transient errors, unwrap the response, and return raw text.
 
@@ -346,9 +348,11 @@ def request_text(
     ``models`` ``None``/single the historical single-model path runs unchanged.
     """
     if models and len(models) > 1:
-        return _request_text_with_fallback(client, prompt, list(models), sleep=sleep)
+        return _request_text_with_fallback(
+            client, prompt, list(models), sleep=sleep, timeout=timeout
+        )
     try:
-        response = generate_with_retry(client, prompt, sleep=sleep)
+        response = generate_with_retry(client, prompt, sleep=sleep, timeout=timeout)
     except QueryMindError:
         raise
     except Exception as exc:
@@ -364,6 +368,7 @@ def _request_text_with_fallback(
     models: list[str],
     *,
     sleep: Callable[[float], None] = time.sleep,
+    timeout: Optional[float] = None,
 ) -> str:
     """Try each model in *models* in order until one answers.
 
@@ -380,7 +385,9 @@ def _request_text_with_fallback(
 
     for index, model in enumerate(models):
         try:
-            response = generate_with_retry(client, prompt, sleep=sleep, model=model)
+            response = generate_with_retry(
+                client, prompt, sleep=sleep, model=model, timeout=timeout
+            )
         except QueryMindError as exc:
             if not is_model_fallback_error(exc):
                 raise

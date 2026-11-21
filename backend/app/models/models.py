@@ -114,6 +114,9 @@ class Question(Base):
         JSONB().with_variant(JSON, "sqlite"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    source: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="live", server_default="live"
+    )
 
     attempts: Mapped[list["Attempt"]] = relationship("Attempt", back_populates="question")
 

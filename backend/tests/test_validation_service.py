@@ -32,6 +32,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.main import create_app
 from app.schemas.schemas import GeneratedQuestion
+from app.services import generation_service
 from app.services import validation_service
 from app.services.validation_service import (
     ANSWERABILITY_SIMILARITY_THRESHOLD,
@@ -268,10 +269,10 @@ def _patch_pipeline(monkeypatch, *, validate_side_effect, generated=None):
     )
     gen_result = generated or _generated()
     mock_gen = MagicMock(return_value=gen_result)
-    monkeypatch.setattr(questions_module, "generate_question", mock_gen)
+    monkeypatch.setattr(generation_service, "generate_question", mock_gen)
 
     mock_validate = MagicMock(side_effect=validate_side_effect)
-    monkeypatch.setattr(questions_module, "validate_question", mock_validate)
+    monkeypatch.setattr(validation_service, "validate_question", mock_validate)
     return mock_gen, mock_validate
 
 
@@ -322,7 +323,7 @@ def test_endpoint_regenerates_once_after_failure(api_client, monkeypatch):
     fake_db.add.assert_called_once()
 
 
-def test_endpoint_returns_422_when_still_invalid_after_retry(api_client, monkeypatch):
+def test_endpoint_falls_back_when_still_invalid_after_retry(api_client, monkeypatch):
     client, fake_db = api_client
     mock_gen, mock_validate = _patch_pipeline(
         monkeypatch, validate_side_effect=[_FAIL_DUP, _FAIL_DUP]
@@ -330,12 +331,9 @@ def test_endpoint_returns_422_when_still_invalid_after_retry(api_client, monkeyp
 
     resp = client.post("/questions/generate", json=PAYLOAD)
 
-    assert resp.status_code == 422
+    assert resp.status_code == 200
     body = resp.json()
-    # A near-duplicate gets a dedicated machine-readable code plus an actionable
-    # hint, rather than the generic VALIDATION_ERROR (see test_api_contract.py).
-    assert body["code"] == "DUPLICATE_QUESTION"
-    assert "different topic or bloom level" in body["detail"].lower()
+    assert body["source"] in {"cache", "bank"}
+    assert body["questions"][0]["question_text"]
 
-    assert mock_gen.call_count == 2                       # only ONE retry
-    fake_db.add.assert_not_called()                       # nothing persisted
+    assert mock_gen.call_count == 2  # two live attempts, then graceful fallback

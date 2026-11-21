@@ -1,0 +1,1442 @@
+[
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what mutual exclusion is in Deadlocks.",
+    "correct_answer": "mutual exclusion: only one process may hold a resource at a time.",
+    "explanation": "Bank question for Deadlocks/remember: only one process may hold a resource at a time"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what hold and wait is in Deadlocks.",
+    "correct_answer": "hold and wait: a process holds resources while requesting more.",
+    "explanation": "Bank question for Deadlocks/remember: a process holds resources while requesting more"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what no preemption is in Deadlocks.",
+    "correct_answer": "no preemption: a resource cannot be forcibly taken from its holder.",
+    "explanation": "Bank question for Deadlocks/remember: a resource cannot be forcibly taken from its holder"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what circular wait is in Deadlocks.",
+    "correct_answer": "circular wait: a cycle of processes each waiting for the next one's resource.",
+    "explanation": "Bank question for Deadlocks/remember: a cycle of processes each waiting for the next one's resource"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what resource allocation graph is in Deadlocks.",
+    "correct_answer": "resource allocation graph: a directed graph of resource and process allocations.",
+    "explanation": "Bank question for Deadlocks/remember: a directed graph of resource and process allocations"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what safe state is in Deadlocks.",
+    "correct_answer": "safe state: a state where every process can still finish in some order.",
+    "explanation": "Bank question for Deadlocks/remember: a state where every process can still finish in some order"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what deadlock detection is in Deadlocks.",
+    "correct_answer": "deadlock detection: periodically checking the allocation graph for cycles.",
+    "explanation": "Bank question for Deadlocks/remember: periodically checking the allocation graph for cycles"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what recovery by rollback is in Deadlocks.",
+    "correct_answer": "recovery by rollback: rolling back a process to break a detected deadlock.",
+    "explanation": "Bank question for Deadlocks/remember: rolling back a process to break a detected deadlock"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how mutual exclusion affects behaviour in Deadlocks.",
+    "correct_answer": "mutual exclusion means only one process may hold a resource at a time. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: only one process may hold a resource at a time"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how hold and wait affects behaviour in Deadlocks.",
+    "correct_answer": "hold and wait means a process holds resources while requesting more. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: a process holds resources while requesting more"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how no preemption affects behaviour in Deadlocks.",
+    "correct_answer": "no preemption means a resource cannot be forcibly taken from its holder. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: a resource cannot be forcibly taken from its holder"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how circular wait affects behaviour in Deadlocks.",
+    "correct_answer": "circular wait means a cycle of processes each waiting for the next one's resource. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: a cycle of processes each waiting for the next one's resource"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how resource allocation graph affects behaviour in Deadlocks.",
+    "correct_answer": "resource allocation graph means a directed graph of resource and process allocations. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: a directed graph of resource and process allocations"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how safe state affects behaviour in Deadlocks.",
+    "correct_answer": "safe state means a state where every process can still finish in some order. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: a state where every process can still finish in some order"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how deadlock detection affects behaviour in Deadlocks.",
+    "correct_answer": "deadlock detection means periodically checking the allocation graph for cycles. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: periodically checking the allocation graph for cycles"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how recovery by rollback affects behaviour in Deadlocks.",
+    "correct_answer": "recovery by rollback means rolling back a process to break a detected deadlock. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Deadlocks/understand: rolling back a process to break a detected deadlock"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs mutual exclusion. How would you apply it?",
+    "correct_answer": "Identify where mutual exclusion is needed and apply it directly: only one process may hold a resource at a time. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: only one process may hold a resource at a time"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs hold and wait. How would you apply it?",
+    "correct_answer": "Identify where hold and wait is needed and apply it directly: a process holds resources while requesting more. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: a process holds resources while requesting more"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs no preemption. How would you apply it?",
+    "correct_answer": "Identify where no preemption is needed and apply it directly: a resource cannot be forcibly taken from its holder. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: a resource cannot be forcibly taken from its holder"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs circular wait. How would you apply it?",
+    "correct_answer": "Identify where circular wait is needed and apply it directly: a cycle of processes each waiting for the next one's resource. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: a cycle of processes each waiting for the next one's resource"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs resource allocation graph. How would you apply it?",
+    "correct_answer": "Identify where resource allocation graph is needed and apply it directly: a directed graph of resource and process allocations. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: a directed graph of resource and process allocations"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs safe state. How would you apply it?",
+    "correct_answer": "Identify where safe state is needed and apply it directly: a state where every process can still finish in some order. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: a state where every process can still finish in some order"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs deadlock detection. How would you apply it?",
+    "correct_answer": "Identify where deadlock detection is needed and apply it directly: periodically checking the allocation graph for cycles. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: periodically checking the allocation graph for cycles"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Deadlocks needs recovery by rollback. How would you apply it?",
+    "correct_answer": "Identify where recovery by rollback is needed and apply it directly: rolling back a process to break a detected deadlock. Verify the outcome against the workload.",
+    "explanation": "Bank question for Deadlocks/apply: rolling back a process to break a detected deadlock"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by mutual exclusion in Deadlocks.",
+    "correct_answer": "mutual exclusion gives only one process may hold a resource at a time. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: only one process may hold a resource at a time"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by hold and wait in Deadlocks.",
+    "correct_answer": "hold and wait gives a process holds resources while requesting more. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: a process holds resources while requesting more"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by no preemption in Deadlocks.",
+    "correct_answer": "no preemption gives a resource cannot be forcibly taken from its holder. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: a resource cannot be forcibly taken from its holder"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by circular wait in Deadlocks.",
+    "correct_answer": "circular wait gives a cycle of processes each waiting for the next one's resource. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: a cycle of processes each waiting for the next one's resource"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by resource allocation graph in Deadlocks.",
+    "correct_answer": "resource allocation graph gives a directed graph of resource and process allocations. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: a directed graph of resource and process allocations"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by safe state in Deadlocks.",
+    "correct_answer": "safe state gives a state where every process can still finish in some order. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: a state where every process can still finish in some order"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by deadlock detection in Deadlocks.",
+    "correct_answer": "deadlock detection gives periodically checking the allocation graph for cycles. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: periodically checking the allocation graph for cycles"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by recovery by rollback in Deadlocks.",
+    "correct_answer": "recovery by rollback gives rolling back a process to break a detected deadlock. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Deadlocks/analyze: rolling back a process to break a detected deadlock"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is mutual exclusion a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "mutual exclusion (only one process may hold a resource at a time) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: only one process may hold a resource at a time"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is hold and wait a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "hold and wait (a process holds resources while requesting more) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: a process holds resources while requesting more"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is no preemption a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "no preemption (a resource cannot be forcibly taken from its holder) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: a resource cannot be forcibly taken from its holder"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is circular wait a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "circular wait (a cycle of processes each waiting for the next one's resource) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: a cycle of processes each waiting for the next one's resource"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is resource allocation graph a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "resource allocation graph (a directed graph of resource and process allocations) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: a directed graph of resource and process allocations"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is safe state a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "safe state (a state where every process can still finish in some order) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: a state where every process can still finish in some order"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is deadlock detection a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "deadlock detection (periodically checking the allocation graph for cycles) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: periodically checking the allocation graph for cycles"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is recovery by rollback a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "correct_answer": "recovery by rollback (rolling back a process to break a detected deadlock) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Deadlocks/evaluate: rolling back a process to break a detected deadlock"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses mutual exclusion to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply mutual exclusion (only one process may hold a resource at a time), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: only one process may hold a resource at a time"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses hold and wait to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply hold and wait (a process holds resources while requesting more), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: a process holds resources while requesting more"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses no preemption to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply no preemption (a resource cannot be forcibly taken from its holder), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: a resource cannot be forcibly taken from its holder"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses circular wait to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply circular wait (a cycle of processes each waiting for the next one's resource), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: a cycle of processes each waiting for the next one's resource"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses resource allocation graph to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply resource allocation graph (a directed graph of resource and process allocations), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: a directed graph of resource and process allocations"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses safe state to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply safe state (a state where every process can still finish in some order), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: a state where every process can still finish in some order"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses deadlock detection to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply deadlock detection (periodically checking the allocation graph for cycles), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: periodically checking the allocation graph for cycles"
+  },
+  {
+    "subject": "OS",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses recovery by rollback to handle a Deadlocks problem.",
+    "correct_answer": "Procedure: detect the problem, apply recovery by rollback (rolling back a process to break a detected deadlock), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Deadlocks/create: rolling back a process to break a detected deadlock"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what atomicity is in Transactions.",
+    "correct_answer": "atomicity: a transaction either commits completely or rolls back completely.",
+    "explanation": "Bank question for Transactions/remember: a transaction either commits completely or rolls back completely"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what consistency is in Transactions.",
+    "correct_answer": "consistency: a committed transaction preserves database invariants.",
+    "explanation": "Bank question for Transactions/remember: a committed transaction preserves database invariants"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what isolation is in Transactions.",
+    "correct_answer": "isolation: concurrent transactions do not see each other's partial effects.",
+    "explanation": "Bank question for Transactions/remember: concurrent transactions do not see each other's partial effects"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what durability is in Transactions.",
+    "correct_answer": "durability: committed changes survive a crash.",
+    "explanation": "Bank question for Transactions/remember: committed changes survive a crash"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what two-phase locking is in Transactions.",
+    "correct_answer": "two-phase locking: a growing phase of locks followed by a shrinking phase.",
+    "explanation": "Bank question for Transactions/remember: a growing phase of locks followed by a shrinking phase"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what write-ahead logging is in Transactions.",
+    "correct_answer": "write-ahead logging: log records are flushed before data pages are written.",
+    "explanation": "Bank question for Transactions/remember: log records are flushed before data pages are written"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what serializability is in Transactions.",
+    "correct_answer": "serializability: a concurrent schedule is equivalent to some serial schedule.",
+    "explanation": "Bank question for Transactions/remember: a concurrent schedule is equivalent to some serial schedule"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what savepoint is in Transactions.",
+    "correct_answer": "savepoint: a named point inside a transaction that can be rolled back to.",
+    "explanation": "Bank question for Transactions/remember: a named point inside a transaction that can be rolled back to"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how atomicity affects behaviour in Transactions.",
+    "correct_answer": "atomicity means a transaction either commits completely or rolls back completely. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: a transaction either commits completely or rolls back completely"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how consistency affects behaviour in Transactions.",
+    "correct_answer": "consistency means a committed transaction preserves database invariants. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: a committed transaction preserves database invariants"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how isolation affects behaviour in Transactions.",
+    "correct_answer": "isolation means concurrent transactions do not see each other's partial effects. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: concurrent transactions do not see each other's partial effects"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how durability affects behaviour in Transactions.",
+    "correct_answer": "durability means committed changes survive a crash. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: committed changes survive a crash"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how two-phase locking affects behaviour in Transactions.",
+    "correct_answer": "two-phase locking means a growing phase of locks followed by a shrinking phase. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: a growing phase of locks followed by a shrinking phase"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how write-ahead logging affects behaviour in Transactions.",
+    "correct_answer": "write-ahead logging means log records are flushed before data pages are written. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: log records are flushed before data pages are written"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how serializability affects behaviour in Transactions.",
+    "correct_answer": "serializability means a concurrent schedule is equivalent to some serial schedule. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: a concurrent schedule is equivalent to some serial schedule"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how savepoint affects behaviour in Transactions.",
+    "correct_answer": "savepoint means a named point inside a transaction that can be rolled back to. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for Transactions/understand: a named point inside a transaction that can be rolled back to"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs atomicity. How would you apply it?",
+    "correct_answer": "Identify where atomicity is needed and apply it directly: a transaction either commits completely or rolls back completely. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: a transaction either commits completely or rolls back completely"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs consistency. How would you apply it?",
+    "correct_answer": "Identify where consistency is needed and apply it directly: a committed transaction preserves database invariants. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: a committed transaction preserves database invariants"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs isolation. How would you apply it?",
+    "correct_answer": "Identify where isolation is needed and apply it directly: concurrent transactions do not see each other's partial effects. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: concurrent transactions do not see each other's partial effects"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs durability. How would you apply it?",
+    "correct_answer": "Identify where durability is needed and apply it directly: committed changes survive a crash. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: committed changes survive a crash"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs two-phase locking. How would you apply it?",
+    "correct_answer": "Identify where two-phase locking is needed and apply it directly: a growing phase of locks followed by a shrinking phase. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: a growing phase of locks followed by a shrinking phase"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs write-ahead logging. How would you apply it?",
+    "correct_answer": "Identify where write-ahead logging is needed and apply it directly: log records are flushed before data pages are written. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: log records are flushed before data pages are written"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs serializability. How would you apply it?",
+    "correct_answer": "Identify where serializability is needed and apply it directly: a concurrent schedule is equivalent to some serial schedule. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: a concurrent schedule is equivalent to some serial schedule"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in Transactions needs savepoint. How would you apply it?",
+    "correct_answer": "Identify where savepoint is needed and apply it directly: a named point inside a transaction that can be rolled back to. Verify the outcome against the workload.",
+    "explanation": "Bank question for Transactions/apply: a named point inside a transaction that can be rolled back to"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by atomicity in Transactions.",
+    "correct_answer": "atomicity gives a transaction either commits completely or rolls back completely. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: a transaction either commits completely or rolls back completely"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by consistency in Transactions.",
+    "correct_answer": "consistency gives a committed transaction preserves database invariants. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: a committed transaction preserves database invariants"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by isolation in Transactions.",
+    "correct_answer": "isolation gives concurrent transactions do not see each other's partial effects. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: concurrent transactions do not see each other's partial effects"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by durability in Transactions.",
+    "correct_answer": "durability gives committed changes survive a crash. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: committed changes survive a crash"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by two-phase locking in Transactions.",
+    "correct_answer": "two-phase locking gives a growing phase of locks followed by a shrinking phase. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: a growing phase of locks followed by a shrinking phase"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by write-ahead logging in Transactions.",
+    "correct_answer": "write-ahead logging gives log records are flushed before data pages are written. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: log records are flushed before data pages are written"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by serializability in Transactions.",
+    "correct_answer": "serializability gives a concurrent schedule is equivalent to some serial schedule. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: a concurrent schedule is equivalent to some serial schedule"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by savepoint in Transactions.",
+    "correct_answer": "savepoint gives a named point inside a transaction that can be rolled back to. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for Transactions/analyze: a named point inside a transaction that can be rolled back to"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is atomicity a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "atomicity (a transaction either commits completely or rolls back completely) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: a transaction either commits completely or rolls back completely"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is consistency a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "consistency (a committed transaction preserves database invariants) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: a committed transaction preserves database invariants"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is isolation a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "isolation (concurrent transactions do not see each other's partial effects) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: concurrent transactions do not see each other's partial effects"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is durability a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "durability (committed changes survive a crash) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: committed changes survive a crash"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is two-phase locking a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "two-phase locking (a growing phase of locks followed by a shrinking phase) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: a growing phase of locks followed by a shrinking phase"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is write-ahead logging a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "write-ahead logging (log records are flushed before data pages are written) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: log records are flushed before data pages are written"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is serializability a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "serializability (a concurrent schedule is equivalent to some serial schedule) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: a concurrent schedule is equivalent to some serial schedule"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is savepoint a good choice for a latency-sensitive Transactions workload? Justify.",
+    "correct_answer": "savepoint (a named point inside a transaction that can be rolled back to) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for Transactions/evaluate: a named point inside a transaction that can be rolled back to"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses atomicity to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply atomicity (a transaction either commits completely or rolls back completely), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: a transaction either commits completely or rolls back completely"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses consistency to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply consistency (a committed transaction preserves database invariants), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: a committed transaction preserves database invariants"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses isolation to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply isolation (concurrent transactions do not see each other's partial effects), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: concurrent transactions do not see each other's partial effects"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses durability to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply durability (committed changes survive a crash), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: committed changes survive a crash"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses two-phase locking to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply two-phase locking (a growing phase of locks followed by a shrinking phase), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: a growing phase of locks followed by a shrinking phase"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses write-ahead logging to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply write-ahead logging (log records are flushed before data pages are written), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: log records are flushed before data pages are written"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses serializability to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply serializability (a concurrent schedule is equivalent to some serial schedule), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: a concurrent schedule is equivalent to some serial schedule"
+  },
+  {
+    "subject": "DBMS",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses savepoint to handle a Transactions problem.",
+    "correct_answer": "Procedure: detect the problem, apply savepoint (a named point inside a transaction that can be rolled back to), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for Transactions/create: a named point inside a transaction that can be rolled back to"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what FCFS is in CPU Scheduling.",
+    "correct_answer": "FCFS: processes are served in arrival order.",
+    "explanation": "Bank question for CPU Scheduling/remember: processes are served in arrival order"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what SJF is in CPU Scheduling.",
+    "correct_answer": "SJF: the process with the shortest next burst runs first.",
+    "explanation": "Bank question for CPU Scheduling/remember: the process with the shortest next burst runs first"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what round robin is in CPU Scheduling.",
+    "correct_answer": "round robin: each process gets a fixed time quantum in a cyclic queue.",
+    "explanation": "Bank question for CPU Scheduling/remember: each process gets a fixed time quantum in a cyclic queue"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what time quantum is in CPU Scheduling.",
+    "correct_answer": "time quantum: the maximum uninterrupted CPU slice given to a process.",
+    "explanation": "Bank question for CPU Scheduling/remember: the maximum uninterrupted CPU slice given to a process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what preemption is in CPU Scheduling.",
+    "correct_answer": "preemption: the scheduler may take the CPU from a running process.",
+    "explanation": "Bank question for CPU Scheduling/remember: the scheduler may take the CPU from a running process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what starvation is in CPU Scheduling.",
+    "correct_answer": "starvation: a process waits indefinitely because others are preferred.",
+    "explanation": "Bank question for CPU Scheduling/remember: a process waits indefinitely because others are preferred"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what aging is in CPU Scheduling.",
+    "correct_answer": "aging: gradually raising the priority of long-waiting processes.",
+    "explanation": "Bank question for CPU Scheduling/remember: gradually raising the priority of long-waiting processes"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "difficulty": "easy",
+    "question_type": "open",
+    "question": "State what turnaround time is in CPU Scheduling.",
+    "correct_answer": "turnaround time: the interval from submission to completion.",
+    "explanation": "Bank question for CPU Scheduling/remember: the interval from submission to completion"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how FCFS affects behaviour in CPU Scheduling.",
+    "correct_answer": "FCFS means processes are served in arrival order. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: processes are served in arrival order"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how SJF affects behaviour in CPU Scheduling.",
+    "correct_answer": "SJF means the process with the shortest next burst runs first. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: the process with the shortest next burst runs first"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how round robin affects behaviour in CPU Scheduling.",
+    "correct_answer": "round robin means each process gets a fixed time quantum in a cyclic queue. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: each process gets a fixed time quantum in a cyclic queue"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how time quantum affects behaviour in CPU Scheduling.",
+    "correct_answer": "time quantum means the maximum uninterrupted CPU slice given to a process. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: the maximum uninterrupted CPU slice given to a process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how preemption affects behaviour in CPU Scheduling.",
+    "correct_answer": "preemption means the scheduler may take the CPU from a running process. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: the scheduler may take the CPU from a running process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how starvation affects behaviour in CPU Scheduling.",
+    "correct_answer": "starvation means a process waits indefinitely because others are preferred. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: a process waits indefinitely because others are preferred"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how aging affects behaviour in CPU Scheduling.",
+    "correct_answer": "aging means gradually raising the priority of long-waiting processes. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: gradually raising the priority of long-waiting processes"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "Explain how turnaround time affects behaviour in CPU Scheduling.",
+    "correct_answer": "turnaround time means the interval from submission to completion. It affects behaviour because it determines how the system proceeds.",
+    "explanation": "Bank question for CPU Scheduling/understand: the interval from submission to completion"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs FCFS. How would you apply it?",
+    "correct_answer": "Identify where FCFS is needed and apply it directly: processes are served in arrival order. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: processes are served in arrival order"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs SJF. How would you apply it?",
+    "correct_answer": "Identify where SJF is needed and apply it directly: the process with the shortest next burst runs first. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: the process with the shortest next burst runs first"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs round robin. How would you apply it?",
+    "correct_answer": "Identify where round robin is needed and apply it directly: each process gets a fixed time quantum in a cyclic queue. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: each process gets a fixed time quantum in a cyclic queue"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs time quantum. How would you apply it?",
+    "correct_answer": "Identify where time quantum is needed and apply it directly: the maximum uninterrupted CPU slice given to a process. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: the maximum uninterrupted CPU slice given to a process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs preemption. How would you apply it?",
+    "correct_answer": "Identify where preemption is needed and apply it directly: the scheduler may take the CPU from a running process. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: the scheduler may take the CPU from a running process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs starvation. How would you apply it?",
+    "correct_answer": "Identify where starvation is needed and apply it directly: a process waits indefinitely because others are preferred. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: a process waits indefinitely because others are preferred"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs aging. How would you apply it?",
+    "correct_answer": "Identify where aging is needed and apply it directly: gradually raising the priority of long-waiting processes. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: gradually raising the priority of long-waiting processes"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "difficulty": "medium",
+    "question_type": "open",
+    "question": "A workload in CPU Scheduling needs turnaround time. How would you apply it?",
+    "correct_answer": "Identify where turnaround time is needed and apply it directly: the interval from submission to completion. Verify the outcome against the workload.",
+    "explanation": "Bank question for CPU Scheduling/apply: the interval from submission to completion"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by FCFS in CPU Scheduling.",
+    "correct_answer": "FCFS gives processes are served in arrival order. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: processes are served in arrival order"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by SJF in CPU Scheduling.",
+    "correct_answer": "SJF gives the process with the shortest next burst runs first. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: the process with the shortest next burst runs first"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by round robin in CPU Scheduling.",
+    "correct_answer": "round robin gives each process gets a fixed time quantum in a cyclic queue. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: each process gets a fixed time quantum in a cyclic queue"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by time quantum in CPU Scheduling.",
+    "correct_answer": "time quantum gives the maximum uninterrupted CPU slice given to a process. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: the maximum uninterrupted CPU slice given to a process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by preemption in CPU Scheduling.",
+    "correct_answer": "preemption gives the scheduler may take the CPU from a running process. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: the scheduler may take the CPU from a running process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by starvation in CPU Scheduling.",
+    "correct_answer": "starvation gives a process waits indefinitely because others are preferred. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: a process waits indefinitely because others are preferred"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by aging in CPU Scheduling.",
+    "correct_answer": "aging gives gradually raising the priority of long-waiting processes. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: gradually raising the priority of long-waiting processes"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Analyse the trade-off introduced by turnaround time in CPU Scheduling.",
+    "correct_answer": "turnaround time gives the interval from submission to completion. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "explanation": "Bank question for CPU Scheduling/analyze: the interval from submission to completion"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is FCFS a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "FCFS (processes are served in arrival order) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: processes are served in arrival order"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is SJF a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "SJF (the process with the shortest next burst runs first) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: the process with the shortest next burst runs first"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is round robin a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "round robin (each process gets a fixed time quantum in a cyclic queue) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: each process gets a fixed time quantum in a cyclic queue"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is time quantum a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "time quantum (the maximum uninterrupted CPU slice given to a process) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: the maximum uninterrupted CPU slice given to a process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is preemption a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "preemption (the scheduler may take the CPU from a running process) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: the scheduler may take the CPU from a running process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is starvation a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "starvation (a process waits indefinitely because others are preferred) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: a process waits indefinitely because others are preferred"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is aging a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "aging (gradually raising the priority of long-waiting processes) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: gradually raising the priority of long-waiting processes"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Is turnaround time a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "correct_answer": "turnaround time (the interval from submission to completion) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "explanation": "Bank question for CPU Scheduling/evaluate: the interval from submission to completion"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses FCFS to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply FCFS (processes are served in arrival order), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: processes are served in arrival order"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses SJF to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply SJF (the process with the shortest next burst runs first), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: the process with the shortest next burst runs first"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses round robin to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply round robin (each process gets a fixed time quantum in a cyclic queue), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: each process gets a fixed time quantum in a cyclic queue"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses time quantum to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply time quantum (the maximum uninterrupted CPU slice given to a process), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: the maximum uninterrupted CPU slice given to a process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses preemption to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply preemption (the scheduler may take the CPU from a running process), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: the scheduler may take the CPU from a running process"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses starvation to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply starvation (a process waits indefinitely because others are preferred), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: a process waits indefinitely because others are preferred"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses aging to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply aging (gradually raising the priority of long-waiting processes), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: gradually raising the priority of long-waiting processes"
+  },
+  {
+    "subject": "OS",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "difficulty": "hard",
+    "question_type": "open",
+    "question": "Design a short procedure that uses turnaround time to handle a CPU Scheduling problem.",
+    "correct_answer": "Procedure: detect the problem, apply turnaround time (the interval from submission to completion), then verify that the system is back in a valid state.",
+    "explanation": "Bank question for CPU Scheduling/create: the interval from submission to completion"
+  }
+]
