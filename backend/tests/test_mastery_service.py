@@ -43,7 +43,7 @@ from app.main import create_app
 from app.models.base import Base
 from app.models.models import Attempt, MasteryRecord, Question, User
 from app.schemas.schemas import GeneratedQuestion
-from app.services import mastery_service
+from app.services import attempt_service, mastery_service
 from app.services.mastery_service import (
     EMA_ALPHA,
     get_mastery,
@@ -350,7 +350,7 @@ def test_mastery_me_subject_filter(db):
     assert len(body) == 1 and body[0]["subject"] == "OS"
 
 
-# ── submit-answer -> mastery, and the failure-isolation guarantee ─────────────
+# ── submit-answer -> mastery, and the atomic-rollback guarantee ───────────────
 
 def test_submit_answer_updates_mastery(db, monkeypatch):
     user = _add_user(db)
@@ -359,8 +359,9 @@ def test_submit_answer_updates_mastery(db, monkeypatch):
     db.commit()
     db.refresh(question)
 
+    # Evaluator moved into the shared attempt core in item 2.
     monkeypatch.setattr(
-        questions_module, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
+        attempt_service, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
     )
     resp = _authed_client(db, user).post(
         f"/questions/{question.id}/submit-answer",
@@ -376,7 +377,7 @@ def test_submit_answer_updates_mastery(db, monkeypatch):
     assert records[0].attempts_count == 1
 
 
-def test_mastery_failure_does_not_lose_the_attempt(db, monkeypatch):
+def test_mastery_failure_rolls_back_the_whole_request(db, monkeypatch):
     user = _add_user(db)
     question = _question()
     db.add(question)
@@ -384,24 +385,27 @@ def test_mastery_failure_does_not_lose_the_attempt(db, monkeypatch):
     db.refresh(question)
 
     monkeypatch.setattr(
-        questions_module, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
+        attempt_service, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
     )
-    # Make the mastery update blow up AFTER the attempt has been added.
     monkeypatch.setattr(
-        questions_module,
+        attempt_service,
         "update_mastery",
         MagicMock(side_effect=RuntimeError("mastery store unavailable")),
     )
 
-    resp = _authed_client(db, user).post(
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: user
+    resp = TestClient(app, raise_server_exceptions=False).post(
         f"/questions/{question.id}/submit-answer",
         json={"answer": "2PL holds exclusive locks until commit."},
     )
 
-    assert resp.status_code == 200                       # request still succeeds
+    assert resp.status_code == 500
+    assert resp.json()["code"] == "INTERNAL_ERROR"   # explicit, never silent success
     db.expire_all()
-    assert db.query(Attempt).count() == 1                # the answer survived
-    assert db.query(MasteryRecord).count() == 0          # mastery write rolled back
+    assert db.query(Attempt).count() == 0             # attempt rolled back too
+    assert db.query(MasteryRecord).count() == 0
 
 
 # ── POST /questions/generate adaptive flag ────────────────────────────────────
