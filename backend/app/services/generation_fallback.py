@@ -11,10 +11,14 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
+import uuid
+from collections import deque
 from pathlib import Path
 from typing import Any, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -27,6 +31,36 @@ logger = logging.getLogger("querymind.generation.fallback")
 
 _BANK_PATH = Path(__file__).resolve().parents[1] / "data" / "demo_question_bank.json"
 _BANK_CACHE: Optional[list[dict[str, Any]]] = None
+
+# ── Served-question registry ──────────────────────────────────────────────────
+# A demo session must not serve the same question twice while unserved bank or
+# cached questions remain. The key is (user, topic); live/cache/bank ids are all
+# tracked here. Bounded so a long-running process cannot grow without limit.
+_served_lock = threading.Lock()
+_served: dict[tuple[str, str], deque[uuid.UUID]] = {}
+_MAX_SERVED = 512
+
+
+def _served_key(user_id: Any, topic: str) -> tuple[str, str]:
+    return (str(user_id), (topic or "").strip().lower())
+
+
+def served_question_ids(user_id: Any, topic: str) -> set[uuid.UUID]:
+    with _served_lock:
+        return set(_served.get(_served_key(user_id, topic), ()))
+
+
+def mark_served(user_id: Any, topic: str, question_id: uuid.UUID) -> None:
+    key = _served_key(user_id, topic)
+    with _served_lock:
+        queue = _served.setdefault(key, deque(maxlen=_MAX_SERVED))
+        if question_id not in queue:
+            queue.append(question_id)
+
+
+def reset_served_for_tests() -> None:
+    with _served_lock:
+        _served.clear()
 
 
 def load_bank() -> list[dict[str, Any]]:
@@ -104,9 +138,10 @@ def _bloom_distance(requested: str, actual: str | None) -> int:
 
 
 def _question_from_cache(
-    db: Session, *, subject: str, topic: str, bloom_level: str, excluded_texts: set[str]
+    db: Session, *, subject: str, topic: str, bloom_level: str,
+    excluded_texts: set[str], served_ids: set[uuid.UUID],
 ) -> Optional[GeneratedQuestion]:
-    rows = (
+    query = (
         db.query(Question)
         .filter(
             Question.topic == topic,
@@ -114,13 +149,15 @@ def _question_from_cache(
             Question.source.in_(["live", "cache"]),
         )
         .order_by(Question.created_at.desc())
-        .limit(25)
-        .all()
     )
+    if served_ids:
+        query = query.filter(Question.id.notin_(served_ids))
+    rows = query.limit(50).all()
     for row in rows:
         if row.question_text in excluded_texts:
             continue
         return GeneratedQuestion(
+            question_id=row.id,
             question=row.question_text,
             correct_answer=row.reference_answer or "Use the course material for this topic.",
             explanation="Previously validated question served from cache.",
@@ -132,59 +169,79 @@ def _question_from_cache(
     return None
 
 
+def _bank_candidates(
+    db: Session, *, topic: str, bloom_level: str,
+    excluded_texts: set[str], served_ids: set[uuid.UUID],
+) -> list[Question]:
+    """Unserved rows first: target rung, then adjacent rungs, then any rung.
+
+    Only when the whole pool is exhausted do we allow a repeat, so a 30-question
+    demo never shows the same bank question while a fresh one is available.
+    """
+    seed_bank(db)
+    key = (topic or "").strip().lower()
+    query = db.query(Question).filter(Question.source == "bank")
+    topic_rows = query.filter(func.lower(Question.topic) == key).all()
+    rows = topic_rows or query.all()  # unknown topic still gets a valid bank question
+
+    index = BLOOM_ORDER.index(bloom_level) if bloom_level in BLOOM_ORDER else 0
+    rung_order = [index]
+    for distance in range(1, len(BLOOM_ORDER)):
+        for candidate in (index - distance, index + distance):
+            if 0 <= candidate < len(BLOOM_ORDER):
+                rung_order.append(candidate)
+
+    buckets: dict[str, list[Question]] = {rung: [] for rung in BLOOM_ORDER}
+    for row in rows:
+        if row.question_text in excluded_texts:
+            continue
+        buckets.setdefault(row.bloom_level, []).append(row)
+
+    ordered = [row for rung in rung_order for row in buckets.get(BLOOM_ORDER[rung], [])]
+    unserved = [row for row in ordered if row.id not in served_ids]
+    return unserved or ordered
+
+
 def _question_from_bank(
     db: Session, *, subject: str, topic: str, bloom_level: str,
-    excluded_texts: set[str],
+    excluded_texts: set[str], served_ids: set[uuid.UUID],
 ) -> GeneratedQuestion:
-    seed_bank(db)
-    bank = load_bank()
-    key = (topic or "").strip().lower()
-    matches = [e for e in bank if e["topic"].strip().lower() == key and e["bloom_level"] == bloom_level]
-    if not matches:  # still serve a valid question for an unknown topic
-        matches = [e for e in bank if e["bloom_level"] == bloom_level]
-    for entry in matches:
-        if entry["question"] in excluded_texts:
-            continue
-        return GeneratedQuestion(
-            question=entry["question"],
-            correct_answer=entry["correct_answer"],
-            explanation=entry["explanation"],
-            bloom_level=entry["bloom_level"],
-            difficulty=entry["difficulty"],
-            topic=entry["topic"],
-            source="bank",
-            context_warning=(
-                "Served from the seeded demo bank (no live LLM was used)."
-                if settings.offline_demo_mode
-                else None
-            ),
-        )
-    # Every bank entry was already used in this batch — vary the wording rather
-    # than returning nothing.
-    base = matches[0]
+    candidates = _bank_candidates(
+        db, topic=topic, bloom_level=bloom_level,
+        excluded_texts=excluded_texts, served_ids=served_ids,
+    )
+    row = candidates[0]
+    reused = row.id in served_ids
+    warning = None
+    if settings.offline_demo_mode:
+        warning = "Served from the seeded demo bank (no live LLM was used)."
+    if reused:
+        warning = f"{warning or ''} Bank pool exhausted for this topic; reusing a served question.".strip()
     return GeneratedQuestion(
-        question=f"{base['question']} (variant {len(excluded_texts) + 1})",
-        correct_answer=base["correct_answer"],
-        explanation=base["explanation"],
-        bloom_level=base["bloom_level"],
-        difficulty=base["difficulty"],
-        topic=base["topic"],
+        question_id=row.id,
+        question=row.question_text,
+        correct_answer=row.reference_answer or "Use the course material for this topic.",
+        explanation=f"Bank question for {row.topic}/{row.bloom_level}.",
+        bloom_level=row.bloom_level,
+        difficulty=row.difficulty,
+        topic=row.topic,
         source="bank",
+        context_warning=warning,
     )
 
 
 def _fallback(
     db: Session, *, subject: str, topic: str, bloom_level: str,
-    excluded_texts: set[str], reason: str,
+    excluded_texts: set[str], served_ids: set[uuid.UUID], reason: str,
 ) -> GeneratedQuestion:
     logger.warning("Generation falling back to cache/bank: %s", reason)
     cached = _question_from_cache(
         db, subject=subject, topic=topic, bloom_level=bloom_level,
-        excluded_texts=excluded_texts,
+        excluded_texts=excluded_texts, served_ids=served_ids,
     )
     result = cached or _question_from_bank(
         db, subject=subject, topic=topic, bloom_level=bloom_level,
-        excluded_texts=excluded_texts,
+        excluded_texts=excluded_texts, served_ids=served_ids,
     )
     result.context_warning = (
         f"{result.context_warning or ''} Fallback reason: {reason}".strip()
@@ -205,8 +262,10 @@ def generate_one(
     excluded_texts: set[str],
     deadline: float,
     adaptive_reason: str | None = None,
+    served_ids: Optional[set[uuid.UUID]] = None,
 ) -> GeneratedQuestion:
     """Return one usable question, trying live generation within the deadline."""
+    served_ids = served_ids or set()
     chunk_texts = [str(c.get("text", "")) for c in context_chunks]
 
     if not settings.offline_demo_mode:
@@ -217,7 +276,8 @@ def generate_one(
             if remaining < 2.0:
                 return _fallback(
                     db, subject=subject, topic=topic, bloom_level=bloom_level,
-                    excluded_texts=excluded_texts, reason="deadline exhausted",
+                    excluded_texts=excluded_texts, served_ids=served_ids,
+                    reason="deadline exhausted",
                 )
 
             notes: list[str] = []
@@ -302,7 +362,7 @@ def generate_one(
 
     return _fallback(
         db, subject=subject, topic=topic, bloom_level=bloom_level,
-        excluded_texts=excluded_texts,
+        excluded_texts=excluded_texts, served_ids=served_ids,
         reason=("offline demo mode" if settings.offline_demo_mode
                 else "live generation unavailable or invalid"),
     )
