@@ -73,6 +73,7 @@ function mapSingleQuestion(raw) {
     options: raw.options ?? undefined,
     correct_answer: raw.correct_answer ?? undefined,
     explanation: raw.explanation ?? undefined,
+    source: raw.source ?? undefined,
   }
 }
 
