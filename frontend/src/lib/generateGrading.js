@@ -20,6 +20,7 @@
 
 import { attemptsApi } from '../api/endpoints/attempts.js'
 import { normaliseScore } from './generateRun.js'
+import { getSubmissionId } from './submissionId.js'
 
 /**
  * Ask the backend to mark one written answer.
@@ -42,7 +43,12 @@ export async function gradeGeneratedAnswer(question, answerText, userId) {
 
   try {
     const result = await attemptsApi.submit(
-      { question_id: question.question_id, answer_text: text },
+      {
+        question_id: question.question_id,
+        answer_text: text,
+        // One answer gets one id, reused by retries and double submits.
+        submission_id: getSubmissionId(question.question_id, text),
+      },
       userId
     )
     const score = normaliseScore(result?.score)
