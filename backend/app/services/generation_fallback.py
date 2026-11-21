@@ -191,10 +191,11 @@ def _bank_candidates(
             if 0 <= candidate < len(BLOOM_ORDER):
                 rung_order.append(candidate)
 
+    # Excluding the whole pool must not crash generation: a repeat is the last
+    # resort, not an empty candidate list.
+    candidate_pool = [row for row in rows if row.question_text not in excluded_texts] or rows
     buckets: dict[str, list[Question]] = {rung: [] for rung in BLOOM_ORDER}
-    for row in rows:
-        if row.question_text in excluded_texts:
-            continue
+    for row in candidate_pool:
         buckets.setdefault(row.bloom_level, []).append(row)
 
     ordered = [row for rung in rung_order for row in buckets.get(BLOOM_ORDER[rung], [])]
@@ -210,6 +211,26 @@ def _question_from_bank(
         db, topic=topic, bloom_level=bloom_level,
         excluded_texts=excluded_texts, served_ids=served_ids,
     )
+    if not candidates:
+        # A test/mocked session (or a DB where seeding has not run) can yield no
+        # rows at all. The JSON bank is the source of truth for seeding, so it is
+        # also a valid last-resort source for a usable question.
+        bank = load_bank()
+        key = (topic or "").strip().lower()
+        matches = [
+            entry for entry in bank
+            if entry["topic"].strip().lower() == key and entry["bloom_level"] == bloom_level
+        ] or [entry for entry in bank if entry["bloom_level"] == bloom_level] or bank
+        entry = matches[0]
+        return GeneratedQuestion(
+            question=entry["question"],
+            correct_answer=entry["correct_answer"],
+            explanation=entry["explanation"],
+            bloom_level=entry["bloom_level"],
+            difficulty=entry["difficulty"],
+            topic=entry["topic"],
+            source="bank",
+        )
     row = candidates[0]
     reused = row.id in served_ids
     warning = None
