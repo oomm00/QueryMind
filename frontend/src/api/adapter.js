@@ -88,6 +88,7 @@ export function adaptSubmitAttemptRequest(contractBody, userId) {
     user_id: userId,
     user_answer: contractBody.answer_text,
     time_taken_seconds: contractBody.time_taken_seconds ?? null,
+    submission_id: contractBody.submission_id ?? null,
   }
 }
 

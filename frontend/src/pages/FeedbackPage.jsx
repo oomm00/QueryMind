@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { attemptsApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
+import { getSubmissionId } from '../lib/submissionId.js'
 import { Button } from '../components/ui/Button'
 import { Panel, PanelLarge } from '../components/ui/Panel'
 import { ProgressLine } from '../components/ui/ProgressLine'
@@ -69,6 +70,7 @@ export default function FeedbackPage() {
           question_id: currentQuestion.question_id,
           answer_text: userAnswer,
           time_taken_seconds: timeTaken,
+          submission_id: getSubmissionId(currentQuestion.question_id, userAnswer),
         },
         userId
       )
