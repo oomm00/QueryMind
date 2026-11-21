@@ -162,6 +162,49 @@ def test_empty_college_results_falls_back_to_public():
     assert results[0]["score"] == 0.85
 
 
+def test_college_only_does_not_fall_back_to_public():
+    """Uploaded-only generation must never substitute public material."""
+    mock_collection = MagicMock()
+    mock_collection.query.return_value = {
+        "documents": [["Weak uploaded note"]],
+        "metadatas": [[{
+            "source_type": "college",
+            "source_doc": "notes.txt",
+        }]],
+        "distances": [[0.80]],
+    }
+
+    results = retrieve_context(
+        topic="Unrelated topic",
+        subject="General",
+        collection=mock_collection,
+        college_only=True,
+    )
+
+    assert mock_collection.query.call_count == 1
+    assert results[0]["source_type"] == "college"
+    assert results[0]["source_doc"] == "notes.txt"
+
+
+def test_college_only_returns_empty_when_no_uploaded_material():
+    """Missing uploaded material must remain empty instead of using public context."""
+    mock_collection = MagicMock()
+    mock_collection.get.return_value = {
+        "documents": [],
+        "metadatas": [],
+    }
+
+    results = retrieve_context(
+        topic=None,
+        subject=None,
+        collection=mock_collection,
+        college_only=True,
+    )
+
+    assert mock_collection.get.call_count == 1
+    assert results == []
+
+
 def test_best_available_college_when_neither_tier_clears_threshold():
     """If neither tier clears the threshold, best-available COLLEGE chunks are returned."""
     mock_collection = MagicMock()

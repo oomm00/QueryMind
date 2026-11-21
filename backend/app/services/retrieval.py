@@ -246,6 +246,51 @@ def _query_collection(
     return ranked_chunks[:n_results]
 
 
+def _get_uploaded_chunks(
+    collection: Collection,
+    subject: Optional[str],
+    topic: Optional[str],
+    limit: int,
+) -> list[dict]:
+    """Read uploaded chunks directly when no topic exists to search for."""
+    filters = [{"source_type": "college"}]
+    if subject is not None:
+        filters.append({"subject": subject})
+    if topic is not None:
+        filters.append({"topic": topic})
+    where_filter: dict[str, Any] = (
+        filters[0] if len(filters) == 1 else {"$and": filters}
+    )
+
+    try:
+        results = collection.get(
+            where=where_filter,
+            limit=limit,
+            include=["documents", "metadatas"],
+        )
+    except Exception as exc:
+        logger.warning(
+            "Could not read uploaded chunks directly (subject=%s, topic=%s): %s",
+            subject,
+            topic,
+            exc,
+        )
+        return []
+
+    documents = results.get("documents") or []
+    metadatas = results.get("metadatas") or []
+    return [
+        {
+            "text": doc,
+            "source_type": meta.get("source_type", "college"),
+            "score": 1.0,
+            "source_doc": meta.get("source_doc", "unknown"),
+        }
+        for doc, meta in zip(documents, metadatas)
+        if doc
+    ]
+
+
 def retrieve_context(
     topic: Optional[str],
     subject: Optional[str] = None,
@@ -256,6 +301,7 @@ def retrieve_context(
     client: Optional[ClientAPI] = None,
     collection: Optional[Collection] = None,
     public_only: bool = False,
+    college_only: bool = False,
 ) -> list[dict]:
     """Retrieve grounded context chunks with Two-Tier college priority and public fallback.
 
@@ -287,7 +333,10 @@ def retrieve_context(
         else f"{subject} {topic}" if subject and topic else topic or "uploaded study notes"
     )
 
-    cache_key = (subject, topic, f"{'public' if public_only else 'tiered'}:{search_query}")
+    retrieval_mode = (
+        "public" if public_only else "college" if college_only else "tiered"
+    )
+    cache_key = (subject, topic, f"{retrieval_mode}:{search_query}")
 
     # Early cache lookup — before touching Chroma. A hit must NOT pay for client
     # construction / collection resolution, which is the dominant per-request
@@ -311,6 +360,17 @@ def retrieve_context(
             # Process-wide memoized collection (avoids rebuilding the client).
             collection = get_default_collection()
 
+    if college_only and topic is None and subject is None:
+        result = _get_uploaded_chunks(
+            collection=collection,
+            subject=None,
+            topic=None,
+            limit=top_k,
+        )
+        if not injected:
+            _cache_put(cache_key, result, time.monotonic())
+        return result
+
     result = _retrieve_uncached(
         collection=collection,
         search_query=search_query,
@@ -318,6 +378,7 @@ def retrieve_context(
         topic=topic,
         top_k=top_k,
         public_only=public_only,
+        college_only=college_only,
     )
 
     if not injected:
@@ -333,6 +394,7 @@ def _retrieve_uncached(
     topic: Optional[str],
     top_k: int,
     public_only: bool = False,
+    college_only: bool = False,
 ) -> list[dict]:
     """Two-tier retrieval (no caching) — the body behind :func:`retrieve_context`."""
     if public_only:
@@ -364,6 +426,23 @@ def _retrieve_uncached(
         topic=topic,
         n_results=top_k,
     )
+
+    if college_only:
+        if college_chunks:
+            logger.info(
+                "Retrieved %d college-only chunks (top score: %.4f) for %s / %s",
+                len(college_chunks),
+                college_chunks[0]["score"],
+                subject,
+                topic,
+            )
+        else:
+            logger.warning(
+                "No uploaded college material found for college-only retrieval of %s / %s",
+                subject,
+                topic,
+            )
+        return college_chunks
 
     if college_chunks and college_chunks[0]["score"] >= SIMILARITY_THRESHOLD:
         logger.info(
