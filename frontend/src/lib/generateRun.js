@@ -194,6 +194,7 @@ export async function runGeneration({
   difficulty = 'medium',
   blooms = [],
   count = 0,
+  adaptive = true,
   uploaded_only = false,
   signal,
   onProgress,
@@ -239,6 +240,7 @@ export async function runGeneration({
         bloom_level: bloom,
         difficulty,
         count: 1,
+        adaptive,
         uploaded_only,
       },
       { signal }

@@ -36,11 +36,7 @@ from app.schemas.schemas import (
 )
 from app.services.evaluation_service import evaluate_answer
 from app.services.generation_service import _configure_genai, generate_question
-from app.services.mastery_service import (
-    explain_recommendation,
-    recommend_next,
-    update_mastery,
-)
+from app.services.mastery_service import adaptive_recommendation, update_mastery
 from app.services.retrieval import retrieve_context
 from app.services.validation_service import validate_question
 
@@ -149,14 +145,12 @@ def generate_questions(
     generation_subject = (payload.subject or "").strip() or "General"
     adaptive_reason: str | None = None
     if payload.adaptive:
-        recommendation = recommend_next(
+        recommendation = adaptive_recommendation(
             current_user.id, generation_subject, generation_topic, db
         )
         bloom_level = recommendation["bloom_level"]
         difficulty = recommendation["difficulty"]
-        adaptive_reason = explain_recommendation(
-            current_user.id, generation_subject, generation_topic, db
-        )
+        adaptive_reason = recommendation["reason"]
         logger.info(
             "Adaptive selection for user=%s %s/%s -> %s/%s",
             current_user.id, generation_subject, generation_topic, bloom_level, difficulty,

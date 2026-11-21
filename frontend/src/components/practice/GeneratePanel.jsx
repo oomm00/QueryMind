@@ -129,6 +129,7 @@ export function GeneratePanel() {
   const [difficulty, setDifficulty] = useState('medium')
   const [blooms, setBlooms] = useState(() => bloomsForDifficulty('medium'))
   const [count, setCount] = useState(DEFAULT_COUNT)
+  const [adaptive, setAdaptive] = useState(true)
   const [uploadedOnly, setUploadedOnly] = useState(false)
   const [touchedUploadedOnly, setTouchedUploadedOnly] = useState(false)
 
@@ -224,6 +225,7 @@ export function GeneratePanel() {
         difficulty,
         blooms,
         count,
+        adaptive,
         signal: controller.signal,
         onProgress: setProgress,
       })
@@ -326,6 +328,23 @@ export function GeneratePanel() {
           </div>
 
           <div>
+            <h3 className="text-[13px] font-medium text-ink">Level selection</h3>
+            <p className="mt-0.5 text-xs text-muted">
+              Adaptive picks the next level from your answers; manual uses the choices below.
+            </p>
+            <Segmented
+              className="mt-1.5"
+              label="Level selection"
+              options={[
+                { value: true, label: 'Adaptive (recommended)' },
+                { value: false, label: 'Manual' },
+              ]}
+              value={adaptive}
+              onChange={setAdaptive}
+            />
+          </div>
+
+          <div className={adaptive ? 'opacity-50' : undefined}>
             <h3 className="text-[13px] font-medium text-ink">Difficulty</h3>
             <Segmented
               className="mt-1.5"
@@ -336,7 +355,7 @@ export function GeneratePanel() {
             />
           </div>
 
-          <div>
+          <div className={adaptive ? 'opacity-50' : undefined}>
             <h3 className="text-[13px] font-medium text-ink">Bloom levels</h3>
             <p className="mt-0.5 text-xs text-muted">
               {difficultyLabel(difficulty)} starts with these; keep or drop any of them.
