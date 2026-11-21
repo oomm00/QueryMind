@@ -8,7 +8,6 @@ routes.
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 
@@ -34,9 +33,9 @@ from app.schemas.schemas import (
     GeneratedQuestion,
     SubmitAnswerRequest,
 )
-from app.services.evaluation_service import evaluate_answer
+from app.services.attempt_service import submit_attempt_core
 from app.services.generation_service import _configure_genai, generate_question
-from app.services.mastery_service import adaptive_recommendation, update_mastery
+from app.services.mastery_service import adaptive_recommendation
 from app.services.retrieval import retrieve_context
 from app.services.validation_service import validate_question
 
@@ -304,79 +303,29 @@ def submit_answer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AnswerEvaluationResponse:
-    """Grade a student's answer to an existing question and persist the attempt.
-
-    - Looks up the question (404 if unknown).
-    - Runs the rubric-based LLM judge (correctness / completeness /
-      depth_of_reasoning / clarity) and computes the weighted overall score (0-100).
-    - Persists an :class:`Attempt` (score stored as 0-1, full rubric JSON in
-      ``evaluation_data``).
-    - Requires a valid JWT Bearer token.
-    """
+    """Grade an answer through the shared attempt core (one transaction)."""
     question = db.query(Question).filter(Question.id == question_id).first()
     if question is None:
         raise NotFoundError(f"Question {question_id} not found")
 
     with stage("evaluate"):
-        evaluation = evaluate_answer(question=question, student_answer=payload.answer)
-
-    attempt = Attempt(
-        user_id=current_user.id,
-        question_id=question.id,
-        user_answer=payload.answer,
-        score=round(evaluation["overall_score"] / 100.0, 4),  # store 0-1 per model convention
-        feedback=evaluation["feedback"],
-        criteria_scores=evaluation["scores"],
-        evaluation_data=json.dumps(evaluation),
-    )
-    db.add(attempt)
-    db.flush()  # assign attempt.id inside the open transaction
-
-    # ── Stage 10: fold this attempt into the learner's mastery profile ────────
-    # Runs in the SAME transaction as the attempt, but inside a SAVEPOINT so a
-    # failure in the mastery update rolls back only the mastery write — the
-    # student's answer is never lost.
-    try:
-        with db.begin_nested():
-            update_mastery(
-                user_id=current_user.id,
-                subject=question.subject,
-                topic=question.topic,
-                score=attempt.score,
-                bloom_level=question.bloom_level,
-                difficulty=question.difficulty,
-                db=db,
-            )
-    except Exception:  # defensive: the answer must survive a mastery failure
-        logger.exception(
-            "Mastery update failed for user=%s subject=%s topic=%s; "
-            "attempt=%s was still saved",
-            current_user.id, question.subject, question.topic, attempt.id,
-        )
-
-    db.commit()
-    db.refresh(attempt)
-
-    try:
-        from app.services.adaptive_service import update_mastery_profile
-
-        update_mastery_profile(
-            user_id=current_user.id,
-            topic=question.topic,
-            bloom_level=question.bloom_level,
-            score=attempt.score,
+        result = submit_attempt_core(
             db=db,
+            user_id=current_user.id,
+            question=question,
+            answer_text=payload.answer,
+            submission_id=payload.submission_id,
         )
-    except Exception:
-        pass
 
     return AnswerEvaluationResponse(
-        attempt_id=attempt.id,
-        question_id=question.id,
-        scores=evaluation["scores"],
-        overall_score=evaluation["overall_score"],
-        feedback=evaluation["feedback"],
-        missing_points=evaluation["missing_points"],
-        strengths=evaluation["strengths"],
-        reference_answer=question.reference_answer,
+        attempt_id=result["attempt_id"],
+        question_id=result["question_id"],
+        scores=result["scores"],
+        overall_score=result["overall_score"],
+        feedback=result["feedback"],
+        missing_points=result["missing_points"],
+        strengths=result["strengths"],
+        reference_answer=result["reference_answer"],
+        evaluation_mode=result["evaluation_mode"],
+        duplicate_submission=result.get("duplicate_submission", False),
     )

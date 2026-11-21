@@ -8,16 +8,13 @@ adaptive mastery profile, and returns detailed constructive feedback.
 
 from __future__ import annotations
 
-import json
-import logging
-import uuid
-from typing import Optional
+import uuid  # needed to resolve postponed route annotations (uuid.UUID path params)
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.db.session import get_db
 from app.models.models import Attempt, Question, User
 from app.schemas.schemas import (
@@ -25,18 +22,9 @@ from app.schemas.schemas import (
     AttemptHistoryItem,
     SubmitAttemptRequest,
 )
-from app.services.adaptive_service import update_mastery_profile
-from app.services.evaluation_service import evaluate_answer
-from app.services.mastery_service import update_mastery
-
-logger = logging.getLogger("querymind.attempts")
+from app.services.attempt_service import submit_attempt_core
 
 router = APIRouter()
-
-
-def _normalize_criteria_scores(scores: dict[str, int]) -> dict[str, float]:
-    """Rubric sub-scores are stored 0-10 but exposed 0-1 to match the client contract."""
-    return {name: round(value / 10.0, 4) for name, value in scores.items()}
 
 
 @router.post(
@@ -49,96 +37,32 @@ def submit_attempt(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AttemptFeedback:
-    """Submit a student answer for rubric-based evaluation.
-
-    1. Retrieves question by question_id.
-    2. Validates student answer (non-empty).
-    3. Evaluates answer against weighted 5-criterion rubric (LLM-as-judge).
-    4. Computes overall score in code.
-    5. Persists Attempt with criteria_scores stored as JSONB.
-    6. Calls adaptive engine's update_mastery_profile function.
-    7. Returns comprehensive feedback with score breakdowns and missing points.
-    """
+    """Evaluate, persist and fold into mastery via the shared attempt core."""
     question = db.query(Question).filter(Question.id == payload.question_id).first()
     if question is None:
         raise NotFoundError(f"Question with ID {payload.question_id} not found.")
 
-    answer_text = (payload.answer_text or payload.user_answer or "").strip()
-    if not answer_text:
-        raise ValidationError("Answer text must not be empty.")
-
-    # Determine user identity
-    user_id = current_user.id if current_user is not None else payload.user_id
-    if user_id is None:
-        # Fallback to a deterministic test UUID if neither token nor payload provides user_id
-        user_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
-
-    # Evaluate answer with LLM judge
-    evaluation = evaluate_answer(question=question, student_answer=answer_text)
-
-    # Persist attempt
-    attempt = Attempt(
-        user_id=user_id,
-        question_id=question.id,
-        user_answer=answer_text,
-        score=round(evaluation["overall_score"] / 100.0, 4),
-        feedback=evaluation["feedback"],
-        criteria_scores=evaluation["scores"],
-        evaluation_data=json.dumps(evaluation),
+    result = submit_attempt_core(
+        db=db,
+        user_id=current_user.id,
+        question=question,
+        answer_text=payload.answer_text or payload.user_answer or "",
+        submission_id=payload.submission_id,
         time_taken_seconds=payload.time_taken_seconds,
     )
-    db.add(attempt)
-    db.commit()
-    db.refresh(attempt)
-
-    # Call adaptive engine's mastery update function (knowledge_profiles store).
-    try:
-        update_mastery_profile(
-            user_id=user_id,
-            topic=question.topic,
-            bloom_level=question.bloom_level,
-            score=attempt.score,
-            db=db,
-        )
-    except Exception as exc:
-        logger.warning("Adaptive engine mastery update error: %s", exc)
-
-    # Fold this attempt into the EMA mastery store (mastery_records). The
-    # adaptive engine's recommend_next() — used by adaptive=true generation —
-    # reads this store, so without this write adaptive mode never adapts for
-    # frontend clients (which only call /attempts/submit). Mirrors the defensive
-    # pattern in questions.py submit-answer: the attempt is already committed, so
-    # a mastery failure must never surface to the caller.
-    try:
-        with db.begin_nested():
-            update_mastery(
-                user_id=user_id,
-                subject=question.subject,
-                topic=question.topic,
-                score=attempt.score,
-                bloom_level=question.bloom_level,
-                difficulty=question.difficulty,
-                db=db,
-            )
-        db.commit()
-    except Exception:  # defensive: the answer must survive a mastery failure
-        logger.exception(
-            "Mastery update failed for user=%s subject=%s topic=%s; "
-            "attempt=%s was still saved",
-            user_id, question.subject, question.topic, attempt.id,
-        )
-
     return AttemptFeedback(
-        attempt_id=attempt.id,
-        question_id=question.id,
-        score=attempt.score,
-        overall_score=evaluation["overall_score"],
-        criteria_scores=_normalize_criteria_scores(evaluation["scores"]),
-        feedback=evaluation["feedback"],
-        missing_points=evaluation.get("missing_points", []),
-        strengths=evaluation.get("strengths", []),
-        correct_answer=question.reference_answer,
+        attempt_id=result["attempt_id"],
+        question_id=result["question_id"],
+        score=result["score"],
+        overall_score=result["overall_score"],
+        criteria_scores=result["criteria_scores"],
+        feedback=result["feedback"],
+        missing_points=result["missing_points"],
+        strengths=result["strengths"],
+        correct_answer=result["reference_answer"],
         stub=False,
+        evaluation_mode=result["evaluation_mode"],
+        duplicate_submission=result.get("duplicate_submission", False),
     )
 
 
