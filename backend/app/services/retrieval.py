@@ -20,9 +20,14 @@ freshly uploaded document is immediately visible.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 import json
+
+# Chroma reads this at import time; keep it off even before Settings is built.
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "false")
+
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 from collections import OrderedDict
@@ -126,29 +131,82 @@ def retrieval_cache_size() -> int:
         return len(_retrieval_cache)
 
 
-def get_chroma_client() -> ClientAPI:
-    """Instantiate ChromaDB client connected to host:port from settings, with fallback to local persistent client."""
-    chroma_settings = chromadb.config.Settings(anonymized_telemetry=False)
+# ── Chroma health state ───────────────────────────────────────────────────────
+# Last observed remote/local result; /health reads it without paying for another
+# network round-trip. Updated loudly on every connection attempt.
+_chroma_state: dict[str, Any] = {
+    "status": "unknown",
+    "source": None,
+    "detail": "not checked yet",
+}
+_chroma_state_lock = threading.Lock()
+
+
+def _set_chroma_state(status: str, source: str | None, detail: str) -> None:
+    with _chroma_state_lock:
+        _chroma_state.update(status=status, source=source, detail=detail)
+
+
+def chroma_status() -> dict[str, Any]:
+    """Live status for /health: probe the configured Chroma target briefly."""
     try:
-        client = chromadb.HttpClient(
-            host=settings.chroma_host,
-            port=settings.chroma_port,
-            settings=chroma_settings,
-        )
+        client = get_chroma_client()
         client.heartbeat()
-        return client
+        with _chroma_state_lock:
+            return dict(_chroma_state)
     except Exception as exc:
-        logger.info(
-            "ChromaDB HTTP service not reachable (%s); using local persistent client at ./chroma_data",
-            exc,
-        )
-        import os
-        from pathlib import Path
-        # Look for chroma_data in current dir or repo root
-        root_chroma = Path(__file__).resolve().parent.parent.parent.parent / "chroma_data"
-        local_chroma = Path("chroma_data")
-        chroma_path = str(root_chroma if root_chroma.exists() else local_chroma)
-        return chromadb.PersistentClient(path=chroma_path)
+        with _chroma_state_lock:
+            return dict(_chroma_state)
+
+
+def get_chroma_client() -> ClientAPI:
+    """Connect to configured Chroma, retry briefly, then obey fallback policy.
+
+    A configured host is treated as the source of truth. Local persistence is
+    used only when CHROMA_ALLOW_LOCAL_FALLBACK=true; otherwise the failure is
+    raised so /health can report it and callers cannot silently use stale data.
+    """
+    chroma_settings = chromadb.config.Settings(
+        anonymized_telemetry=False,
+        chroma_product_telemetry_impl="app.services.chroma_telemetry.QuietPosthog",
+        chroma_telemetry_impl="",
+    )
+    last_exc: Exception | None = None
+    attempts = max(1, settings.chroma_retry_attempts)
+    for attempt in range(attempts):
+        try:
+            client = chromadb.HttpClient(
+                host=settings.chroma_host,
+                port=settings.chroma_port,
+                settings=chroma_settings,
+            )
+            client.heartbeat()
+            _set_chroma_state("healthy", "remote", f"connected to {settings.chroma_host}:{settings.chroma_port}")
+            return client
+        except Exception as exc:
+            last_exc = exc
+            if attempt + 1 < attempts:
+                logger.warning(
+                    "ChromaDB %s:%s unreachable (attempt %d/%d): %s — retrying",
+                    settings.chroma_host, settings.chroma_port, attempt + 1, attempts, exc,
+                )
+                time.sleep(settings.chroma_retry_backoff_seconds)
+
+    message = f"ChromaDB {settings.chroma_host}:{settings.chroma_port} unreachable: {last_exc}"
+    if not settings.chroma_allow_local_fallback:
+        logger.error("%s (local fallback disabled)", message)
+        _set_chroma_state("unavailable", "remote", message)
+        raise RuntimeError(message) from last_exc
+
+    logger.error("%s — FALLING BACK TO LOCAL PERSISTENT CHROMA", message)
+    from pathlib import Path
+
+    root_chroma = Path(__file__).resolve().parents[2] / "chroma_data"
+    local_chroma = Path("chroma_data")
+    chroma_path = str(root_chroma if root_chroma.exists() else local_chroma)
+    client = chromadb.PersistentClient(path=chroma_path, settings=chroma_settings)
+    _set_chroma_state("degraded", "local", f"{message}; using local path {chroma_path}")
+    return client
 
 
 # ── Shared default collection (process-wide memo) ─────────────────────────────
@@ -184,6 +242,13 @@ def reset_default_collection() -> None:
     global _default_collection
     with _default_collection_lock:
         _default_collection = None
+
+
+def _invalidate_if_default(collection: Collection) -> None:
+    """A stale handle must not poison every later retrieval: re-resolve it."""
+    if collection is _default_collection:
+        logger.warning("Default Chroma collection handle failed — invalidating memo")
+        reset_default_collection()
 
 
 def _query_collection(
@@ -224,6 +289,7 @@ def _query_collection(
             topic,
             exc,
         )
+        _invalidate_if_default(collection)
         return []
 
     documents = results.get("documents", [[]])[0] if results.get("documents") else []

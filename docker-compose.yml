@@ -63,7 +63,20 @@ services:
       # fall back to a local persistent store. Pin the in-network port here.
       CHROMA_HOST: chroma
       CHROMA_PORT: 8000
+      # Remote-first: no silent local Chroma. Set true only for a laptop demo
+      # without the chroma service. Telemetry stays off in every mode.
+      CHROMA_ALLOW_LOCAL_FALLBACK: ${CHROMA_ALLOW_LOCAL_FALLBACK:-false}
+      CHROMA_CONNECT_TIMEOUT_SECONDS: ${CHROMA_CONNECT_TIMEOUT_SECONDS:-2}
+      ANONYMIZED_TELEMETRY: "FALSE"
       DATABASE_URL: postgresql://${POSTGRES_USER:-querymind}:${POSTGRES_PASSWORD:-querymind_dev_password}@db:5432/${POSTGRES_DB:-querymind_db}
+      DB_CONNECT_TIMEOUT_SECONDS: ${DB_CONNECT_TIMEOUT_SECONDS:-5}
+      DB_STATEMENT_TIMEOUT_SECONDS: ${DB_STATEMENT_TIMEOUT_SECONDS:-5}
+      HEALTH_DB_TIMEOUT_SECONDS: ${HEALTH_DB_TIMEOUT_SECONDS:-5}
+      SQL_ECHO: ${SQL_ECHO:-false}
+      # Demo-day switch: skip all LLM calls and use the deterministic evaluator.
+      OFFLINE_DEMO_MODE: ${OFFLINE_DEMO_MODE:-false}
+      GENERATION_DEADLINE_SECONDS: ${GENERATION_DEADLINE_SECONDS:-35}
+      GENERATION_CALL_TIMEOUT_SECONDS: ${GENERATION_CALL_TIMEOUT_SECONDS:-15}
     depends_on:
       db:
         condition: service_healthy
