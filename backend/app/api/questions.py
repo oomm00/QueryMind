@@ -23,6 +23,7 @@ from app.core.exceptions import (
     LLMNotConfiguredError,
     NotFoundError,
     ValidationError,
+    QueryMindError,
 )
 from app.core.timing import stage
 from app.db.session import get_db
@@ -170,11 +171,12 @@ def generate_questions(
             bloom_level=bloom_level,
             difficulty=difficulty,
             public_only=not payload.uploaded_only,
+            college_only=payload.uploaded_only,
         )
         # The frontend derives `subject` from the free-text topic (subject == topic),
         # so an exact (subject, topic) filter can miss material filed under a
         # different subject. Fall back to a topic-only search before giving up.
-        if not context_chunks and not (payload.uploaded_only and not payload.topic):
+        if not context_chunks and not payload.uploaded_only:
             logger.info(
                 "No exact (subject, topic) material for %s / %s; retrying topic-only",
                 generation_subject, generation_topic,
@@ -185,6 +187,13 @@ def generate_questions(
                 bloom_level=bloom_level,
                 difficulty=difficulty,
                 public_only=True,
+            )
+        if payload.uploaded_only and not context_chunks:
+            raise QueryMindError(
+                "No uploaded material was found for this request. Upload readable notes "
+                "and try again.",
+                status_code=422,
+                code="NO_CONTEXT",
             )
     chunk_texts = [chunk["text"] for chunk in context_chunks]
 
