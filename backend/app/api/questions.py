@@ -36,7 +36,12 @@ from app.schemas.schemas import (
     SubmitAnswerRequest,
 )
 from app.services.attempt_service import submit_attempt_core
-from app.services.generation_fallback import generate_one, persist_generated_question
+from app.services.generation_fallback import (
+    generate_one,
+    mark_served,
+    persist_generated_question,
+    served_question_ids,
+)
 from app.services.generation_service import _configure_genai
 from app.services.mastery_service import adaptive_recommendation
 from app.services.retrieval import retrieve_context
@@ -110,6 +115,7 @@ def generate_questions(
 
     results: list[GeneratedQuestion] = []
     excluded_texts: set[str] = set()
+    served = served_question_ids(current_user.id, generation_topic)
     for _ in range(payload.num_questions):
         with stage("generate"):
             generated = generate_one(
@@ -122,20 +128,24 @@ def generate_questions(
                 context_chunks=context_chunks,
                 alignment_client=alignment_client,
                 excluded_texts=excluded_texts,
+                served_ids=served,
                 deadline=deadline,
                 adaptive_reason=adaptive_reason,
             )
         if payload.adaptive:
             generated.adaptive = True
             generated.adaptive_reason = generated.adaptive_reason or adaptive_reason
-        persisted = persist_generated_question(
-            db=db,
-            generated=generated,
-            subject=generation_subject,
-            topic=generation_topic,
-            question_type=payload.question_type,
-        )
-        generated.question_id = persisted.id
+        if generated.question_id is None:
+            persisted = persist_generated_question(
+                db=db,
+                generated=generated,
+                subject=generation_subject,
+                topic=generation_topic,
+                question_type=payload.question_type,
+            )
+            generated.question_id = persisted.id
+        mark_served(current_user.id, generation_topic, generated.question_id)
+        served.add(generated.question_id)
         results.append(generated)
         excluded_texts.add(generated.question)
 
