@@ -1,29 +1,10 @@
 /**
- * generateRun — asking for N questions when the backend hands back one.
+ * generateRun — one request for the whole run.
  *
- * POST /questions/generate returns a single question and ignores a count, so a
- * request for ten is ten calls. They are made at most two at a time: enough to
- * keep the model busy, few enough that a rate limit is not provoked.
- *
- * Each call is asked for the next Bloom level in turn, round-robin over the
- * chips the student kept, so a run is mixed rather than one level on end.
- *
- * Three failures are worth another go rather than a shrug:
- *
- *   DUPLICATE_QUESTION         ask again at a different Bloom, twice, then skip
- *   BLOOM_ALIGNMENT_MISMATCH   ask the same level once more, then skip
- *   RATE_LIMIT_EXCEEDED        wait out Retry-After, then resume
- *
- * NO_CONTEXT is different in kind: it means the material does not cover the
- * topic, so the whole run stops and the page offers the closest topic it does
- * know. Everything else stops the run with a sentence from
- * api/errorMessages.js - never a code.
- *
- * Losing a call is not losing the run: whatever arrived is kept, and the page
- * offers to start with fewer questions rather than throwing the work away.
- *
- * No React, no storage and no fetch of its own: the call is injected, so the
- * whole rule can be exercised with a fake one.
+ * The backend now honours `num_questions` and owns the retry/deadline/fallback
+ * chain. The browser makes exactly ONE POST /questions/generate call per run and
+ * maps the returned `questions[]` into session shape. Duplicate and Bloom
+ * retries happen server-side; the UI never fans out into ten calls again.
  */
 
 import { customConceptId, MAX_IN_FLIGHT } from './generateForm.js'
@@ -171,8 +152,9 @@ export function generatedToSessionQuestion(raw, meta = {}) {
 }
 
 /**
- * Ask for `count` questions, at most two calls in flight, reporting as they
- * arrive.
+ * Ask the backend ONCE for the whole run. The server owns generation retries,
+ * duplicate handling, Bloom gating, the deadline and the cache/bank fallback.
+ * The browser only maps the returned questions into session shape.
  *
  * @param {object} request
  * @param {(payload: object, options: {signal?: AbortSignal}) => Promise<{questions: Array}>} request.generate
@@ -202,120 +184,65 @@ export async function runGeneration({
   const wanted = Math.max(0, Number(count) || 0)
   const levels = blooms.length > 0 ? [...blooms] : ['understand']
   const conceptId = customConceptId(topic) ?? 'custom:topic'
-
   const questions = []
-  let skipped = 0
-  let noContext = false
-  let error = null
-  let cancelled = false
-  let started = 0
-  let nextBloom = 0
+  const report = () => onProgress?.({ ready: questions.length, target: wanted, skipped: 0 })
 
-  const stopped = () => cancelled || noContext || Boolean(error) || Boolean(signal?.aborted)
-  const report = () => onProgress?.({ ready: questions.length, target: wanted, skipped })
-
-  const takeBloom = () => {
-    const level = levels[nextBloom % levels.length]
-    nextBloom += 1
-    return level
+  if (wanted === 0) {
+    report()
+    return { questions, skipped: 0, noContext: false, error: null, cancelled: false }
   }
 
-  const keep = (raw, bloom, index) => {
-    questions.push(
-      generatedToSessionQuestion(raw, {
-        topic,
-        conceptId,
-        fallbackId: `generated:${conceptId}:${index}`,
-        bloom,
-        difficulty,
-      })
-    )
-  }
-
-  const ask = async (bloom) => {
+  try {
     const result = await generate(
       {
         topic,
         subject,
-        bloom_level: bloom,
+        bloom_level: levels[0],
         difficulty,
-        count: 1,
+        count: wanted,
+        num_questions: wanted,
         adaptive,
         uploaded_only,
       },
       { signal }
     )
-    return result?.questions?.[0] ?? null
-  }
-
-  const oneSlot = async () => {
-    while (!stopped() && started < wanted) {
-      const index = started
-      started += 1
-      let bloom = takeBloom()
-      let duplicates = 0
-      let mismatches = 0
-      let rateLimits = 0
-
-      for (;;) {
-        if (stopped()) return
-
-        try {
-          const raw = await ask(bloom)
-          if (stopped()) return
-          if (raw) keep(raw, bloom, index)
-          else skipped += 1
-          report()
-          break
-        } catch (failure) {
-          if (signal?.aborted) {
-            cancelled = true
-            return
-          }
-
-          const code = generationErrorCode(failure)
-
-          if (code === NO_CONTEXT) {
-            noContext = true
-            return
-          }
-
-          if (code === DUPLICATE_QUESTION && duplicates < DUPLICATE_ATTEMPTS) {
-            duplicates += 1
-            bloom = takeBloom()
-            continue
-          }
-
-          if (code === BLOOM_ALIGNMENT_MISMATCH && mismatches < 1) {
-            mismatches += 1
-            continue
-          }
-
-          if (code === RATE_LIMIT_EXCEEDED && rateLimits < RATE_LIMIT_ATTEMPTS) {
-            rateLimits += 1
-            await sleep(retryAfterMs(failure), signal)
-            if (stopped()) return
-            continue
-          }
-
-          if (code === DUPLICATE_QUESTION || code === BLOOM_ALIGNMENT_MISMATCH) {
-            skipped += 1
-            report()
-            break
-          }
-
-          error = failure
-          return
-        }
-      }
+    const rawQuestions = Array.isArray(result?.questions)
+      ? result.questions
+      : result?.question
+        ? [result]
+        : []
+    rawQuestions.slice(0, wanted).forEach((raw, index) => {
+      questions.push(
+        generatedToSessionQuestion(raw, {
+          topic,
+          conceptId,
+          fallbackId: `generated:${conceptId}:${index}`,
+          bloom: raw?.bloom_level ?? levels[index % levels.length],
+          difficulty: raw?.difficulty ?? difficulty,
+        })
+      )
+    })
+    report()
+    return {
+      questions,
+      skipped: Math.max(0, wanted - questions.length),
+      noContext: false,
+      error: null,
+      cancelled: false,
+    }
+  } catch (failure) {
+    if (signal?.aborted) {
+      report()
+      return { questions, skipped: wanted, noContext: false, error: null, cancelled: true }
+    }
+    const code = generationErrorCode(failure)
+    report()
+    return {
+      questions,
+      skipped: wanted,
+      noContext: code === NO_CONTEXT,
+      error: code === NO_CONTEXT ? null : failure,
+      cancelled: false,
     }
   }
-
-  if (wanted > 0) {
-    const slots = Math.min(MAX_IN_FLIGHT, wanted)
-    await Promise.all(Array.from({ length: slots }, () => oneSlot()))
-  }
-
-  report()
-  return { questions, skipped, noContext, error, cancelled: cancelled || Boolean(signal?.aborted) }
 }

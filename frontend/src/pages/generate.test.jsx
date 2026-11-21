@@ -126,24 +126,24 @@ async function nextCall() {
   return pending.shift()
 }
 
-function questionPayload(bloom, index) {
+/** The backend now returns the whole run in ONE response. */
+function questionBatch(count, bloom = 'apply') {
   return {
-    questions: [
-      {
-        question_id: `gen-${index}`,
-        question_text: `A generated ${bloom} question, number ${index}.`,
-        bloom_level: bloom,
-        difficulty: 'medium',
-      },
-    ],
+    questions: Array.from({ length: count }, (_, index) => ({
+      question_id: `gen-${index + 1}`,
+      question_text: `A generated ${bloom} question, number ${index + 1}.`,
+      bloom_level: bloom,
+      difficulty: 'medium',
+      source: 'live',
+    })),
   }
 }
 
-/** Answer the next call with one generated question. */
-async function answerWithQuestion() {
+/** Answer the single generation call with a complete batch. */
+async function answerWithBatch(count = 6, bloom = 'apply') {
   const call = await nextCall()
   answered += 1
-  call.resolve(200, questionPayload(call.body.bloom_level, answered))
+  call.resolve(200, questionBatch(count, bloom))
   return call
 }
 
@@ -246,76 +246,64 @@ describe('the form', () => {
 })
 
 describe('a run', () => {
-  it('asks one question at a time, reports progress, and offers what arrived', async () => {
+  it('makes ONE call for the whole run, reports the ready count and offers the batch', async () => {
     const user = userEvent.setup()
     const topic = await openAnyTopic(user)
 
     await user.type(topic, 'Deadlocks')
     await user.click(screen.getByRole('button', { name: 'Generate questions' }))
 
-    const first = await nextCall()
-    // One question per call, filed under the subject of the document it matched.
-    expect(first.body).toMatchObject({ topic: 'Deadlocks', subject: 'OS', num_questions: 1 })
-    expect(['apply', 'analyze']).toContain(first.body.bloom_level)
-    first.resolve(200, questionPayload(first.body.bloom_level, 1))
-
-    await answerWithQuestion()
-    await answerWithQuestion()
-
-    // Two slots, so a third is already in flight and the run is visibly done
-    // with half of it.
-    expect(await screen.findByText('3 of 6 ready')).toBeTruthy()
+    const call = await nextCall()
+    // One request for six questions, filed under the subject of the document it matched.
+    expect(call.body).toMatchObject({
+      topic: 'Deadlocks',
+      subject: 'OS',
+      num_questions: 6,
+      adaptive: true,
+    })
+    expect(await screen.findByText('0 of 6 ready')).toBeTruthy()
     expect(screen.getByText(/Analyze questions can take up to 30 seconds/)).toBeTruthy()
 
-    await answerWithQuestion()
-    await answerWithQuestion()
-    await answerWithQuestion()
+    call.resolve(200, questionBatch(6))
 
     expect(await screen.findByText('6 questions ready')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Start practice' })).toBeTruthy()
-    // Every question carries its Bloom chip and its source.
     expect(screen.getAllByText('Generated')).toHaveLength(6)
+    expect(pending).toHaveLength(0)
   })
 
-  it('stops the calls still out when Cancel is pressed, and keeps what arrived', async () => {
+  it('cancels the single request cleanly without inventing questions', async () => {
     const user = userEvent.setup()
     const topic = await openAnyTopic(user)
 
     await user.type(topic, 'Deadlocks')
     await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-    await answerWithQuestion()
-
-    expect(await screen.findByText('1 of 6 ready')).toBeTruthy()
+    const call = await nextCall()
+    expect(await screen.findByText('0 of 6 ready')).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(await screen.findByText('1 question ready')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Start with 1 question' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Generate questions' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Start with/ })).toBeNull()
+    expect(call.body.num_questions).toBe(6)
   })
 
-  it('asks a duplicate again at another level rather than losing the run', async () => {
+  it('lets the backend own duplicate retries: one call still fills the run', async () => {
     const user = userEvent.setup()
     const topic = await openAnyTopic(user)
 
     await user.type(topic, 'Deadlocks')
     await user.click(screen.getByRole('button', { name: 'Generate questions' }))
 
-    const duplicate = await answerWithCode('DUPLICATE_QUESTION', 409)
-    const retry = await nextCall()
-
-    expect(retry.body.bloom_level).not.toBe(duplicate.body.bloom_level)
-    retry.resolve(200, questionPayload(retry.body.bloom_level, 1))
-
-    await answerWithQuestion()
-    await answerWithQuestion()
-    await answerWithQuestion()
-    await answerWithQuestion()
-    await answerWithQuestion()
-
+    const call = await nextCall()
+    // The server retries DUPLICATE_QUESTION with a different angle; the browser
+    // does not fan out again, and a full batch still arrives.
+    call.resolve(200, questionBatch(6, 'analyze'))
     expect(await screen.findByText('6 questions ready')).toBeTruthy()
+    expect(pending).toHaveLength(0)
   })
 
-  it('offers the topic the student does have when nothing matches', async () => {
+  it('offers the topic the student does have when the backend reports NO_CONTEXT', async () => {
     const user = userEvent.setup()
     const topic = await openAnyTopic(user)
 
@@ -323,8 +311,6 @@ describe('a run', () => {
     await user.click(screen.getByRole('button', { name: 'Generate questions' }))
 
     await answerWithCode('NO_CONTEXT', 404)
-    // The other slot was already out; it finishes into a run that has stopped.
-    await answerWithQuestion()
 
     expect(await screen.findByText(/No material found for .Deadlock./)).toBeTruthy()
 
@@ -359,10 +345,9 @@ describe('the questions it produced', () => {
 
     await user.type(topic, 'Deadlocks')
     await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-    await answerWithQuestion()
+    await answerWithBatch(1)
 
-    await screen.findByText('1 of 6 ready')
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(await screen.findByText('1 question ready')).toBeTruthy()
     await user.click(await screen.findByRole('button', { name: 'Start with 1 question' }))
 
     // The same session screen the question bank uses.
