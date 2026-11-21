@@ -10,8 +10,8 @@ Unit (no network):
  3. Hard questions move mastery more than easy ones; the weighted score and the
     resulting mastery are clamped to 0..1.
  4. The per-Bloom breakdown tracks each level with the same EMA.
- 5. ``recommend_next`` picks the right level at every band / boundary.
- 6. The "struggling" rule steps the recommendation down one level.
+ 5. ``recommend_next`` moves at most one rung per real attempt.
+ 6. A failed rung demotes once; two good scores are needed to promote again.
 
 Endpoint (real in-memory DB unless noted):
  7. GET /mastery/me -> 401 when unauthenticated.
@@ -206,7 +206,7 @@ def test_bloom_breakdown_tracks_each_level(db, user):
     assert breakdown["analyze"] == pytest.approx(1.0)
 
 
-# ── Stage 11: recommend_next ──────────────────────────────────────────────────
+# ── Stage 11: recommend_next (pure rung decision over real attempts) ─────────
 
 def test_recommend_no_history_is_recall_easy(db, user):
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
@@ -215,64 +215,54 @@ def test_recommend_no_history_is_recall_easy(db, user):
     }
 
 
-@pytest.mark.parametrize(
-    "mastery, expected",
-    [
-        (0.10, {"bloom_level": "remember", "difficulty": "easy"}),
-        (0.39, {"bloom_level": "remember", "difficulty": "easy"}),
-        (0.40, {"bloom_level": "apply", "difficulty": "medium"}),   # low boundary
-        (0.55, {"bloom_level": "apply", "difficulty": "medium"}),
-        (0.70, {"bloom_level": "apply", "difficulty": "medium"}),   # high boundary
-        (0.71, {"bloom_level": "analyze", "difficulty": "hard"}),
-        (0.95, {"bloom_level": "analyze", "difficulty": "hard"}),
-    ],
-)
-def test_recommend_by_mastery_band(db, user, mastery, expected):
+@pytest.mark.parametrize("mastery", [0.10, 0.39, 0.40, 0.55, 0.70, 0.71, 0.95])
+def test_ema_mastery_alone_does_not_drive_recommendation(db, user, mastery):
+    """The EMA number is display-only; without attempts the first rung is used."""
     _seed_mastery(db, user, "DBMS", "Transactions", mastery)
-    assert recommend_next(user.id, "DBMS", "Transactions", db) == expected
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "remember",
+        "difficulty": "easy",
+    }
 
 
-def test_struggle_steps_down_one_level_from_mid(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.5)  # base: apply/medium
+def test_one_good_attempt_promotes_exactly_one_rung(db, user):
     now = datetime.now(timezone.utc)
-    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=2))
-    _add_attempt(db, user, "DBMS", "Transactions", 0.2, now - timedelta(minutes=1))
-
+    _add_attempt(db, user, "DBMS", "Transactions", 0.9, now)
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
         "bloom_level": "understand",
         "difficulty": "easy",
     }
 
 
-def test_struggle_steps_down_one_level_from_high(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.9)  # base: analyze/hard
+def test_two_bad_attempts_at_the_floor_stay_at_the_floor(db, user):
     now = datetime.now(timezone.utc)
-    _add_attempt(db, user, "DBMS", "Transactions", 0.0, now - timedelta(minutes=2))
-    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=1))
-
+    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=2))
+    _add_attempt(db, user, "DBMS", "Transactions", 0.2, now - timedelta(minutes=1))
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
-        "bloom_level": "apply",
-        "difficulty": "medium",
+        "bloom_level": "remember",
+        "difficulty": "easy",
     }
 
 
-def test_no_step_down_with_only_one_bad_attempt(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.5)
-    _add_attempt(
-        db, user, "DBMS", "Transactions", 0.1,
-        datetime.now(timezone.utc) - timedelta(minutes=1),
-    )
-    assert recommend_next(user.id, "DBMS", "Transactions", db)["bloom_level"] == "apply"
-
-
-def test_no_step_down_when_recent_attempts_are_mixed(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.5)
+def test_failing_the_current_rung_demotes_one_rung(db, user):
     now = datetime.now(timezone.utc)
-    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=2))
-    _add_attempt(db, user, "DBMS", "Transactions", 0.8, now - timedelta(minutes=1))
+    for offset, score in enumerate((0.9, 0.9, 0.1)):
+        _add_attempt(db, user, "DBMS", "Transactions", score,
+                     now - timedelta(minutes=3 - offset))
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
-        "bloom_level": "apply",
-        "difficulty": "medium",
+        "bloom_level": "understand",
+        "difficulty": "easy",
+    }
+
+
+def test_hysteresis_blocks_immediate_re_promotion(db, user):
+    now = datetime.now(timezone.utc)
+    for offset, score in enumerate((0.9, 0.9, 0.1, 0.9)):
+        _add_attempt(db, user, "DBMS", "Transactions", score,
+                     now - timedelta(minutes=4 - offset))
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "understand",
+        "difficulty": "easy",
     }
 
 
@@ -470,13 +460,12 @@ def _generate_client(monkeypatch):
 def test_generate_adaptive_true_uses_recommendation(monkeypatch):
     client, fake_db, user = _generate_client(monkeypatch)
     mock_gen = _patch_generation(monkeypatch)
-    mock_rec = MagicMock(return_value={"bloom_level": "analyze", "difficulty": "hard"})
-    monkeypatch.setattr(questions_module, "recommend_next", mock_rec)
-    monkeypatch.setattr(
-        questions_module,
-        "explain_recommendation",
-        MagicMock(return_value="Mastery 0.90 is above 0.7 — moving to analyze/hard."),
-    )
+    mock_rec = MagicMock(return_value={
+        "bloom_level": "analyze",
+        "difficulty": "hard",
+        "reason": "Scored 90% on Evaluate/Hard -> moving up.",
+    })
+    monkeypatch.setattr(questions_module, "adaptive_recommendation", mock_rec)
 
     resp = client.post(
         "/questions/generate",
@@ -491,7 +480,7 @@ def test_generate_adaptive_true_uses_recommendation(monkeypatch):
 
     body = resp.json()
     assert body["adaptive"] is True
-    assert "analyze" in body["adaptive_reason"]
+    assert "moving up" in body["adaptive_reason"]
     assert body["bloom_level"] == "analyze"
     assert body["difficulty"] == "hard"
 
@@ -500,7 +489,7 @@ def test_generate_without_adaptive_is_unchanged(monkeypatch):
     client, _, _ = _generate_client(monkeypatch)
     mock_gen = _patch_generation(monkeypatch)
     mock_rec = MagicMock()
-    monkeypatch.setattr(questions_module, "recommend_next", mock_rec)
+    monkeypatch.setattr(questions_module, "adaptive_recommendation", mock_rec)
 
     resp = client.post("/questions/generate", json=_GEN_PAYLOAD)
 

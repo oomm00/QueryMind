@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import uuid
 from datetime import datetime, timezone
 
@@ -203,12 +204,130 @@ def record_to_dict(record: MasteryRecord) -> dict:
     }
 
 
-# ── Stage 11: adaptive next-question selection ────────────────────────────────
+# ── Stage 11: deterministic next-rung decision ────────────────────────────────
+# One ordered ladder (bloom + difficulty). One answer moves AT MOST one rung.
+RUNG_LADDER: tuple[tuple[str, str], ...] = (
+    ("remember", "easy"),
+    ("understand", "easy"),
+    ("apply", "medium"),
+    ("analyze", "medium"),
+    ("evaluate", "hard"),
+    ("create", "hard"),
+)
+PROMOTE_SCORE = 0.75
+DEMOTE_SCORE = 0.40
+ADAPTIVE_HISTORY_LIMIT = 24
+_FIRST_RUNG_REASON = "No prior attempts for this topic — starting at Remember/Easy."
 
-def _is_struggling(
+
+def clamp_rung(rung: object) -> int:
+    """Coerce any rung input into the ladder's valid index range."""
+    try:
+        value = int(rung)  # type: ignore[arg-type]
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return max(0, min(len(RUNG_LADDER) - 1, value))
+
+
+def rung_from_labels(bloom_level: str | None, difficulty: str | None) -> int:
+    """Map stored labels to a rung; unknown labels fall back to the easiest rung."""
+    bloom = (bloom_level or "").strip().lower()
+    diff = (difficulty or "").strip().lower()
+    for index, (known_bloom, known_diff) in enumerate(RUNG_LADDER):
+        if bloom == known_bloom and diff == known_diff:
+            return index
+    for index, (known_bloom, _) in enumerate(RUNG_LADDER):
+        if bloom == known_bloom:
+            return index
+    for index, (_, known_diff) in enumerate(RUNG_LADDER):
+        if diff == known_diff:
+            return index
+    return 0
+
+
+def labels_from_rung(rung: object) -> tuple[str, str]:
+    """Return the (bloom_level, difficulty) labels for a rung index."""
+    return RUNG_LADDER[clamp_rung(rung)]
+
+
+def _clean_scores(scores: object) -> list[float]:
+    """Drop None/NaN/infinite/out-of-range scores; never raise."""
+    cleaned: list[float] = []
+    for raw in scores or ():  # type: ignore[union-attr]
+        try:
+            value = float(raw)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if not math.isfinite(value) or value < 0.0 or value > 1.0:
+            continue
+        cleaned.append(value)
+    return cleaned
+
+
+def _format_rung(rung: int) -> str:
+    bloom, difficulty = labels_from_rung(rung)
+    return f"{bloom.capitalize()}/{difficulty.capitalize()}"
+
+
+def next_rung(
+    current_rung: object,
+    recent_scores: object,
+    *,
+    demotion_pending: bool = False,
+) -> tuple[int, str]:
+    """Pure decision: return ``(new_rung, human_readable_reason)``.
+
+    No database, network, LLM, clock or random calls. ``recent_scores`` are the
+    learner's real scores at the current rung, oldest first, with the newest
+    last. After a demotion, two consecutive scores >= 0.75 are required to
+    promote again.
+    """
+    current = clamp_rung(current_rung)
+    scores = _clean_scores(recent_scores)
+    here = _format_rung(current)
+
+    if not scores:
+        return current, f"No valid recent scores — staying at {here}."
+
+    latest = scores[-1]
+    pct = f"{latest:.0%}"
+
+    if latest < DEMOTE_SCORE:
+        target = clamp_rung(current - 1)
+        if target == current:
+            return current, f"Scored {pct} on {here} — already at the lowest rung, staying."
+        return target, f"Scored {pct} on {here} -> moving down to {_format_rung(target)}."
+
+    if latest >= PROMOTE_SCORE:
+        if demotion_pending:
+            streak = 0
+            for value in reversed(scores):
+                if value >= PROMOTE_SCORE:
+                    streak += 1
+                else:
+                    break
+            if streak < 2:
+                return current, (
+                    f"Scored {pct} on {here} — {streak}/2 consecutive scores at or "
+                    "above 75% before moving up."
+                )
+        target = clamp_rung(current + 1)
+        if target == current:
+            return current, f"Scored {pct} on {here} — already at the highest rung, staying."
+        return target, f"Scored {pct} on {here} -> moving up to {_format_rung(target)}."
+
+    return current, f"Scored {pct} on {here} — between 40% and 75%, staying."
+
+
+def _adaptive_state(
     user_id: uuid.UUID, subject: str, topic: str, db: Session
-) -> bool:
-    """True when the last ``STRUGGLE_LOOKBACK`` attempts were all below threshold."""
+) -> tuple[int, bool, list[float], str]:
+    """Replay the learner's real attempts to derive the current rung.
+
+    The EMA in ``mastery_records`` stays for display only; this replay uses the
+    actual attempt scores so one good or bad answer changes the next question
+    immediately (with one-rung and hysteresis guards).
+    """
     rows = (
         db.query(Attempt.score)
         .join(Question, Attempt.question_id == Question.id)
@@ -217,89 +336,53 @@ def _is_struggling(
             Question.subject == subject,
             Question.topic == topic,
         )
-        .order_by(Attempt.created_at.desc(), Attempt.id.desc())
-        .limit(STRUGGLE_LOOKBACK)
+        .order_by(Attempt.created_at.asc(), Attempt.id.asc())
+        .limit(ADAPTIVE_HISTORY_LIMIT)
         .all()
     )
-    scores = [score for (score,) in rows]
-    return len(scores) == STRUGGLE_LOOKBACK and all(
-        score is not None and score < STRUGGLE_SCORE_THRESHOLD for score in scores
-    )
+    if not rows:
+        return 0, False, [], _FIRST_RUNG_REASON
+
+    rung = 0
+    demotion_pending = False
+    history: list[float] = []
+    reason = _FIRST_RUNG_REASON
+    for (score,) in rows:
+        history.append(score)
+        target, reason = next_rung(rung, history, demotion_pending=demotion_pending)
+        if target != rung:
+            demotion_pending = target < rung
+            rung = target
+            history = []  # scores at the new rung start fresh
+    return rung, demotion_pending, history, reason
 
 
-def _step_down(bloom_level: str, difficulty: str) -> tuple[str, str]:
-    """Move one rung down the Bloom and difficulty ladders (clamped at the floor)."""
-    bloom_index = BLOOM_ORDER.index(bloom_level) if bloom_level in BLOOM_ORDER else 0
-    diff_index = (
-        DIFFICULTY_ORDER.index(difficulty) if difficulty in DIFFICULTY_ORDER else 0
-    )
-    return (
-        BLOOM_ORDER[max(0, bloom_index - 1)],
-        DIFFICULTY_ORDER[max(0, diff_index - 1)],
-    )
-
-
-def _recommend(
+def adaptive_recommendation(
     user_id: uuid.UUID, subject: str, topic: str, db: Session
-) -> tuple[str, str, str]:
-    """Core recommendation: returns (bloom_level, difficulty, reason)."""
-    record = _lookup(db, user_id, subject, topic)
-    has_history = record is not None and (record.attempts_count or 0) > 0
-    mastery = (record.mastery_score or MASTERY_MIN) if has_history else MASTERY_MIN
-
-    if not has_history:
-        bloom_level, difficulty = RECOMMEND_NO_HISTORY
-        reason = (
-            "No prior attempts for this topic — starting at recall level "
-            f"({bloom_level}/{difficulty})."
-        )
-    elif mastery < MASTERY_LOW_THRESHOLD:
-        bloom_level, difficulty = RECOMMEND_LOW
-        reason = (
-            f"Mastery {mastery:.2f} is below {MASTERY_LOW_THRESHOLD} — staying at "
-            f"recall level ({bloom_level}/{difficulty})."
-        )
-    elif mastery <= MASTERY_HIGH_THRESHOLD:
-        bloom_level, difficulty = RECOMMEND_MID
-        reason = (
-            f"Mastery {mastery:.2f} is in the {MASTERY_LOW_THRESHOLD}–"
-            f"{MASTERY_HIGH_THRESHOLD} band — moving to application "
-            f"({bloom_level}/{difficulty})."
-        )
-    else:
-        bloom_level, difficulty = RECOMMEND_HIGH
-        reason = (
-            f"Mastery {mastery:.2f} is above {MASTERY_HIGH_THRESHOLD} — moving to "
-            f"higher-order thinking ({bloom_level}/{difficulty})."
-        )
-
-    if has_history and _is_struggling(user_id, subject, topic, db):
-        bloom_level, difficulty = _step_down(bloom_level, difficulty)
-        reason += (
-            f" Stepped down one level: the last {STRUGGLE_LOOKBACK} attempts were "
-            f"all below {STRUGGLE_SCORE_THRESHOLD}."
-        )
-
-    return bloom_level, difficulty, reason
+) -> dict:
+    """One call returning the next level plus the reason the UI can display."""
+    rung, pending, history, reason = _adaptive_state(user_id, subject, topic, db)
+    bloom, difficulty = labels_from_rung(rung)
+    return {
+        "bloom_level": bloom,
+        "difficulty": difficulty,
+        "reason": reason,
+        "rung": rung,
+        "demotion_pending": pending,
+        "recent_scores": history,
+    }
 
 
 def recommend_next(
     user_id: uuid.UUID, subject: str, topic: str, db: Session
 ) -> dict:
-    """Pick the next ``bloom_level`` and ``difficulty`` for this learner.
-
-    Rules:
-      * no history / mastery < 0.4  -> remember (recall), easy
-      * 0.4 <= mastery <= 0.7       -> apply, medium
-      * mastery > 0.7               -> analyze, hard
-      * step down one level when the last 2 attempts were both below 0.3.
-    """
-    bloom_level, difficulty, _ = _recommend(user_id, subject, topic, db)
-    return {"bloom_level": bloom_level, "difficulty": difficulty}
+    """Pick the next ``bloom_level``/``difficulty`` from actual recent attempts."""
+    rec = adaptive_recommendation(user_id, subject, topic, db)
+    return {"bloom_level": rec["bloom_level"], "difficulty": rec["difficulty"]}
 
 
 def explain_recommendation(
     user_id: uuid.UUID, subject: str, topic: str, db: Session
 ) -> str:
     """Human-readable justification for :func:`recommend_next`'s choice."""
-    return _recommend(user_id, subject, topic, db)[2]
+    return adaptive_recommendation(user_id, subject, topic, db)["reason"]
