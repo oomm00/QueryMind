@@ -5,7 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    // Demo port is pinned: the backend CORS list and start-demo.ps1 key off it.
+    port: 5174,
+    strictPort: true,
     // Proxy API calls to backend in dev — avoids CORS issues
     proxy: {
       '/api': {
