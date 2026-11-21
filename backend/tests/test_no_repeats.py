@@ -90,3 +90,22 @@ def test_adjacent_rung_is_borrowed_before_repeating():
             served_ids=all_served,
         )
         assert exhausted  # allowed only after the whole topic pool is exhausted
+
+
+def test_excluding_every_bank_text_still_returns_a_question():
+    """A full batch must repeat rather than crash with an empty candidate list."""
+    with SessionLocal() as db:
+        seed_bank(db)
+        topic_rows = (
+            db.query(Question)
+            .filter(Question.source == "bank", Question.topic == "Deadlocks")
+            .all()
+        )
+        candidates = _bank_candidates(
+            db,
+            topic="Deadlocks",
+            bloom_level="remember",
+            excluded_texts={row.question_text for row in topic_rows},
+            served_ids=set(),
+        )
+        assert candidates
