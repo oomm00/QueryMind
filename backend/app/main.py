@@ -14,6 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.exc import OperationalError
 
 from app.api import auth, questions, attempts, profile, documents, mastery
 from app.core.config import settings
@@ -99,6 +100,25 @@ def create_app() -> FastAPI:
             content={
                 "detail": exc.detail,
                 "code": f"HTTP_{exc.status_code}",
+                "request_id": request_id,
+            },
+            headers={"X-Request-ID": request_id} if request_id else None,
+        )
+
+    @app.exception_handler(OperationalError)
+    async def database_unavailable_handler(request: Request, exc: OperationalError) -> JSONResponse:
+        # A stopped/unreachable database is a temporary dependency failure, not a
+        # bug in this request. Clients get a stable code they can retry on.
+        request_id = getattr(request.state, "request_id", None)
+        logger.warning(
+            "Database unavailable on %s %s (request_id=%s): %s",
+            request.method, request.url.path, request_id, exc,
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "The database is temporarily unavailable. Try again shortly.",
+                "code": "DB_UNAVAILABLE",
                 "request_id": request_id,
             },
             headers={"X-Request-ID": request_id} if request_id else None,
