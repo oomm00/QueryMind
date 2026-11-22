@@ -1,0 +1,2450 @@
+[
+  {
+    "question": "State what mutual exclusion is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "mutual exclusion",
+    "reference": "mutual exclusion: only one process may hold a resource at a time.",
+    "paraphrased_correct": [
+      "Just one process can own a given resource at any moment.",
+      "A resource is exclusive: only a single process may be using it at once.",
+      "At any instant, one process at most has the resource; tehre is no sharing."
+    ],
+    "plausible_wrong": [
+      "Deadlocks are avoided by letting every process use the resource at the same time.",
+      "Mutual exclusion means all processes release their resources before requesting new ones.",
+      "In a deadlock, the scheduler always grants the resource to the longest waiting process."
+    ]
+  },
+  {
+    "question": "State what hold and wait is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "hold and wait",
+    "reference": "hold and wait: a process holds resources while requesting more.",
+    "paraphrased_correct": [
+      "A process keeps what it already has while it asks for additional resources.",
+      "The process does not release held resources before making more requests.",
+      "It retains allocated resources and then requests extra ones."
+    ],
+    "plausible_wrong": [
+      "A process must release all held resources before it asks for any more.",
+      "Hold and wait means the OS preempts resources from whichever process has waited longest.",
+      "The system grants every request immediately and ignores current holdings."
+    ]
+  },
+  {
+    "question": "State what no preemption is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "no preemption",
+    "reference": "no preemption: a resource cannot be forcibly taken from its holder.",
+    "paraphrased_correct": [
+      "The system cannot take a resource away until its holder gives it up.",
+      "Resources are not forcibly removed; the owning process must release them.",
+      "Preemption is disallowed, so an allocated resource stays with its process."
+    ],
+    "plausible_wrong": [
+      "No preemption means the OS can reclaim any resource at any time.",
+      "The scheduler forcibly removes resources from the oldest process first.",
+      "Resources are released automatically when another process asks for them."
+    ]
+  },
+  {
+    "question": "State what circular wait is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "circular wait",
+    "reference": "circular wait: a cycle of processes each waiting for the next one's resource.",
+    "paraphrased_correct": [
+      "There is a loop: each process waits for a resource held by the next.",
+      "Processes form a wait cycle, with every member waiting on another.",
+      "A chain of processes closes into a ring of dependencies."
+    ],
+    "plausible_wrong": [
+      "Circular wait means every process waits for the CPU but not for resources.",
+      "The processes are arranged in a straight line, not a cycle.",
+      "Circular wait is resolved by giving each process every resource immediately."
+    ]
+  },
+  {
+    "question": "State what resource allocation graph is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "resource allocation graph",
+    "reference": "resource allocation graph: a directed graph of resource and process allocations.",
+    "paraphrased_correct": [
+      "It is a directed graph showing which process holds which resource.",
+      "Nodes represent processes and resources, and arrows show allocations.",
+      "A diagram with arrows from resources to processes and requests back."
+    ],
+    "plausible_wrong": [
+      "A resource allocation graph is a bar chart of average CPU burst lengths.",
+      "It records only process names and ignores all resource assignments.",
+      "The graph plots memory usage against time and has no edges."
+    ]
+  },
+  {
+    "question": "State what safe state is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "safe state",
+    "reference": "safe state: a state where every process can still finish in some order.",
+    "paraphrased_correct": [
+      "A state is safe when there is at least one order in which all processes finish.",
+      "There exists a sequence of completions that lets every process complete.",
+      "The system can still arrange the remaining work so nobody gets stuck."
+    ],
+    "plausible_wrong": [
+      "A safe state is one where no process may ever request another resource.",
+      "It means every process has already finished and the system is idle.",
+      "The system is safe only when all resources are assigned to one process."
+    ]
+  },
+  {
+    "question": "State what deadlock detection is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "deadlock detection",
+    "reference": "deadlock detection: periodically checking the allocation graph for cycles.",
+    "paraphrased_correct": [
+      "The system regularly examines the graph to see whether a cycle exists.",
+      "Detection runs from time to time and looks for circular dependencies.",
+      "It scans allocations repeatedly to find a deadlock cycle."
+    ],
+    "plausible_wrong": [
+      "Deadlock detection prevents deadlocks by refusing every new request.",
+      "It checks CPU temperature once per second.",
+      "Detection rolls back all processes without inspecting the graph."
+    ]
+  },
+  {
+    "question": "State what recovery by rollback is in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "remember",
+    "concept": "recovery by rollback",
+    "reference": "recovery by rollback: rolling back a process to break a detected deadlock.",
+    "paraphrased_correct": [
+      "The system sends one process back to an earlier state to resolve the deadlock.",
+      "Recovery undoes a process's recent work so the cycle is broken.",
+      "A victim process is rolled back until the deadlock disappears."
+    ],
+    "plausible_wrong": [
+      "Recovery by rollback gives every process a new resource instead of undoing work.",
+      "It restarts the entire machine without choosing a victim.",
+      "Rollback means deleting all deadlock detection records."
+    ]
+  },
+  {
+    "question": "Explain how mutual exclusion affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "mutual exclusion",
+    "reference": "mutual exclusion means only one process may hold a resource at a time. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "Just one process can own a given resource at any moment.",
+      "A resource is exclusive: only a single process may be using it at once.",
+      "At any instant, one process at most has the resource; tehre is no sharing."
+    ],
+    "plausible_wrong": [
+      "Deadlocks are avoided by letting every process use the resource at the same time.",
+      "Mutual exclusion means all processes release their resources before requesting new ones.",
+      "In a deadlock, the scheduler always grants the resource to the longest waiting process."
+    ]
+  },
+  {
+    "question": "Explain how hold and wait affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "hold and wait",
+    "reference": "hold and wait means a process holds resources while requesting more. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "A process keeps what it already has while it asks for additional resources.",
+      "The process does not release held resources before making more requests.",
+      "It retains allocated resources and then requests extra ones."
+    ],
+    "plausible_wrong": [
+      "A process must release all held resources before it asks for any more.",
+      "Hold and wait means the OS preempts resources from whichever process has waited longest.",
+      "The system grants every request immediately and ignores current holdings."
+    ]
+  },
+  {
+    "question": "Explain how no preemption affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "no preemption",
+    "reference": "no preemption means a resource cannot be forcibly taken from its holder. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The system cannot take a resource away until its holder gives it up.",
+      "Resources are not forcibly removed; the owning process must release them.",
+      "Preemption is disallowed, so an allocated resource stays with its process."
+    ],
+    "plausible_wrong": [
+      "No preemption means the OS can reclaim any resource at any time.",
+      "The scheduler forcibly removes resources from the oldest process first.",
+      "Resources are released automatically when another process asks for them."
+    ]
+  },
+  {
+    "question": "Explain how circular wait affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "circular wait",
+    "reference": "circular wait means a cycle of processes each waiting for the next one's resource. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "There is a loop: each process waits for a resource held by the next.",
+      "Processes form a wait cycle, with every member waiting on another.",
+      "A chain of processes closes into a ring of dependencies."
+    ],
+    "plausible_wrong": [
+      "Circular wait means every process waits for the CPU but not for resources.",
+      "The processes are arranged in a straight line, not a cycle.",
+      "Circular wait is resolved by giving each process every resource immediately."
+    ]
+  },
+  {
+    "question": "Explain how resource allocation graph affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "resource allocation graph",
+    "reference": "resource allocation graph means a directed graph of resource and process allocations. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "It is a directed graph showing which process holds which resource.",
+      "Nodes represent processes and resources, and arrows show allocations.",
+      "A diagram with arrows from resources to processes and requests back."
+    ],
+    "plausible_wrong": [
+      "A resource allocation graph is a bar chart of average CPU burst lengths.",
+      "It records only process names and ignores all resource assignments.",
+      "The graph plots memory usage against time and has no edges."
+    ]
+  },
+  {
+    "question": "Explain how safe state affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "safe state",
+    "reference": "safe state means a state where every process can still finish in some order. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "A state is safe when there is at least one order in which all processes finish.",
+      "There exists a sequence of completions that lets every process complete.",
+      "The system can still arrange the remaining work so nobody gets stuck."
+    ],
+    "plausible_wrong": [
+      "A safe state is one where no process may ever request another resource.",
+      "It means every process has already finished and the system is idle.",
+      "The system is safe only when all resources are assigned to one process."
+    ]
+  },
+  {
+    "question": "Explain how deadlock detection affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "deadlock detection",
+    "reference": "deadlock detection means periodically checking the allocation graph for cycles. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The system regularly examines the graph to see whether a cycle exists.",
+      "Detection runs from time to time and looks for circular dependencies.",
+      "It scans allocations repeatedly to find a deadlock cycle."
+    ],
+    "plausible_wrong": [
+      "Deadlock detection prevents deadlocks by refusing every new request.",
+      "It checks CPU temperature once per second.",
+      "Detection rolls back all processes without inspecting the graph."
+    ]
+  },
+  {
+    "question": "Explain how recovery by rollback affects behaviour in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "understand",
+    "concept": "recovery by rollback",
+    "reference": "recovery by rollback means rolling back a process to break a detected deadlock. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The system sends one process back to an earlier state to resolve the deadlock.",
+      "Recovery undoes a process's recent work so the cycle is broken.",
+      "A victim process is rolled back until the deadlock disappears."
+    ],
+    "plausible_wrong": [
+      "Recovery by rollback gives every process a new resource instead of undoing work.",
+      "It restarts the entire machine without choosing a victim.",
+      "Rollback means deleting all deadlock detection records."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs mutual exclusion. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "mutual exclusion",
+    "reference": "Identify where mutual exclusion is needed and apply it directly: only one process may hold a resource at a time. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "Just one process can own a given resource at any moment.",
+      "A resource is exclusive: only a single process may be using it at once.",
+      "At any instant, one process at most has the resource; tehre is no sharing."
+    ],
+    "plausible_wrong": [
+      "Deadlocks are avoided by letting every process use the resource at the same time.",
+      "Mutual exclusion means all processes release their resources before requesting new ones.",
+      "In a deadlock, the scheduler always grants the resource to the longest waiting process."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs hold and wait. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "hold and wait",
+    "reference": "Identify where hold and wait is needed and apply it directly: a process holds resources while requesting more. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "A process keeps what it already has while it asks for additional resources.",
+      "The process does not release held resources before making more requests.",
+      "It retains allocated resources and then requests extra ones."
+    ],
+    "plausible_wrong": [
+      "A process must release all held resources before it asks for any more.",
+      "Hold and wait means the OS preempts resources from whichever process has waited longest.",
+      "The system grants every request immediately and ignores current holdings."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs no preemption. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "no preemption",
+    "reference": "Identify where no preemption is needed and apply it directly: a resource cannot be forcibly taken from its holder. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The system cannot take a resource away until its holder gives it up.",
+      "Resources are not forcibly removed; the owning process must release them.",
+      "Preemption is disallowed, so an allocated resource stays with its process."
+    ],
+    "plausible_wrong": [
+      "No preemption means the OS can reclaim any resource at any time.",
+      "The scheduler forcibly removes resources from the oldest process first.",
+      "Resources are released automatically when another process asks for them."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs circular wait. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "circular wait",
+    "reference": "Identify where circular wait is needed and apply it directly: a cycle of processes each waiting for the next one's resource. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "There is a loop: each process waits for a resource held by the next.",
+      "Processes form a wait cycle, with every member waiting on another.",
+      "A chain of processes closes into a ring of dependencies."
+    ],
+    "plausible_wrong": [
+      "Circular wait means every process waits for the CPU but not for resources.",
+      "The processes are arranged in a straight line, not a cycle.",
+      "Circular wait is resolved by giving each process every resource immediately."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs resource allocation graph. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "resource allocation graph",
+    "reference": "Identify where resource allocation graph is needed and apply it directly: a directed graph of resource and process allocations. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "It is a directed graph showing which process holds which resource.",
+      "Nodes represent processes and resources, and arrows show allocations.",
+      "A diagram with arrows from resources to processes and requests back."
+    ],
+    "plausible_wrong": [
+      "A resource allocation graph is a bar chart of average CPU burst lengths.",
+      "It records only process names and ignores all resource assignments.",
+      "The graph plots memory usage against time and has no edges."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs safe state. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "safe state",
+    "reference": "Identify where safe state is needed and apply it directly: a state where every process can still finish in some order. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "A state is safe when there is at least one order in which all processes finish.",
+      "There exists a sequence of completions that lets every process complete.",
+      "The system can still arrange the remaining work so nobody gets stuck."
+    ],
+    "plausible_wrong": [
+      "A safe state is one where no process may ever request another resource.",
+      "It means every process has already finished and the system is idle.",
+      "The system is safe only when all resources are assigned to one process."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs deadlock detection. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "deadlock detection",
+    "reference": "Identify where deadlock detection is needed and apply it directly: periodically checking the allocation graph for cycles. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The system regularly examines the graph to see whether a cycle exists.",
+      "Detection runs from time to time and looks for circular dependencies.",
+      "It scans allocations repeatedly to find a deadlock cycle."
+    ],
+    "plausible_wrong": [
+      "Deadlock detection prevents deadlocks by refusing every new request.",
+      "It checks CPU temperature once per second.",
+      "Detection rolls back all processes without inspecting the graph."
+    ]
+  },
+  {
+    "question": "A workload in Deadlocks needs recovery by rollback. How would you apply it?",
+    "topic": "Deadlocks",
+    "bloom_level": "apply",
+    "concept": "recovery by rollback",
+    "reference": "Identify where recovery by rollback is needed and apply it directly: rolling back a process to break a detected deadlock. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The system sends one process back to an earlier state to resolve the deadlock.",
+      "Recovery undoes a process's recent work so the cycle is broken.",
+      "A victim process is rolled back until the deadlock disappears."
+    ],
+    "plausible_wrong": [
+      "Recovery by rollback gives every process a new resource instead of undoing work.",
+      "It restarts the entire machine without choosing a victim.",
+      "Rollback means deleting all deadlock detection records."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by mutual exclusion in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "mutual exclusion",
+    "reference": "mutual exclusion gives only one process may hold a resource at a time. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "Just one process can own a given resource at any moment.",
+      "A resource is exclusive: only a single process may be using it at once.",
+      "At any instant, one process at most has the resource; tehre is no sharing."
+    ],
+    "plausible_wrong": [
+      "Deadlocks are avoided by letting every process use the resource at the same time.",
+      "Mutual exclusion means all processes release their resources before requesting new ones.",
+      "In a deadlock, the scheduler always grants the resource to the longest waiting process."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by hold and wait in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "hold and wait",
+    "reference": "hold and wait gives a process holds resources while requesting more. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "A process keeps what it already has while it asks for additional resources.",
+      "The process does not release held resources before making more requests.",
+      "It retains allocated resources and then requests extra ones."
+    ],
+    "plausible_wrong": [
+      "A process must release all held resources before it asks for any more.",
+      "Hold and wait means the OS preempts resources from whichever process has waited longest.",
+      "The system grants every request immediately and ignores current holdings."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by no preemption in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "no preemption",
+    "reference": "no preemption gives a resource cannot be forcibly taken from its holder. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The system cannot take a resource away until its holder gives it up.",
+      "Resources are not forcibly removed; the owning process must release them.",
+      "Preemption is disallowed, so an allocated resource stays with its process."
+    ],
+    "plausible_wrong": [
+      "No preemption means the OS can reclaim any resource at any time.",
+      "The scheduler forcibly removes resources from the oldest process first.",
+      "Resources are released automatically when another process asks for them."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by circular wait in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "circular wait",
+    "reference": "circular wait gives a cycle of processes each waiting for the next one's resource. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "There is a loop: each process waits for a resource held by the next.",
+      "Processes form a wait cycle, with every member waiting on another.",
+      "A chain of processes closes into a ring of dependencies."
+    ],
+    "plausible_wrong": [
+      "Circular wait means every process waits for the CPU but not for resources.",
+      "The processes are arranged in a straight line, not a cycle.",
+      "Circular wait is resolved by giving each process every resource immediately."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by resource allocation graph in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "resource allocation graph",
+    "reference": "resource allocation graph gives a directed graph of resource and process allocations. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "It is a directed graph showing which process holds which resource.",
+      "Nodes represent processes and resources, and arrows show allocations.",
+      "A diagram with arrows from resources to processes and requests back."
+    ],
+    "plausible_wrong": [
+      "A resource allocation graph is a bar chart of average CPU burst lengths.",
+      "It records only process names and ignores all resource assignments.",
+      "The graph plots memory usage against time and has no edges."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by safe state in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "safe state",
+    "reference": "safe state gives a state where every process can still finish in some order. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "A state is safe when there is at least one order in which all processes finish.",
+      "There exists a sequence of completions that lets every process complete.",
+      "The system can still arrange the remaining work so nobody gets stuck."
+    ],
+    "plausible_wrong": [
+      "A safe state is one where no process may ever request another resource.",
+      "It means every process has already finished and the system is idle.",
+      "The system is safe only when all resources are assigned to one process."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by deadlock detection in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "deadlock detection",
+    "reference": "deadlock detection gives periodically checking the allocation graph for cycles. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The system regularly examines the graph to see whether a cycle exists.",
+      "Detection runs from time to time and looks for circular dependencies.",
+      "It scans allocations repeatedly to find a deadlock cycle."
+    ],
+    "plausible_wrong": [
+      "Deadlock detection prevents deadlocks by refusing every new request.",
+      "It checks CPU temperature once per second.",
+      "Detection rolls back all processes without inspecting the graph."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by recovery by rollback in Deadlocks.",
+    "topic": "Deadlocks",
+    "bloom_level": "analyze",
+    "concept": "recovery by rollback",
+    "reference": "recovery by rollback gives rolling back a process to break a detected deadlock. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The system sends one process back to an earlier state to resolve the deadlock.",
+      "Recovery undoes a process's recent work so the cycle is broken.",
+      "A victim process is rolled back until the deadlock disappears."
+    ],
+    "plausible_wrong": [
+      "Recovery by rollback gives every process a new resource instead of undoing work.",
+      "It restarts the entire machine without choosing a victim.",
+      "Rollback means deleting all deadlock detection records."
+    ]
+  },
+  {
+    "question": "Is mutual exclusion a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "mutual exclusion",
+    "reference": "mutual exclusion (only one process may hold a resource at a time) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "Just one process can own a given resource at any moment.",
+      "A resource is exclusive: only a single process may be using it at once.",
+      "At any instant, one process at most has the resource; tehre is no sharing."
+    ],
+    "plausible_wrong": [
+      "Deadlocks are avoided by letting every process use the resource at the same time.",
+      "Mutual exclusion means all processes release their resources before requesting new ones.",
+      "In a deadlock, the scheduler always grants the resource to the longest waiting process."
+    ]
+  },
+  {
+    "question": "Is hold and wait a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "hold and wait",
+    "reference": "hold and wait (a process holds resources while requesting more) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "A process keeps what it already has while it asks for additional resources.",
+      "The process does not release held resources before making more requests.",
+      "It retains allocated resources and then requests extra ones."
+    ],
+    "plausible_wrong": [
+      "A process must release all held resources before it asks for any more.",
+      "Hold and wait means the OS preempts resources from whichever process has waited longest.",
+      "The system grants every request immediately and ignores current holdings."
+    ]
+  },
+  {
+    "question": "Is no preemption a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "no preemption",
+    "reference": "no preemption (a resource cannot be forcibly taken from its holder) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The system cannot take a resource away until its holder gives it up.",
+      "Resources are not forcibly removed; the owning process must release them.",
+      "Preemption is disallowed, so an allocated resource stays with its process."
+    ],
+    "plausible_wrong": [
+      "No preemption means the OS can reclaim any resource at any time.",
+      "The scheduler forcibly removes resources from the oldest process first.",
+      "Resources are released automatically when another process asks for them."
+    ]
+  },
+  {
+    "question": "Is circular wait a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "circular wait",
+    "reference": "circular wait (a cycle of processes each waiting for the next one's resource) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "There is a loop: each process waits for a resource held by the next.",
+      "Processes form a wait cycle, with every member waiting on another.",
+      "A chain of processes closes into a ring of dependencies."
+    ],
+    "plausible_wrong": [
+      "Circular wait means every process waits for the CPU but not for resources.",
+      "The processes are arranged in a straight line, not a cycle.",
+      "Circular wait is resolved by giving each process every resource immediately."
+    ]
+  },
+  {
+    "question": "Is resource allocation graph a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "resource allocation graph",
+    "reference": "resource allocation graph (a directed graph of resource and process allocations) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "It is a directed graph showing which process holds which resource.",
+      "Nodes represent processes and resources, and arrows show allocations.",
+      "A diagram with arrows from resources to processes and requests back."
+    ],
+    "plausible_wrong": [
+      "A resource allocation graph is a bar chart of average CPU burst lengths.",
+      "It records only process names and ignores all resource assignments.",
+      "The graph plots memory usage against time and has no edges."
+    ]
+  },
+  {
+    "question": "Is safe state a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "safe state",
+    "reference": "safe state (a state where every process can still finish in some order) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "A state is safe when there is at least one order in which all processes finish.",
+      "There exists a sequence of completions that lets every process complete.",
+      "The system can still arrange the remaining work so nobody gets stuck."
+    ],
+    "plausible_wrong": [
+      "A safe state is one where no process may ever request another resource.",
+      "It means every process has already finished and the system is idle.",
+      "The system is safe only when all resources are assigned to one process."
+    ]
+  },
+  {
+    "question": "Is deadlock detection a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "deadlock detection",
+    "reference": "deadlock detection (periodically checking the allocation graph for cycles) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The system regularly examines the graph to see whether a cycle exists.",
+      "Detection runs from time to time and looks for circular dependencies.",
+      "It scans allocations repeatedly to find a deadlock cycle."
+    ],
+    "plausible_wrong": [
+      "Deadlock detection prevents deadlocks by refusing every new request.",
+      "It checks CPU temperature once per second.",
+      "Detection rolls back all processes without inspecting the graph."
+    ]
+  },
+  {
+    "question": "Is recovery by rollback a good choice for a latency-sensitive Deadlocks workload? Justify.",
+    "topic": "Deadlocks",
+    "bloom_level": "evaluate",
+    "concept": "recovery by rollback",
+    "reference": "recovery by rollback (rolling back a process to break a detected deadlock) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The system sends one process back to an earlier state to resolve the deadlock.",
+      "Recovery undoes a process's recent work so the cycle is broken.",
+      "A victim process is rolled back until the deadlock disappears."
+    ],
+    "plausible_wrong": [
+      "Recovery by rollback gives every process a new resource instead of undoing work.",
+      "It restarts the entire machine without choosing a victim.",
+      "Rollback means deleting all deadlock detection records."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses mutual exclusion to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "mutual exclusion",
+    "reference": "Procedure: detect the problem, apply mutual exclusion (only one process may hold a resource at a time), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "Just one process can own a given resource at any moment.",
+      "A resource is exclusive: only a single process may be using it at once.",
+      "At any instant, one process at most has the resource; tehre is no sharing."
+    ],
+    "plausible_wrong": [
+      "Deadlocks are avoided by letting every process use the resource at the same time.",
+      "Mutual exclusion means all processes release their resources before requesting new ones.",
+      "In a deadlock, the scheduler always grants the resource to the longest waiting process."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses hold and wait to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "hold and wait",
+    "reference": "Procedure: detect the problem, apply hold and wait (a process holds resources while requesting more), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "A process keeps what it already has while it asks for additional resources.",
+      "The process does not release held resources before making more requests.",
+      "It retains allocated resources and then requests extra ones."
+    ],
+    "plausible_wrong": [
+      "A process must release all held resources before it asks for any more.",
+      "Hold and wait means the OS preempts resources from whichever process has waited longest.",
+      "The system grants every request immediately and ignores current holdings."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses no preemption to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "no preemption",
+    "reference": "Procedure: detect the problem, apply no preemption (a resource cannot be forcibly taken from its holder), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The system cannot take a resource away until its holder gives it up.",
+      "Resources are not forcibly removed; the owning process must release them.",
+      "Preemption is disallowed, so an allocated resource stays with its process."
+    ],
+    "plausible_wrong": [
+      "No preemption means the OS can reclaim any resource at any time.",
+      "The scheduler forcibly removes resources from the oldest process first.",
+      "Resources are released automatically when another process asks for them."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses circular wait to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "circular wait",
+    "reference": "Procedure: detect the problem, apply circular wait (a cycle of processes each waiting for the next one's resource), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "There is a loop: each process waits for a resource held by the next.",
+      "Processes form a wait cycle, with every member waiting on another.",
+      "A chain of processes closes into a ring of dependencies."
+    ],
+    "plausible_wrong": [
+      "Circular wait means every process waits for the CPU but not for resources.",
+      "The processes are arranged in a straight line, not a cycle.",
+      "Circular wait is resolved by giving each process every resource immediately."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses resource allocation graph to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "resource allocation graph",
+    "reference": "Procedure: detect the problem, apply resource allocation graph (a directed graph of resource and process allocations), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "It is a directed graph showing which process holds which resource.",
+      "Nodes represent processes and resources, and arrows show allocations.",
+      "A diagram with arrows from resources to processes and requests back."
+    ],
+    "plausible_wrong": [
+      "A resource allocation graph is a bar chart of average CPU burst lengths.",
+      "It records only process names and ignores all resource assignments.",
+      "The graph plots memory usage against time and has no edges."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses safe state to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "safe state",
+    "reference": "Procedure: detect the problem, apply safe state (a state where every process can still finish in some order), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "A state is safe when there is at least one order in which all processes finish.",
+      "There exists a sequence of completions that lets every process complete.",
+      "The system can still arrange the remaining work so nobody gets stuck."
+    ],
+    "plausible_wrong": [
+      "A safe state is one where no process may ever request another resource.",
+      "It means every process has already finished and the system is idle.",
+      "The system is safe only when all resources are assigned to one process."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses deadlock detection to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "deadlock detection",
+    "reference": "Procedure: detect the problem, apply deadlock detection (periodically checking the allocation graph for cycles), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The system regularly examines the graph to see whether a cycle exists.",
+      "Detection runs from time to time and looks for circular dependencies.",
+      "It scans allocations repeatedly to find a deadlock cycle."
+    ],
+    "plausible_wrong": [
+      "Deadlock detection prevents deadlocks by refusing every new request.",
+      "It checks CPU temperature once per second.",
+      "Detection rolls back all processes without inspecting the graph."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses recovery by rollback to handle a Deadlocks problem.",
+    "topic": "Deadlocks",
+    "bloom_level": "create",
+    "concept": "recovery by rollback",
+    "reference": "Procedure: detect the problem, apply recovery by rollback (rolling back a process to break a detected deadlock), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The system sends one process back to an earlier state to resolve the deadlock.",
+      "Recovery undoes a process's recent work so the cycle is broken.",
+      "A victim process is rolled back until the deadlock disappears."
+    ],
+    "plausible_wrong": [
+      "Recovery by rollback gives every process a new resource instead of undoing work.",
+      "It restarts the entire machine without choosing a victim.",
+      "Rollback means deleting all deadlock detection records."
+    ]
+  },
+  {
+    "question": "State what atomicity is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "atomicity",
+    "reference": "atomicity: a transaction either commits completely or rolls back completely.",
+    "paraphrased_correct": [
+      "A transaction is all-or-nothing: it finishes fully or is undone fully.",
+      "Either every operation in the transaction succeeds, or none of them do.",
+      "The database applies the whole transaction or reverts the whole thing."
+    ],
+    "plausible_wrong": [
+      "Atomicity means a transaction may commit some of its operations and skip others.",
+      "Transactions are split into smaller independent updates that each commit separately.",
+      "Atomicity guarantees a transaction always commits, even if it fails."
+    ]
+  },
+  {
+    "question": "State what consistency is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "consistency",
+    "reference": "consistency: a committed transaction preserves database invariants.",
+    "paraphrased_correct": [
+      "A committed transaction leaves the database in a valid state and keeps its rules.",
+      "The data still satisfies all invariants after the transaction finishes.",
+      "It preserves the database's correctness rules from before to after."
+    ],
+    "plausible_wrong": [
+      "Consistency means every transaction reads the same value twice.",
+      "It requires all tables to have identical numbers of rows.",
+      "Consistency lets a transaction violate rules as long as it commits quickly."
+    ]
+  },
+  {
+    "question": "State what isolation is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "isolation",
+    "reference": "isolation: concurrent transactions do not see each other's partial effects.",
+    "paraphrased_correct": [
+      "Transactions running at the same time cannot observe each other's uncommitted changes.",
+      "Each transaction appears to run on its own, despite concurrency.",
+      "Partial work from one transaction is hidden from other transactions."
+    ],
+    "plausible_wrong": [
+      "Isolation means transactions must run one after another, never concurrently.",
+      "It allows every transaction to read uncommitted writes from others.",
+      "Isolation deletes data written by competing transactions."
+    ]
+  },
+  {
+    "question": "State what durability is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "durability",
+    "reference": "durability: committed changes survive a crash.",
+    "paraphrased_correct": [
+      "Once committed, changes are not lost if the system crashes.",
+      "A committed update remains after a restart or power failure.",
+      "The database keeps committed results even when hardware fails."
+    ],
+    "plausible_wrong": [
+      "Durability means committed changes are erased after a crash for safety.",
+      "It guarantees no data is ever written to disk.",
+      "Durability requires the database to shut down after every commit."
+    ]
+  },
+  {
+    "question": "State what two-phase locking is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "two-phase locking",
+    "reference": "two-phase locking: a growing phase of locks followed by a shrinking phase.",
+    "paraphrased_correct": [
+      "First the transaction only acquires locks, then it only releases them.",
+      "Locks grow during one phase and shrink during a later phase.",
+      "The transaction has an acquiring stage followed by a releasing stage."
+    ],
+    "plausible_wrong": [
+      "Two-phase locking takes all locks and releases them at the same instant.",
+      "It alternates acquiring and releasing every second.",
+      "Two-phase locking is a rule about transaction names, not locks."
+    ]
+  },
+  {
+    "question": "State what write-ahead logging is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "write-ahead logging",
+    "reference": "write-ahead logging: log records are flushed before data pages are written.",
+    "paraphrased_correct": [
+      "The log is forced to disk before the changed pages reach disk.",
+      "Records go to the log first; data page writes happen afterwards.",
+      "Before writing a page, the database makes sure the log record is durable."
+    ],
+    "plausible_wrong": [
+      "Write-ahead logging writes data pages before any log record.",
+      "It stores logs only after the transaction has committed and the page is written.",
+      "The log is kept in memory and never flushed to disk."
+    ]
+  },
+  {
+    "question": "State what serializability is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "serializability",
+    "reference": "serializability: a concurrent schedule is equivalent to some serial schedule.",
+    "paraphrased_correct": [
+      "The concurrent execution produces the same result as running transactions one at a time.",
+      "Even with overlap, the outcome matches some serial ordering.",
+      "A schedule is serializable when it behaves like a non-overlapping one."
+    ],
+    "plausible_wrong": [
+      "Serializability requires all transactions to use the same table.",
+      "It means every transaction must be one statement long.",
+      "The schedule is serializable only if no transaction ever commits."
+    ]
+  },
+  {
+    "question": "State what savepoint is in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "remember",
+    "concept": "savepoint",
+    "reference": "savepoint: a named point inside a transaction that can be rolled back to.",
+    "paraphrased_correct": [
+      "It is a marker in a transaction that you can undo back to.",
+      "A savepoint lets you roll back part of a transaction, not all of it.",
+      "You can name a point and later revert changes made after that point."
+    ],
+    "plausible_wrong": [
+      "A savepoint commits the transaction immediately.",
+      "It is a backup of the whole database stored offsite.",
+      "Savepoints can only be used after a transaction has ended."
+    ]
+  },
+  {
+    "question": "Explain how atomicity affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "atomicity",
+    "reference": "atomicity means a transaction either commits completely or rolls back completely. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "A transaction is all-or-nothing: it finishes fully or is undone fully.",
+      "Either every operation in the transaction succeeds, or none of them do.",
+      "The database applies the whole transaction or reverts the whole thing."
+    ],
+    "plausible_wrong": [
+      "Atomicity means a transaction may commit some of its operations and skip others.",
+      "Transactions are split into smaller independent updates that each commit separately.",
+      "Atomicity guarantees a transaction always commits, even if it fails."
+    ]
+  },
+  {
+    "question": "Explain how consistency affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "consistency",
+    "reference": "consistency means a committed transaction preserves database invariants. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "A committed transaction leaves the database in a valid state and keeps its rules.",
+      "The data still satisfies all invariants after the transaction finishes.",
+      "It preserves the database's correctness rules from before to after."
+    ],
+    "plausible_wrong": [
+      "Consistency means every transaction reads the same value twice.",
+      "It requires all tables to have identical numbers of rows.",
+      "Consistency lets a transaction violate rules as long as it commits quickly."
+    ]
+  },
+  {
+    "question": "Explain how isolation affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "isolation",
+    "reference": "isolation means concurrent transactions do not see each other's partial effects. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "Transactions running at the same time cannot observe each other's uncommitted changes.",
+      "Each transaction appears to run on its own, despite concurrency.",
+      "Partial work from one transaction is hidden from other transactions."
+    ],
+    "plausible_wrong": [
+      "Isolation means transactions must run one after another, never concurrently.",
+      "It allows every transaction to read uncommitted writes from others.",
+      "Isolation deletes data written by competing transactions."
+    ]
+  },
+  {
+    "question": "Explain how durability affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "durability",
+    "reference": "durability means committed changes survive a crash. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "Once committed, changes are not lost if the system crashes.",
+      "A committed update remains after a restart or power failure.",
+      "The database keeps committed results even when hardware fails."
+    ],
+    "plausible_wrong": [
+      "Durability means committed changes are erased after a crash for safety.",
+      "It guarantees no data is ever written to disk.",
+      "Durability requires the database to shut down after every commit."
+    ]
+  },
+  {
+    "question": "Explain how two-phase locking affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "two-phase locking",
+    "reference": "two-phase locking means a growing phase of locks followed by a shrinking phase. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "First the transaction only acquires locks, then it only releases them.",
+      "Locks grow during one phase and shrink during a later phase.",
+      "The transaction has an acquiring stage followed by a releasing stage."
+    ],
+    "plausible_wrong": [
+      "Two-phase locking takes all locks and releases them at the same instant.",
+      "It alternates acquiring and releasing every second.",
+      "Two-phase locking is a rule about transaction names, not locks."
+    ]
+  },
+  {
+    "question": "Explain how write-ahead logging affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "write-ahead logging",
+    "reference": "write-ahead logging means log records are flushed before data pages are written. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The log is forced to disk before the changed pages reach disk.",
+      "Records go to the log first; data page writes happen afterwards.",
+      "Before writing a page, the database makes sure the log record is durable."
+    ],
+    "plausible_wrong": [
+      "Write-ahead logging writes data pages before any log record.",
+      "It stores logs only after the transaction has committed and the page is written.",
+      "The log is kept in memory and never flushed to disk."
+    ]
+  },
+  {
+    "question": "Explain how serializability affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "serializability",
+    "reference": "serializability means a concurrent schedule is equivalent to some serial schedule. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The concurrent execution produces the same result as running transactions one at a time.",
+      "Even with overlap, the outcome matches some serial ordering.",
+      "A schedule is serializable when it behaves like a non-overlapping one."
+    ],
+    "plausible_wrong": [
+      "Serializability requires all transactions to use the same table.",
+      "It means every transaction must be one statement long.",
+      "The schedule is serializable only if no transaction ever commits."
+    ]
+  },
+  {
+    "question": "Explain how savepoint affects behaviour in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "understand",
+    "concept": "savepoint",
+    "reference": "savepoint means a named point inside a transaction that can be rolled back to. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "It is a marker in a transaction that you can undo back to.",
+      "A savepoint lets you roll back part of a transaction, not all of it.",
+      "You can name a point and later revert changes made after that point."
+    ],
+    "plausible_wrong": [
+      "A savepoint commits the transaction immediately.",
+      "It is a backup of the whole database stored offsite.",
+      "Savepoints can only be used after a transaction has ended."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs atomicity. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "atomicity",
+    "reference": "Identify where atomicity is needed and apply it directly: a transaction either commits completely or rolls back completely. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "A transaction is all-or-nothing: it finishes fully or is undone fully.",
+      "Either every operation in the transaction succeeds, or none of them do.",
+      "The database applies the whole transaction or reverts the whole thing."
+    ],
+    "plausible_wrong": [
+      "Atomicity means a transaction may commit some of its operations and skip others.",
+      "Transactions are split into smaller independent updates that each commit separately.",
+      "Atomicity guarantees a transaction always commits, even if it fails."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs consistency. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "consistency",
+    "reference": "Identify where consistency is needed and apply it directly: a committed transaction preserves database invariants. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "A committed transaction leaves the database in a valid state and keeps its rules.",
+      "The data still satisfies all invariants after the transaction finishes.",
+      "It preserves the database's correctness rules from before to after."
+    ],
+    "plausible_wrong": [
+      "Consistency means every transaction reads the same value twice.",
+      "It requires all tables to have identical numbers of rows.",
+      "Consistency lets a transaction violate rules as long as it commits quickly."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs isolation. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "isolation",
+    "reference": "Identify where isolation is needed and apply it directly: concurrent transactions do not see each other's partial effects. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "Transactions running at the same time cannot observe each other's uncommitted changes.",
+      "Each transaction appears to run on its own, despite concurrency.",
+      "Partial work from one transaction is hidden from other transactions."
+    ],
+    "plausible_wrong": [
+      "Isolation means transactions must run one after another, never concurrently.",
+      "It allows every transaction to read uncommitted writes from others.",
+      "Isolation deletes data written by competing transactions."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs durability. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "durability",
+    "reference": "Identify where durability is needed and apply it directly: committed changes survive a crash. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "Once committed, changes are not lost if the system crashes.",
+      "A committed update remains after a restart or power failure.",
+      "The database keeps committed results even when hardware fails."
+    ],
+    "plausible_wrong": [
+      "Durability means committed changes are erased after a crash for safety.",
+      "It guarantees no data is ever written to disk.",
+      "Durability requires the database to shut down after every commit."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs two-phase locking. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "two-phase locking",
+    "reference": "Identify where two-phase locking is needed and apply it directly: a growing phase of locks followed by a shrinking phase. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "First the transaction only acquires locks, then it only releases them.",
+      "Locks grow during one phase and shrink during a later phase.",
+      "The transaction has an acquiring stage followed by a releasing stage."
+    ],
+    "plausible_wrong": [
+      "Two-phase locking takes all locks and releases them at the same instant.",
+      "It alternates acquiring and releasing every second.",
+      "Two-phase locking is a rule about transaction names, not locks."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs write-ahead logging. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "write-ahead logging",
+    "reference": "Identify where write-ahead logging is needed and apply it directly: log records are flushed before data pages are written. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The log is forced to disk before the changed pages reach disk.",
+      "Records go to the log first; data page writes happen afterwards.",
+      "Before writing a page, the database makes sure the log record is durable."
+    ],
+    "plausible_wrong": [
+      "Write-ahead logging writes data pages before any log record.",
+      "It stores logs only after the transaction has committed and the page is written.",
+      "The log is kept in memory and never flushed to disk."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs serializability. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "serializability",
+    "reference": "Identify where serializability is needed and apply it directly: a concurrent schedule is equivalent to some serial schedule. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The concurrent execution produces the same result as running transactions one at a time.",
+      "Even with overlap, the outcome matches some serial ordering.",
+      "A schedule is serializable when it behaves like a non-overlapping one."
+    ],
+    "plausible_wrong": [
+      "Serializability requires all transactions to use the same table.",
+      "It means every transaction must be one statement long.",
+      "The schedule is serializable only if no transaction ever commits."
+    ]
+  },
+  {
+    "question": "A workload in Transactions needs savepoint. How would you apply it?",
+    "topic": "Transactions",
+    "bloom_level": "apply",
+    "concept": "savepoint",
+    "reference": "Identify where savepoint is needed and apply it directly: a named point inside a transaction that can be rolled back to. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "It is a marker in a transaction that you can undo back to.",
+      "A savepoint lets you roll back part of a transaction, not all of it.",
+      "You can name a point and later revert changes made after that point."
+    ],
+    "plausible_wrong": [
+      "A savepoint commits the transaction immediately.",
+      "It is a backup of the whole database stored offsite.",
+      "Savepoints can only be used after a transaction has ended."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by atomicity in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "atomicity",
+    "reference": "atomicity gives a transaction either commits completely or rolls back completely. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "A transaction is all-or-nothing: it finishes fully or is undone fully.",
+      "Either every operation in the transaction succeeds, or none of them do.",
+      "The database applies the whole transaction or reverts the whole thing."
+    ],
+    "plausible_wrong": [
+      "Atomicity means a transaction may commit some of its operations and skip others.",
+      "Transactions are split into smaller independent updates that each commit separately.",
+      "Atomicity guarantees a transaction always commits, even if it fails."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by consistency in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "consistency",
+    "reference": "consistency gives a committed transaction preserves database invariants. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "A committed transaction leaves the database in a valid state and keeps its rules.",
+      "The data still satisfies all invariants after the transaction finishes.",
+      "It preserves the database's correctness rules from before to after."
+    ],
+    "plausible_wrong": [
+      "Consistency means every transaction reads the same value twice.",
+      "It requires all tables to have identical numbers of rows.",
+      "Consistency lets a transaction violate rules as long as it commits quickly."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by isolation in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "isolation",
+    "reference": "isolation gives concurrent transactions do not see each other's partial effects. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "Transactions running at the same time cannot observe each other's uncommitted changes.",
+      "Each transaction appears to run on its own, despite concurrency.",
+      "Partial work from one transaction is hidden from other transactions."
+    ],
+    "plausible_wrong": [
+      "Isolation means transactions must run one after another, never concurrently.",
+      "It allows every transaction to read uncommitted writes from others.",
+      "Isolation deletes data written by competing transactions."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by durability in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "durability",
+    "reference": "durability gives committed changes survive a crash. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "Once committed, changes are not lost if the system crashes.",
+      "A committed update remains after a restart or power failure.",
+      "The database keeps committed results even when hardware fails."
+    ],
+    "plausible_wrong": [
+      "Durability means committed changes are erased after a crash for safety.",
+      "It guarantees no data is ever written to disk.",
+      "Durability requires the database to shut down after every commit."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by two-phase locking in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "two-phase locking",
+    "reference": "two-phase locking gives a growing phase of locks followed by a shrinking phase. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "First the transaction only acquires locks, then it only releases them.",
+      "Locks grow during one phase and shrink during a later phase.",
+      "The transaction has an acquiring stage followed by a releasing stage."
+    ],
+    "plausible_wrong": [
+      "Two-phase locking takes all locks and releases them at the same instant.",
+      "It alternates acquiring and releasing every second.",
+      "Two-phase locking is a rule about transaction names, not locks."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by write-ahead logging in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "write-ahead logging",
+    "reference": "write-ahead logging gives log records are flushed before data pages are written. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The log is forced to disk before the changed pages reach disk.",
+      "Records go to the log first; data page writes happen afterwards.",
+      "Before writing a page, the database makes sure the log record is durable."
+    ],
+    "plausible_wrong": [
+      "Write-ahead logging writes data pages before any log record.",
+      "It stores logs only after the transaction has committed and the page is written.",
+      "The log is kept in memory and never flushed to disk."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by serializability in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "serializability",
+    "reference": "serializability gives a concurrent schedule is equivalent to some serial schedule. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The concurrent execution produces the same result as running transactions one at a time.",
+      "Even with overlap, the outcome matches some serial ordering.",
+      "A schedule is serializable when it behaves like a non-overlapping one."
+    ],
+    "plausible_wrong": [
+      "Serializability requires all transactions to use the same table.",
+      "It means every transaction must be one statement long.",
+      "The schedule is serializable only if no transaction ever commits."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by savepoint in Transactions.",
+    "topic": "Transactions",
+    "bloom_level": "analyze",
+    "concept": "savepoint",
+    "reference": "savepoint gives a named point inside a transaction that can be rolled back to. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "It is a marker in a transaction that you can undo back to.",
+      "A savepoint lets you roll back part of a transaction, not all of it.",
+      "You can name a point and later revert changes made after that point."
+    ],
+    "plausible_wrong": [
+      "A savepoint commits the transaction immediately.",
+      "It is a backup of the whole database stored offsite.",
+      "Savepoints can only be used after a transaction has ended."
+    ]
+  },
+  {
+    "question": "Is atomicity a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "atomicity",
+    "reference": "atomicity (a transaction either commits completely or rolls back completely) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "A transaction is all-or-nothing: it finishes fully or is undone fully.",
+      "Either every operation in the transaction succeeds, or none of them do.",
+      "The database applies the whole transaction or reverts the whole thing."
+    ],
+    "plausible_wrong": [
+      "Atomicity means a transaction may commit some of its operations and skip others.",
+      "Transactions are split into smaller independent updates that each commit separately.",
+      "Atomicity guarantees a transaction always commits, even if it fails."
+    ]
+  },
+  {
+    "question": "Is consistency a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "consistency",
+    "reference": "consistency (a committed transaction preserves database invariants) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "A committed transaction leaves the database in a valid state and keeps its rules.",
+      "The data still satisfies all invariants after the transaction finishes.",
+      "It preserves the database's correctness rules from before to after."
+    ],
+    "plausible_wrong": [
+      "Consistency means every transaction reads the same value twice.",
+      "It requires all tables to have identical numbers of rows.",
+      "Consistency lets a transaction violate rules as long as it commits quickly."
+    ]
+  },
+  {
+    "question": "Is isolation a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "isolation",
+    "reference": "isolation (concurrent transactions do not see each other's partial effects) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "Transactions running at the same time cannot observe each other's uncommitted changes.",
+      "Each transaction appears to run on its own, despite concurrency.",
+      "Partial work from one transaction is hidden from other transactions."
+    ],
+    "plausible_wrong": [
+      "Isolation means transactions must run one after another, never concurrently.",
+      "It allows every transaction to read uncommitted writes from others.",
+      "Isolation deletes data written by competing transactions."
+    ]
+  },
+  {
+    "question": "Is durability a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "durability",
+    "reference": "durability (committed changes survive a crash) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "Once committed, changes are not lost if the system crashes.",
+      "A committed update remains after a restart or power failure.",
+      "The database keeps committed results even when hardware fails."
+    ],
+    "plausible_wrong": [
+      "Durability means committed changes are erased after a crash for safety.",
+      "It guarantees no data is ever written to disk.",
+      "Durability requires the database to shut down after every commit."
+    ]
+  },
+  {
+    "question": "Is two-phase locking a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "two-phase locking",
+    "reference": "two-phase locking (a growing phase of locks followed by a shrinking phase) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "First the transaction only acquires locks, then it only releases them.",
+      "Locks grow during one phase and shrink during a later phase.",
+      "The transaction has an acquiring stage followed by a releasing stage."
+    ],
+    "plausible_wrong": [
+      "Two-phase locking takes all locks and releases them at the same instant.",
+      "It alternates acquiring and releasing every second.",
+      "Two-phase locking is a rule about transaction names, not locks."
+    ]
+  },
+  {
+    "question": "Is write-ahead logging a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "write-ahead logging",
+    "reference": "write-ahead logging (log records are flushed before data pages are written) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The log is forced to disk before the changed pages reach disk.",
+      "Records go to the log first; data page writes happen afterwards.",
+      "Before writing a page, the database makes sure the log record is durable."
+    ],
+    "plausible_wrong": [
+      "Write-ahead logging writes data pages before any log record.",
+      "It stores logs only after the transaction has committed and the page is written.",
+      "The log is kept in memory and never flushed to disk."
+    ]
+  },
+  {
+    "question": "Is serializability a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "serializability",
+    "reference": "serializability (a concurrent schedule is equivalent to some serial schedule) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The concurrent execution produces the same result as running transactions one at a time.",
+      "Even with overlap, the outcome matches some serial ordering.",
+      "A schedule is serializable when it behaves like a non-overlapping one."
+    ],
+    "plausible_wrong": [
+      "Serializability requires all transactions to use the same table.",
+      "It means every transaction must be one statement long.",
+      "The schedule is serializable only if no transaction ever commits."
+    ]
+  },
+  {
+    "question": "Is savepoint a good choice for a latency-sensitive Transactions workload? Justify.",
+    "topic": "Transactions",
+    "bloom_level": "evaluate",
+    "concept": "savepoint",
+    "reference": "savepoint (a named point inside a transaction that can be rolled back to) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "It is a marker in a transaction that you can undo back to.",
+      "A savepoint lets you roll back part of a transaction, not all of it.",
+      "You can name a point and later revert changes made after that point."
+    ],
+    "plausible_wrong": [
+      "A savepoint commits the transaction immediately.",
+      "It is a backup of the whole database stored offsite.",
+      "Savepoints can only be used after a transaction has ended."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses atomicity to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "atomicity",
+    "reference": "Procedure: detect the problem, apply atomicity (a transaction either commits completely or rolls back completely), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "A transaction is all-or-nothing: it finishes fully or is undone fully.",
+      "Either every operation in the transaction succeeds, or none of them do.",
+      "The database applies the whole transaction or reverts the whole thing."
+    ],
+    "plausible_wrong": [
+      "Atomicity means a transaction may commit some of its operations and skip others.",
+      "Transactions are split into smaller independent updates that each commit separately.",
+      "Atomicity guarantees a transaction always commits, even if it fails."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses consistency to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "consistency",
+    "reference": "Procedure: detect the problem, apply consistency (a committed transaction preserves database invariants), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "A committed transaction leaves the database in a valid state and keeps its rules.",
+      "The data still satisfies all invariants after the transaction finishes.",
+      "It preserves the database's correctness rules from before to after."
+    ],
+    "plausible_wrong": [
+      "Consistency means every transaction reads the same value twice.",
+      "It requires all tables to have identical numbers of rows.",
+      "Consistency lets a transaction violate rules as long as it commits quickly."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses isolation to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "isolation",
+    "reference": "Procedure: detect the problem, apply isolation (concurrent transactions do not see each other's partial effects), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "Transactions running at the same time cannot observe each other's uncommitted changes.",
+      "Each transaction appears to run on its own, despite concurrency.",
+      "Partial work from one transaction is hidden from other transactions."
+    ],
+    "plausible_wrong": [
+      "Isolation means transactions must run one after another, never concurrently.",
+      "It allows every transaction to read uncommitted writes from others.",
+      "Isolation deletes data written by competing transactions."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses durability to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "durability",
+    "reference": "Procedure: detect the problem, apply durability (committed changes survive a crash), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "Once committed, changes are not lost if the system crashes.",
+      "A committed update remains after a restart or power failure.",
+      "The database keeps committed results even when hardware fails."
+    ],
+    "plausible_wrong": [
+      "Durability means committed changes are erased after a crash for safety.",
+      "It guarantees no data is ever written to disk.",
+      "Durability requires the database to shut down after every commit."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses two-phase locking to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "two-phase locking",
+    "reference": "Procedure: detect the problem, apply two-phase locking (a growing phase of locks followed by a shrinking phase), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "First the transaction only acquires locks, then it only releases them.",
+      "Locks grow during one phase and shrink during a later phase.",
+      "The transaction has an acquiring stage followed by a releasing stage."
+    ],
+    "plausible_wrong": [
+      "Two-phase locking takes all locks and releases them at the same instant.",
+      "It alternates acquiring and releasing every second.",
+      "Two-phase locking is a rule about transaction names, not locks."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses write-ahead logging to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "write-ahead logging",
+    "reference": "Procedure: detect the problem, apply write-ahead logging (log records are flushed before data pages are written), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The log is forced to disk before the changed pages reach disk.",
+      "Records go to the log first; data page writes happen afterwards.",
+      "Before writing a page, the database makes sure the log record is durable."
+    ],
+    "plausible_wrong": [
+      "Write-ahead logging writes data pages before any log record.",
+      "It stores logs only after the transaction has committed and the page is written.",
+      "The log is kept in memory and never flushed to disk."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses serializability to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "serializability",
+    "reference": "Procedure: detect the problem, apply serializability (a concurrent schedule is equivalent to some serial schedule), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The concurrent execution produces the same result as running transactions one at a time.",
+      "Even with overlap, the outcome matches some serial ordering.",
+      "A schedule is serializable when it behaves like a non-overlapping one."
+    ],
+    "plausible_wrong": [
+      "Serializability requires all transactions to use the same table.",
+      "It means every transaction must be one statement long.",
+      "The schedule is serializable only if no transaction ever commits."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses savepoint to handle a Transactions problem.",
+    "topic": "Transactions",
+    "bloom_level": "create",
+    "concept": "savepoint",
+    "reference": "Procedure: detect the problem, apply savepoint (a named point inside a transaction that can be rolled back to), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "It is a marker in a transaction that you can undo back to.",
+      "A savepoint lets you roll back part of a transaction, not all of it.",
+      "You can name a point and later revert changes made after that point."
+    ],
+    "plausible_wrong": [
+      "A savepoint commits the transaction immediately.",
+      "It is a backup of the whole database stored offsite.",
+      "Savepoints can only be used after a transaction has ended."
+    ]
+  },
+  {
+    "question": "State what FCFS is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "fcfs",
+    "reference": "FCFS: processes are served in arrival order.",
+    "paraphrased_correct": [
+      "Jobs run in the order they arrive, first come first served.",
+      "The process that arrived earliest is selected next.",
+      "The scheduler uses arrival time and does not reorder the queue."
+    ],
+    "plausible_wrong": [
+      "FCFS always runs the shortest job first.",
+      "It gives each process a fixed time slice in a round.",
+      "FCFS chooses the process with the highest priority regardless of arrival."
+    ]
+  },
+  {
+    "question": "State what SJF is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "sjf",
+    "reference": "SJF: the process with the shortest next burst runs first.",
+    "paraphrased_correct": [
+      "The next process chosen is the one with the briefest CPU burst.",
+      "Short jobs are preferred over longer ones.",
+      "The scheduler estimates burst length and takes the smallest."
+    ],
+    "plausible_wrong": [
+      "SJF selects the process that has waited the longest.",
+      "It always gives every process the same time quantum.",
+      "SJF runs the largest job first to reduce context switches."
+    ]
+  },
+  {
+    "question": "State what round robin is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "round robin",
+    "reference": "round robin: each process gets a fixed time quantum in a cyclic queue.",
+    "paraphrased_correct": [
+      "Processes take turns, each receiving the same fixed slice of CPU time.",
+      "The ready list is circular and every process gets a quantum before repeating.",
+      "A timer interrupts a process after its fixed slice and the next one runs."
+    ],
+    "plausible_wrong": [
+      "Round robin lets one process run until it finishes, without a timer.",
+      "It selects only the process with the shortest burst each time.",
+      "Round robin assigns priorities based on memory size."
+    ]
+  },
+  {
+    "question": "State what time quantum is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "time quantum",
+    "reference": "time quantum: the maximum uninterrupted CPU slice given to a process.",
+    "paraphrased_correct": [
+      "It is the fixed maximum amount of CPU time one process gets before being switched.",
+      "A quantum is the time slice allowed in one turn.",
+      "The scheduler gives a process this slice before moving to the next."
+    ],
+    "plausible_wrong": [
+      "The time quantum is the total time a process needs to finish.",
+      "It is the amount of memory reserved for a process.",
+      "Time quantum is the delay before a process arrives."
+    ]
+  },
+  {
+    "question": "State what preemption is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "preemption",
+    "reference": "preemption: the scheduler may take the CPU from a running process.",
+    "paraphrased_correct": [
+      "The scheduler can interrupt a running job and give the CPU to another.",
+      "A running process may lose the CPU before it finishes.",
+      "The OS can switch away from a process without waiting for it to end."
+    ],
+    "plausible_wrong": [
+      "Preemption means a process keeps the CPU until it voluntarily finishes.",
+      "It increases the priority of long-waiting jobs gradually.",
+      "Preemption is when two processes share the same address space."
+    ]
+  },
+  {
+    "question": "State what starvation is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "starvation",
+    "reference": "starvation: a process waits indefinitely because others are preferred.",
+    "paraphrased_correct": [
+      "A job can wait forever because other jobs are always chosen instead.",
+      "The process never gets CPU time as other work keeps taking priority.",
+      "Indefinite postponement happens when a process is continually overlooked."
+    ],
+    "plausible_wrong": [
+      "Starvation happens when two processes deadlock on the same resource.",
+      "It means every process gets an exactly equal share of CPU time.",
+      "Starvation ends a process immediately when it arrives."
+    ]
+  },
+  {
+    "question": "State what aging is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "aging",
+    "reference": "aging: gradually raising the priority of long-waiting processes.",
+    "paraphrased_correct": [
+      "The scheduler slowly increases a waiting job's priority as time passes.",
+      "Long-waiting processes are promoted step by step.",
+      "A process's priority is boosted the longer it has been waiting."
+    ],
+    "plausible_wrong": [
+      "Aging lowers the priority of processes that have waited the longest.",
+      "It assigns priorities randomly on every context switch.",
+      "Aging deletes processes that have waited too long."
+    ]
+  },
+  {
+    "question": "State what turnaround time is in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "remember",
+    "concept": "turnaround time",
+    "reference": "turnaround time: the interval from submission to completion.",
+    "paraphrased_correct": [
+      "It is the total time from when a process is submitted until it finishes.",
+      "Turnaround measures arrival-to-completion, including all waiting.",
+      "The elapsed time between job submission and job completion."
+    ],
+    "plausible_wrong": [
+      "Turnaround time is only the time spent waiting in the ready queue.",
+      "It measures the time from process creation to its first CPU burst.",
+      "Turnaround time is the length of one time quantum."
+    ]
+  },
+  {
+    "question": "Explain how FCFS affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "fcfs",
+    "reference": "FCFS means processes are served in arrival order. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "Jobs run in the order they arrive, first come first served.",
+      "The process that arrived earliest is selected next.",
+      "The scheduler uses arrival time and does not reorder the queue."
+    ],
+    "plausible_wrong": [
+      "FCFS always runs the shortest job first.",
+      "It gives each process a fixed time slice in a round.",
+      "FCFS chooses the process with the highest priority regardless of arrival."
+    ]
+  },
+  {
+    "question": "Explain how SJF affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "sjf",
+    "reference": "SJF means the process with the shortest next burst runs first. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The next process chosen is the one with the briefest CPU burst.",
+      "Short jobs are preferred over longer ones.",
+      "The scheduler estimates burst length and takes the smallest."
+    ],
+    "plausible_wrong": [
+      "SJF selects the process that has waited the longest.",
+      "It always gives every process the same time quantum.",
+      "SJF runs the largest job first to reduce context switches."
+    ]
+  },
+  {
+    "question": "Explain how round robin affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "round robin",
+    "reference": "round robin means each process gets a fixed time quantum in a cyclic queue. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "Processes take turns, each receiving the same fixed slice of CPU time.",
+      "The ready list is circular and every process gets a quantum before repeating.",
+      "A timer interrupts a process after its fixed slice and the next one runs."
+    ],
+    "plausible_wrong": [
+      "Round robin lets one process run until it finishes, without a timer.",
+      "It selects only the process with the shortest burst each time.",
+      "Round robin assigns priorities based on memory size."
+    ]
+  },
+  {
+    "question": "Explain how time quantum affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "time quantum",
+    "reference": "time quantum means the maximum uninterrupted CPU slice given to a process. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "It is the fixed maximum amount of CPU time one process gets before being switched.",
+      "A quantum is the time slice allowed in one turn.",
+      "The scheduler gives a process this slice before moving to the next."
+    ],
+    "plausible_wrong": [
+      "The time quantum is the total time a process needs to finish.",
+      "It is the amount of memory reserved for a process.",
+      "Time quantum is the delay before a process arrives."
+    ]
+  },
+  {
+    "question": "Explain how preemption affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "preemption",
+    "reference": "preemption means the scheduler may take the CPU from a running process. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The scheduler can interrupt a running job and give the CPU to another.",
+      "A running process may lose the CPU before it finishes.",
+      "The OS can switch away from a process without waiting for it to end."
+    ],
+    "plausible_wrong": [
+      "Preemption means a process keeps the CPU until it voluntarily finishes.",
+      "It increases the priority of long-waiting jobs gradually.",
+      "Preemption is when two processes share the same address space."
+    ]
+  },
+  {
+    "question": "Explain how starvation affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "starvation",
+    "reference": "starvation means a process waits indefinitely because others are preferred. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "A job can wait forever because other jobs are always chosen instead.",
+      "The process never gets CPU time as other work keeps taking priority.",
+      "Indefinite postponement happens when a process is continually overlooked."
+    ],
+    "plausible_wrong": [
+      "Starvation happens when two processes deadlock on the same resource.",
+      "It means every process gets an exactly equal share of CPU time.",
+      "Starvation ends a process immediately when it arrives."
+    ]
+  },
+  {
+    "question": "Explain how aging affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "aging",
+    "reference": "aging means gradually raising the priority of long-waiting processes. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "The scheduler slowly increases a waiting job's priority as time passes.",
+      "Long-waiting processes are promoted step by step.",
+      "A process's priority is boosted the longer it has been waiting."
+    ],
+    "plausible_wrong": [
+      "Aging lowers the priority of processes that have waited the longest.",
+      "It assigns priorities randomly on every context switch.",
+      "Aging deletes processes that have waited too long."
+    ]
+  },
+  {
+    "question": "Explain how turnaround time affects behaviour in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "understand",
+    "concept": "turnaround time",
+    "reference": "turnaround time means the interval from submission to completion. It affects behaviour because it determines how the system proceeds.",
+    "paraphrased_correct": [
+      "It is the total time from when a process is submitted until it finishes.",
+      "Turnaround measures arrival-to-completion, including all waiting.",
+      "The elapsed time between job submission and job completion."
+    ],
+    "plausible_wrong": [
+      "Turnaround time is only the time spent waiting in the ready queue.",
+      "It measures the time from process creation to its first CPU burst.",
+      "Turnaround time is the length of one time quantum."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs FCFS. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "fcfs",
+    "reference": "Identify where FCFS is needed and apply it directly: processes are served in arrival order. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "Jobs run in the order they arrive, first come first served.",
+      "The process that arrived earliest is selected next.",
+      "The scheduler uses arrival time and does not reorder the queue."
+    ],
+    "plausible_wrong": [
+      "FCFS always runs the shortest job first.",
+      "It gives each process a fixed time slice in a round.",
+      "FCFS chooses the process with the highest priority regardless of arrival."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs SJF. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "sjf",
+    "reference": "Identify where SJF is needed and apply it directly: the process with the shortest next burst runs first. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The next process chosen is the one with the briefest CPU burst.",
+      "Short jobs are preferred over longer ones.",
+      "The scheduler estimates burst length and takes the smallest."
+    ],
+    "plausible_wrong": [
+      "SJF selects the process that has waited the longest.",
+      "It always gives every process the same time quantum.",
+      "SJF runs the largest job first to reduce context switches."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs round robin. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "round robin",
+    "reference": "Identify where round robin is needed and apply it directly: each process gets a fixed time quantum in a cyclic queue. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "Processes take turns, each receiving the same fixed slice of CPU time.",
+      "The ready list is circular and every process gets a quantum before repeating.",
+      "A timer interrupts a process after its fixed slice and the next one runs."
+    ],
+    "plausible_wrong": [
+      "Round robin lets one process run until it finishes, without a timer.",
+      "It selects only the process with the shortest burst each time.",
+      "Round robin assigns priorities based on memory size."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs time quantum. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "time quantum",
+    "reference": "Identify where time quantum is needed and apply it directly: the maximum uninterrupted CPU slice given to a process. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "It is the fixed maximum amount of CPU time one process gets before being switched.",
+      "A quantum is the time slice allowed in one turn.",
+      "The scheduler gives a process this slice before moving to the next."
+    ],
+    "plausible_wrong": [
+      "The time quantum is the total time a process needs to finish.",
+      "It is the amount of memory reserved for a process.",
+      "Time quantum is the delay before a process arrives."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs preemption. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "preemption",
+    "reference": "Identify where preemption is needed and apply it directly: the scheduler may take the CPU from a running process. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The scheduler can interrupt a running job and give the CPU to another.",
+      "A running process may lose the CPU before it finishes.",
+      "The OS can switch away from a process without waiting for it to end."
+    ],
+    "plausible_wrong": [
+      "Preemption means a process keeps the CPU until it voluntarily finishes.",
+      "It increases the priority of long-waiting jobs gradually.",
+      "Preemption is when two processes share the same address space."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs starvation. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "starvation",
+    "reference": "Identify where starvation is needed and apply it directly: a process waits indefinitely because others are preferred. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "A job can wait forever because other jobs are always chosen instead.",
+      "The process never gets CPU time as other work keeps taking priority.",
+      "Indefinite postponement happens when a process is continually overlooked."
+    ],
+    "plausible_wrong": [
+      "Starvation happens when two processes deadlock on the same resource.",
+      "It means every process gets an exactly equal share of CPU time.",
+      "Starvation ends a process immediately when it arrives."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs aging. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "aging",
+    "reference": "Identify where aging is needed and apply it directly: gradually raising the priority of long-waiting processes. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "The scheduler slowly increases a waiting job's priority as time passes.",
+      "Long-waiting processes are promoted step by step.",
+      "A process's priority is boosted the longer it has been waiting."
+    ],
+    "plausible_wrong": [
+      "Aging lowers the priority of processes that have waited the longest.",
+      "It assigns priorities randomly on every context switch.",
+      "Aging deletes processes that have waited too long."
+    ]
+  },
+  {
+    "question": "A workload in CPU Scheduling needs turnaround time. How would you apply it?",
+    "topic": "CPU Scheduling",
+    "bloom_level": "apply",
+    "concept": "turnaround time",
+    "reference": "Identify where turnaround time is needed and apply it directly: the interval from submission to completion. Verify the outcome against the workload.",
+    "paraphrased_correct": [
+      "It is the total time from when a process is submitted until it finishes.",
+      "Turnaround measures arrival-to-completion, including all waiting.",
+      "The elapsed time between job submission and job completion."
+    ],
+    "plausible_wrong": [
+      "Turnaround time is only the time spent waiting in the ready queue.",
+      "It measures the time from process creation to its first CPU burst.",
+      "Turnaround time is the length of one time quantum."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by FCFS in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "fcfs",
+    "reference": "FCFS gives processes are served in arrival order. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "Jobs run in the order they arrive, first come first served.",
+      "The process that arrived earliest is selected next.",
+      "The scheduler uses arrival time and does not reorder the queue."
+    ],
+    "plausible_wrong": [
+      "FCFS always runs the shortest job first.",
+      "It gives each process a fixed time slice in a round.",
+      "FCFS chooses the process with the highest priority regardless of arrival."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by SJF in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "sjf",
+    "reference": "SJF gives the process with the shortest next burst runs first. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The next process chosen is the one with the briefest CPU burst.",
+      "Short jobs are preferred over longer ones.",
+      "The scheduler estimates burst length and takes the smallest."
+    ],
+    "plausible_wrong": [
+      "SJF selects the process that has waited the longest.",
+      "It always gives every process the same time quantum.",
+      "SJF runs the largest job first to reduce context switches."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by round robin in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "round robin",
+    "reference": "round robin gives each process gets a fixed time quantum in a cyclic queue. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "Processes take turns, each receiving the same fixed slice of CPU time.",
+      "The ready list is circular and every process gets a quantum before repeating.",
+      "A timer interrupts a process after its fixed slice and the next one runs."
+    ],
+    "plausible_wrong": [
+      "Round robin lets one process run until it finishes, without a timer.",
+      "It selects only the process with the shortest burst each time.",
+      "Round robin assigns priorities based on memory size."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by time quantum in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "time quantum",
+    "reference": "time quantum gives the maximum uninterrupted CPU slice given to a process. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "It is the fixed maximum amount of CPU time one process gets before being switched.",
+      "A quantum is the time slice allowed in one turn.",
+      "The scheduler gives a process this slice before moving to the next."
+    ],
+    "plausible_wrong": [
+      "The time quantum is the total time a process needs to finish.",
+      "It is the amount of memory reserved for a process.",
+      "Time quantum is the delay before a process arrives."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by preemption in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "preemption",
+    "reference": "preemption gives the scheduler may take the CPU from a running process. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The scheduler can interrupt a running job and give the CPU to another.",
+      "A running process may lose the CPU before it finishes.",
+      "The OS can switch away from a process without waiting for it to end."
+    ],
+    "plausible_wrong": [
+      "Preemption means a process keeps the CPU until it voluntarily finishes.",
+      "It increases the priority of long-waiting jobs gradually.",
+      "Preemption is when two processes share the same address space."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by starvation in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "starvation",
+    "reference": "starvation gives a process waits indefinitely because others are preferred. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "A job can wait forever because other jobs are always chosen instead.",
+      "The process never gets CPU time as other work keeps taking priority.",
+      "Indefinite postponement happens when a process is continually overlooked."
+    ],
+    "plausible_wrong": [
+      "Starvation happens when two processes deadlock on the same resource.",
+      "It means every process gets an exactly equal share of CPU time.",
+      "Starvation ends a process immediately when it arrives."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by aging in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "aging",
+    "reference": "aging gives gradually raising the priority of long-waiting processes. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "The scheduler slowly increases a waiting job's priority as time passes.",
+      "Long-waiting processes are promoted step by step.",
+      "A process's priority is boosted the longer it has been waiting."
+    ],
+    "plausible_wrong": [
+      "Aging lowers the priority of processes that have waited the longest.",
+      "It assigns priorities randomly on every context switch.",
+      "Aging deletes processes that have waited too long."
+    ]
+  },
+  {
+    "question": "Analyse the trade-off introduced by turnaround time in CPU Scheduling.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "analyze",
+    "concept": "turnaround time",
+    "reference": "turnaround time gives the interval from submission to completion. The trade-off is extra coordination or overhead in exchange for predictability.",
+    "paraphrased_correct": [
+      "It is the total time from when a process is submitted until it finishes.",
+      "Turnaround measures arrival-to-completion, including all waiting.",
+      "The elapsed time between job submission and job completion."
+    ],
+    "plausible_wrong": [
+      "Turnaround time is only the time spent waiting in the ready queue.",
+      "It measures the time from process creation to its first CPU burst.",
+      "Turnaround time is the length of one time quantum."
+    ]
+  },
+  {
+    "question": "Is FCFS a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "fcfs",
+    "reference": "FCFS (processes are served in arrival order) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "Jobs run in the order they arrive, first come first served.",
+      "The process that arrived earliest is selected next.",
+      "The scheduler uses arrival time and does not reorder the queue."
+    ],
+    "plausible_wrong": [
+      "FCFS always runs the shortest job first.",
+      "It gives each process a fixed time slice in a round.",
+      "FCFS chooses the process with the highest priority regardless of arrival."
+    ]
+  },
+  {
+    "question": "Is SJF a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "sjf",
+    "reference": "SJF (the process with the shortest next burst runs first) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The next process chosen is the one with the briefest CPU burst.",
+      "Short jobs are preferred over longer ones.",
+      "The scheduler estimates burst length and takes the smallest."
+    ],
+    "plausible_wrong": [
+      "SJF selects the process that has waited the longest.",
+      "It always gives every process the same time quantum.",
+      "SJF runs the largest job first to reduce context switches."
+    ]
+  },
+  {
+    "question": "Is round robin a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "round robin",
+    "reference": "round robin (each process gets a fixed time quantum in a cyclic queue) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "Processes take turns, each receiving the same fixed slice of CPU time.",
+      "The ready list is circular and every process gets a quantum before repeating.",
+      "A timer interrupts a process after its fixed slice and the next one runs."
+    ],
+    "plausible_wrong": [
+      "Round robin lets one process run until it finishes, without a timer.",
+      "It selects only the process with the shortest burst each time.",
+      "Round robin assigns priorities based on memory size."
+    ]
+  },
+  {
+    "question": "Is time quantum a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "time quantum",
+    "reference": "time quantum (the maximum uninterrupted CPU slice given to a process) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "It is the fixed maximum amount of CPU time one process gets before being switched.",
+      "A quantum is the time slice allowed in one turn.",
+      "The scheduler gives a process this slice before moving to the next."
+    ],
+    "plausible_wrong": [
+      "The time quantum is the total time a process needs to finish.",
+      "It is the amount of memory reserved for a process.",
+      "Time quantum is the delay before a process arrives."
+    ]
+  },
+  {
+    "question": "Is preemption a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "preemption",
+    "reference": "preemption (the scheduler may take the CPU from a running process) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The scheduler can interrupt a running job and give the CPU to another.",
+      "A running process may lose the CPU before it finishes.",
+      "The OS can switch away from a process without waiting for it to end."
+    ],
+    "plausible_wrong": [
+      "Preemption means a process keeps the CPU until it voluntarily finishes.",
+      "It increases the priority of long-waiting jobs gradually.",
+      "Preemption is when two processes share the same address space."
+    ]
+  },
+  {
+    "question": "Is starvation a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "starvation",
+    "reference": "starvation (a process waits indefinitely because others are preferred) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "A job can wait forever because other jobs are always chosen instead.",
+      "The process never gets CPU time as other work keeps taking priority.",
+      "Indefinite postponement happens when a process is continually overlooked."
+    ],
+    "plausible_wrong": [
+      "Starvation happens when two processes deadlock on the same resource.",
+      "It means every process gets an exactly equal share of CPU time.",
+      "Starvation ends a process immediately when it arrives."
+    ]
+  },
+  {
+    "question": "Is aging a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "aging",
+    "reference": "aging (gradually raising the priority of long-waiting processes) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "The scheduler slowly increases a waiting job's priority as time passes.",
+      "Long-waiting processes are promoted step by step.",
+      "A process's priority is boosted the longer it has been waiting."
+    ],
+    "plausible_wrong": [
+      "Aging lowers the priority of processes that have waited the longest.",
+      "It assigns priorities randomly on every context switch.",
+      "Aging deletes processes that have waited too long."
+    ]
+  },
+  {
+    "question": "Is turnaround time a good choice for a latency-sensitive CPU Scheduling workload? Justify.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "evaluate",
+    "concept": "turnaround time",
+    "reference": "turnaround time (the interval from submission to completion) is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "paraphrased_correct": [
+      "It is the total time from when a process is submitted until it finishes.",
+      "Turnaround measures arrival-to-completion, including all waiting.",
+      "The elapsed time between job submission and job completion."
+    ],
+    "plausible_wrong": [
+      "Turnaround time is only the time spent waiting in the ready queue.",
+      "It measures the time from process creation to its first CPU burst.",
+      "Turnaround time is the length of one time quantum."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses FCFS to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "fcfs",
+    "reference": "Procedure: detect the problem, apply FCFS (processes are served in arrival order), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "Jobs run in the order they arrive, first come first served.",
+      "The process that arrived earliest is selected next.",
+      "The scheduler uses arrival time and does not reorder the queue."
+    ],
+    "plausible_wrong": [
+      "FCFS always runs the shortest job first.",
+      "It gives each process a fixed time slice in a round.",
+      "FCFS chooses the process with the highest priority regardless of arrival."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses SJF to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "sjf",
+    "reference": "Procedure: detect the problem, apply SJF (the process with the shortest next burst runs first), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The next process chosen is the one with the briefest CPU burst.",
+      "Short jobs are preferred over longer ones.",
+      "The scheduler estimates burst length and takes the smallest."
+    ],
+    "plausible_wrong": [
+      "SJF selects the process that has waited the longest.",
+      "It always gives every process the same time quantum.",
+      "SJF runs the largest job first to reduce context switches."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses round robin to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "round robin",
+    "reference": "Procedure: detect the problem, apply round robin (each process gets a fixed time quantum in a cyclic queue), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "Processes take turns, each receiving the same fixed slice of CPU time.",
+      "The ready list is circular and every process gets a quantum before repeating.",
+      "A timer interrupts a process after its fixed slice and the next one runs."
+    ],
+    "plausible_wrong": [
+      "Round robin lets one process run until it finishes, without a timer.",
+      "It selects only the process with the shortest burst each time.",
+      "Round robin assigns priorities based on memory size."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses time quantum to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "time quantum",
+    "reference": "Procedure: detect the problem, apply time quantum (the maximum uninterrupted CPU slice given to a process), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "It is the fixed maximum amount of CPU time one process gets before being switched.",
+      "A quantum is the time slice allowed in one turn.",
+      "The scheduler gives a process this slice before moving to the next."
+    ],
+    "plausible_wrong": [
+      "The time quantum is the total time a process needs to finish.",
+      "It is the amount of memory reserved for a process.",
+      "Time quantum is the delay before a process arrives."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses preemption to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "preemption",
+    "reference": "Procedure: detect the problem, apply preemption (the scheduler may take the CPU from a running process), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The scheduler can interrupt a running job and give the CPU to another.",
+      "A running process may lose the CPU before it finishes.",
+      "The OS can switch away from a process without waiting for it to end."
+    ],
+    "plausible_wrong": [
+      "Preemption means a process keeps the CPU until it voluntarily finishes.",
+      "It increases the priority of long-waiting jobs gradually.",
+      "Preemption is when two processes share the same address space."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses starvation to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "starvation",
+    "reference": "Procedure: detect the problem, apply starvation (a process waits indefinitely because others are preferred), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "A job can wait forever because other jobs are always chosen instead.",
+      "The process never gets CPU time as other work keeps taking priority.",
+      "Indefinite postponement happens when a process is continually overlooked."
+    ],
+    "plausible_wrong": [
+      "Starvation happens when two processes deadlock on the same resource.",
+      "It means every process gets an exactly equal share of CPU time.",
+      "Starvation ends a process immediately when it arrives."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses aging to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "aging",
+    "reference": "Procedure: detect the problem, apply aging (gradually raising the priority of long-waiting processes), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "The scheduler slowly increases a waiting job's priority as time passes.",
+      "Long-waiting processes are promoted step by step.",
+      "A process's priority is boosted the longer it has been waiting."
+    ],
+    "plausible_wrong": [
+      "Aging lowers the priority of processes that have waited the longest.",
+      "It assigns priorities randomly on every context switch.",
+      "Aging deletes processes that have waited too long."
+    ]
+  },
+  {
+    "question": "Design a short procedure that uses turnaround time to handle a CPU Scheduling problem.",
+    "topic": "CPU Scheduling",
+    "bloom_level": "create",
+    "concept": "turnaround time",
+    "reference": "Procedure: detect the problem, apply turnaround time (the interval from submission to completion), then verify that the system is back in a valid state.",
+    "paraphrased_correct": [
+      "It is the total time from when a process is submitted until it finishes.",
+      "Turnaround measures arrival-to-completion, including all waiting.",
+      "The elapsed time between job submission and job completion."
+    ],
+    "plausible_wrong": [
+      "Turnaround time is only the time spent waiting in the ready queue.",
+      "It measures the time from process creation to its first CPU burst.",
+      "Turnaround time is the length of one time quantum."
+    ]
+  }
+]
