@@ -227,6 +227,7 @@ export function GeneratePanel() {
         blooms,
         count,
         adaptive,
+        uploaded_only: uploadedOnly,
         signal: controller.signal,
         onProgress: setProgress,
       })
