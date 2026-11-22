@@ -334,13 +334,28 @@ _BOILERPLATE_PHRASES = (
     ", then verify that the system is back in a valid state.",
 )
 
+# Contradictions that invert the claim outright get a larger deduction than a
+# merely sloppy answer, so a partly right answer can still land near 0.5.
+_SEVERE_CUES = {
+    "longest waiting",
+    "cpu but not for resources",
+    "waits for the cpu",
+    "giving each process every resource",
+    "erased",
+    "deleted",
+    "never written",
+    "same instant",
+    "rule about transaction names",
+    "writes data pages before any log",
+}
+
 # label fragment -> (positive synonym groups, contradiction cues)
 _CLAIM_RULES: dict[str, tuple[list[list[str]], list[str]]] = {
     "mutual exclusion": (
         [["only one", "single", "one process", "just one", "at most one"],
          ["hold", "own", "has", "have", "using", "use", "allocated", "holder"],
          ["resource", "at a time", "at once", "moment", "instant"]],
-        ["every process", "all processes", "same time", "shared", "each process use"],
+        ["every process", "all processes", "same time", "shared", "each process use", "longest waiting"],
     ),
     "hold and wait": (
         [["hold", "holds", "keep", "keeps", "retain", "retains", "does not release", "without releasing"],
@@ -357,8 +372,8 @@ _CLAIM_RULES: dict[str, tuple[list[list[str]], list[str]]] = {
     "circular wait": (
         [["cycle", "loop", "ring", "circular"],
          ["wait", "waiting", "waits", "dependencies", "dependency", "chain"],
-         ["next", "resource", "another", "dependencies", "other"]],
-        ["straight line", "not a cycle", "cpu but not resources", "giving each process every resource"],
+         ["next", "another", "dependencies", "dependency"]],
+        ["straight line", "not a cycle", "cpu but not resources", "cpu but not for resources", "waits for the cpu", "giving each process every resource"],
     ),
     "resource allocation graph": (
         [["graph", "diagram"],
@@ -548,9 +563,19 @@ def evaluate_answer_provisional(question: Question, student_answer: str) -> dict
         )
         cue_score = hits / max(1, len(groups))
         semantic = max(0.0, min(1.0, (max(0.0, embedding) - 0.20) / 0.50))
-        combined = 0.30 * semantic + 0.70 * cue_score
-        if any(_contains_cue(student_answer, cue) for cue in contradictions):
-            combined = min(combined, 0.35)
+        combined = 0.40 * semantic + 0.60 * cue_score
+        matched_contradictions = [
+            cue for cue in contradictions if _contains_cue(student_answer, cue)
+        ]
+        if matched_contradictions:
+            # A right claim plus a sloppy clause should land near 0.5; an outright
+            # inversion of the claim gets a larger deduction.
+            penalty = (
+                0.62
+                if any(cue in _SEVERE_CUES for cue in matched_contradictions)
+                else 0.42
+            )
+            combined = max(0.0, combined - penalty)
     else:
         # Unknown reference: keep the old bounded keyword + embedding behaviour.
         combined = max(0.0, min(1.0, 0.6 * keyword + 0.4 * max(0.0, embedding)))
