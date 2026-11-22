@@ -89,6 +89,24 @@ def test_unhandled_500_has_request_id():
     assert response.headers["X-Request-ID"] == body["request_id"]
 
 
+def test_database_outage_is_503_with_stable_code():
+    from sqlalchemy.exc import OperationalError
+
+    app = create_app()
+
+    @app.get("/__db_down")
+    def db_down():
+        raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/__db_down")
+    assert response.status_code == 503
+    body = response.json()
+    assert body["code"] == "DB_UNAVAILABLE"
+    assert body["request_id"]
+    assert response.headers["X-Request-ID"] == body["request_id"]
+
+
 @pytest.mark.parametrize(
     "origin",
     ["http://localhost:5174", "http://127.0.0.1:5174"],
