@@ -16,6 +16,13 @@ const args = Object.fromEntries(
 const mode = args.mode ?? 'live'
 const port = Number(args.port ?? 5174)
 const base = `http://localhost:${port}`
+
+// Extended proof suites live in their own module so the original ladder proof
+// stays small and unchanged: `node scripts/browser-demo.mjs --suite=middle`.
+if (args.suite) {
+  await import('./browser-demo-extended.mjs')
+  process.exit(0)
+}
 const shotDir = path.resolve(
   process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
   'opencode',

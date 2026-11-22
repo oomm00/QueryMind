@@ -1,0 +1,102 @@
+{
+  "deadlock commonly refers": {
+    "high": "Deadlock commonly refers to a situation where two or more processes are each waiting for the other to take action. The main detail is that the system keeps things predictable.",
+    "mid": "A deadlock is when processes wait for each other, but all requests are granted immediately and no cycle is ever checked."
+  },
+  "mutual exclusion": {
+    "high": "A single process at most can hold a resource.",
+    "mid": "Only one process may hold a resource at a time, but all processes can use it together."
+  },
+  "hold and wait": {
+    "high": "A process holds on to resources while asking for more.",
+    "mid": "A process holds resources while requesting more, but it must release all held resources before asking and cannot keep any."
+  },
+  "no preemption": {
+    "high": "A resource cannot be forcibly taken.",
+    "mid": "A resource cannot be forcibly taken, but resources are released automatically when another process asks."
+  },
+  "circular wait": {
+    "high": "Processes form a cycle, each waiting for another.",
+    "mid": "There is a cycle of processes each waiting for the next, but it is not a cycle in practice."
+  },
+  "resource allocation graph": {
+    "high": "It is a directed graph of allocations.",
+    "mid": "It is a directed graph of process allocations, but it records only process names."
+  },
+  "safe state": {
+    "high": "Every process can still finish.",
+    "mid": "Every process can finish in some order, but no process may ever request another resource because all resources are assigned to one process."
+  },
+  "deadlock detection": {
+    "high": "The system checks the graph for a deadlock cycle periodically.",
+    "mid": "The system checks the graph for a deadlock cycle periodically, but it checks CPU temperature once per second."
+  },
+  "recovery by rollback": {
+    "high": "Recovery rolls back to break the deadlock.",
+    "mid": "A process is rolled back to break the deadlock, but it restarts the entire machine."
+  },
+  "atomicity": {
+    "high": "A transaction is all-or-nothing: either every operation commits completely or none of them do.",
+    "mid": "A transaction is all-or-nothing, but transactions are split into smaller updates that each commit separately."
+  },
+  "consistency": {
+    "high": "The database keeps its invariants.",
+    "mid": "A committed transaction preserves invariants, but it may violate rules."
+  },
+  "isolation": {
+    "high": "Partial work is hidden from other transactions.",
+    "mid": "Concurrent transactions cannot see partial effects, but they read uncommitted writes."
+  },
+  "durability": {
+    "high": "Committed changes survive a crash.",
+    "mid": "Committed changes survive a crash, but it requires the database to shut down after every commit."
+  },
+  "two-phase locking": {
+    "high": "Locks grow during one phase then shrink during a later phase.",
+    "mid": "Locks grow then shrink, but it alternates acquiring and releasing every second."
+  },
+  "write-ahead logging": {
+    "high": "The log is written before data pages are stored on disk.",
+    "mid": "The log is written before data pages, but the log is kept in memory and never flushed to disk."
+  },
+  "serializability": {
+    "high": "A concurrent schedule matches a serial order.",
+    "mid": "The schedule matches a serial order, but all transactions use the same table."
+  },
+  "savepoint": {
+    "high": "It is a point in a transaction that lets you roll back.",
+    "mid": "This point lets you roll back part of a transaction, but it is a backup of the whole database stored offsite."
+  },
+  "fcfs": {
+    "high": "Processes are served in arrival order.",
+    "mid": "Processes are served in arrival order, but it gives each process a fixed time slice."
+  },
+  "sjf": {
+    "high": "The shortest job runs first.",
+    "mid": "The shortest job runs first, but the process that waited the longest runs."
+  },
+  "round robin": {
+    "high": "Processes take turns with a fixed slice.",
+    "mid": "Processes take turns with a fixed slice of CPU time in a cyclic queue, but it selects only the shortest burst each time."
+  },
+  "time quantum": {
+    "high": "It is a fixed CPU slice before moving to the next.",
+    "mid": "It is the fixed maximum CPU time slice in one turn before being switched, but it is the amount of memory reserved."
+  },
+  "preemption": {
+    "high": "The scheduler can interrupt a running process.",
+    "mid": "The scheduler can interrupt a running process, but it increases the priority of long-waiting jobs."
+  },
+  "starvation": {
+    "high": "A job can wait forever because other jobs are chosen.",
+    "mid": "A process can wait forever because other jobs are chosen, but starvation ends a process immediately."
+  },
+  "aging": {
+    "high": "Long-waiting processes are promoted step by step.",
+    "mid": "Long-waiting processes are promoted, but it assigns priorities randomly."
+  },
+  "turnaround time": {
+    "high": "It measures arrival to completion.",
+    "mid": "It is the total time from submission to completion, but it is the length of one time quantum."
+  }
+}
