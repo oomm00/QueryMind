@@ -95,8 +95,10 @@ $env:VITE_MOCK_PROFILE_GOAL = 'false'
 $env:VITE_MOCK_NEXT_PARAMS = 'false'
 $env:VITE_MOCK_PROFILE = 'false'
 $env:VITE_MOCK_HISTORY = 'false'
-$env:VITE_MOCK_CATALOG = 'false'
-$env:VITE_MOCK_CONTENT = 'false'
+# There is no backend catalog/content router; these two are static UI fixtures,
+# not learner data, and must stay local to avoid 404s on course navigation.
+$env:VITE_MOCK_CATALOG = 'true'
+$env:VITE_MOCK_CONTENT = 'true'
 $logDir = Join-Path $env:TEMP 'querymind-demo'
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $outLog = Join-Path $logDir 'frontend.out.log'
