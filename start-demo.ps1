@@ -85,8 +85,18 @@ if (-not $health) { throw 'Backend /health did not become healthy within 60s' }
 
 $env:VITE_API_BASE_URL = 'http://localhost:8000'
 $env:VITE_USE_MOCKS = 'false'
+# Every domain must be real in the demo: a mocked documents endpoint would show
+# a fake "uploaded" toast while the backend never received the PDF.
+$env:VITE_MOCK_AUTH = 'false'
 $env:VITE_MOCK_QUESTIONS = 'false'
 $env:VITE_MOCK_ATTEMPTS = 'false'
+$env:VITE_MOCK_DOCUMENTS = 'false'
+$env:VITE_MOCK_PROFILE_GOAL = 'false'
+$env:VITE_MOCK_NEXT_PARAMS = 'false'
+$env:VITE_MOCK_PROFILE = 'false'
+$env:VITE_MOCK_HISTORY = 'false'
+$env:VITE_MOCK_CATALOG = 'false'
+$env:VITE_MOCK_CONTENT = 'false'
 $logDir = Join-Path $env:TEMP 'querymind-demo'
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $outLog = Join-Path $logDir 'frontend.out.log'
