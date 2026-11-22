@@ -54,7 +54,11 @@ export async function gradeGeneratedAnswer(question, answerText, userId) {
     const score = normaliseScore(result?.score)
     if (score == null) return null
     return { score, feedback: String(result?.feedback_text ?? '').trim() }
-  } catch {
+  } catch (error) {
+    // A database outage is temporary and the answer is still in the browser.
+    // Let the session show a friendly Retry instead of silently marking the
+    // answer as unscored. Other grading failures stay non-fatal as before.
+    if (error?.data?.code === 'DB_UNAVAILABLE' || error?.status === 503) throw error
     return null
   }
 }

@@ -36,6 +36,7 @@ import {
 import { recordScore } from '../lib/masteryStore.js'
 import { marksForQuestion, scoreOf } from '../lib/marks.js'
 import { gradeGeneratedAnswer } from '../lib/generateGrading.js'
+import { generationError } from '../api/errorMessages.js'
 import { resolveQuestions } from '../content/practiceBank.js'
 import { QUESTION_TYPE_LABELS } from '../content/questionBank.js'
 import { Badge } from '../components/ui/Badge'
@@ -86,6 +87,7 @@ export default function SessionPage() {
   const [exitOpen, setExitOpen] = useState(false)
   const [resumed, setResumed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   // Resume at the first unanswered question, once, when the session loads.
   useEffect(() => {
@@ -205,6 +207,7 @@ export default function SessionPage() {
     }
 
     setSubmitting(true)
+    setSubmitError(null)
     try {
       // Score what can be scored now, once each: the store remembers the
       // (session, question) pair, so submitting twice cannot count an answer
@@ -252,6 +255,10 @@ export default function SessionPage() {
       submitSession(userId, sessionId)
       setConfirmOpen(false)
       navigate(`/practice/${sessionId}/results`)
+    } catch (error) {
+      // The answer stays in the session and the submission id is stable, so a
+      // retry after the DB returns cannot double-count it.
+      setSubmitError(error)
     } finally {
       setSubmitting(false)
     }
@@ -421,8 +428,8 @@ export default function SessionPage() {
 
       <Dialog
         open={confirmOpen}
-        title="Submit this session?"
-        description={confirmMessage}
+        title={submitError ? 'Could not save your answer' : 'Submit this session?'}
+        description={submitError ? generationError(submitError).message : confirmMessage}
         onClose={() => setConfirmOpen(false)}
         footer={
           <>
@@ -430,7 +437,7 @@ export default function SessionPage() {
               Keep practicing
             </Button>
             <Button onClick={submit} loading={submitting}>
-              Submit
+              {submitError ? 'Retry' : 'Submit'}
             </Button>
           </>
         }

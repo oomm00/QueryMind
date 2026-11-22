@@ -11,6 +11,8 @@ vi.mock('../api/endpoints/attempts.js', () => ({
 }))
 
 import { attemptsApi } from '../api/endpoints/attempts.js'
+import { ApiError } from '../api/client.js'
+import { generationError } from '../api/errorMessages.js'
 import { gradeGeneratedAnswer } from './generateGrading.js'
 import { clearSubmissionId, getSubmissionId } from './submissionId.js'
 
@@ -57,5 +59,14 @@ describe('gradeGeneratedAnswer', () => {
     attemptsApi.submit.mockResolvedValue({ feedback_text: 'Could not grade.' })
 
     expect(await gradeGeneratedAnswer(question, 'my answer', 'user-1')).toBeNull()
+  })
+
+  it('surfaces a database outage so the session can offer Retry', async () => {
+    const outage = new ApiError(503, 'Database unavailable', { code: 'DB_UNAVAILABLE' })
+    attemptsApi.submit.mockRejectedValueOnce(outage)
+
+    await expect(gradeGeneratedAnswer(question, 'my answer', 'user-1')).rejects.toBe(outage)
+    expect(generationError(outage).retryable).toBe(true)
+    expect(generationError(outage).message).toMatch(/database is temporarily unavailable/i)
   })
 })
