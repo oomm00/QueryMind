@@ -319,23 +319,243 @@ def _tokens(text: str) -> set[str]:
     return {t for t in re.findall(r"[a-z0-9]+", (text or "").lower()) if t not in _STOPWORDS}
 
 
+# The offline evaluator is a demo fallback, not a general essay grader. For the
+# seeded bank we can do better than raw keyword overlap: each reference has a
+# concept label and a short core claim, and the template boilerplate must not be
+# scored as if it were part of the answer. These rules score the *claim* using
+# synonym groups and explicit contradiction cues. They are deliberately about
+# meaning ("own"/"retain"/"hold"), not exact answer strings.
+_BOILERPLATE_PHRASES = (
+    "It affects behaviour because it determines how the system proceeds.",
+    "Verify the outcome against the workload.",
+    "The trade-off is extra coordination or overhead in exchange for predictability.",
+    "is appropriate when predictability matters, but measure its overhead before choosing it for low latency.",
+    "Procedure: detect the problem, apply ",
+    ", then verify that the system is back in a valid state.",
+)
+
+# label fragment -> (positive synonym groups, contradiction cues)
+_CLAIM_RULES: dict[str, tuple[list[list[str]], list[str]]] = {
+    "mutual exclusion": (
+        [["only one", "single", "one process", "just one", "at most one"],
+         ["hold", "own", "has", "have", "using", "use", "allocated", "holder"],
+         ["resource", "at a time", "at once", "moment", "instant"]],
+        ["every process", "all processes", "same time", "shared", "each process use"],
+    ),
+    "hold and wait": (
+        [["hold", "holds", "keep", "keeps", "retain", "retains", "does not release", "without releasing"],
+         ["request", "requesting", "asks", "ask", "more", "additional", "extra"],
+         ["resource", "resources"]],
+        ["must release", "release all", "preempts", "ignores current holdings", "grants every request"],
+    ),
+    "no preemption": (
+        [["cannot", "can not", "can't", "not forcibly", "disallowed", "not taken", "not remove", "not forcibly removed"],
+         ["holder", "holding", "owning", "owns", "allocated", "process"],
+         ["resource", "resources"]],
+        ["can reclaim", "forcibly removes", "released automatically", "may take"],
+    ),
+    "circular wait": (
+        [["cycle", "loop", "ring", "circular"],
+         ["wait", "waiting", "waits", "dependencies", "dependency", "chain"],
+         ["next", "resource", "another", "dependencies", "other"]],
+        ["straight line", "not a cycle", "cpu but not resources", "giving each process every resource"],
+    ),
+    "resource allocation graph": (
+        [["graph", "diagram"],
+         ["directed", "arrows", "edges", "nodes"],
+         ["process", "processes", "resource", "resources", "allocation", "allocations", "assignments", "requests"]],
+        ["bar chart", "only process names", "memory usage", "no edges"],
+    ),
+    "safe state": (
+        [["finish", "complete", "completes", "completion", "gets stuck", "remaining work"],
+         ["every process", "all processes", "nobody", "everyone"],
+         ["order", "sequence", "some order", "arrange"]],
+        ["no process may ever request", "already finished", "all resources are assigned to one"],
+    ),
+    "deadlock detection": (
+        [["regularly", "periodically", "from time to time", "repeatedly", "runs from time"],
+         ["check", "checks", "checking", "examine", "examines", "scan", "looks", "inspect", "graph"],
+         ["cycle", "circular", "deadlock"]],
+        ["refusing every new request", "cpu temperature", "without inspecting"],
+    ),
+    "recovery by rollback": (
+        [["rollback", "roll back", "back", "undo", "undoes", "earlier state", "revert"],
+         ["process", "victim"],
+         ["deadlock", "cycle", "resolve", "broken", "disappears"]],
+        ["new resource instead", "restarts the entire machine", "deleting all deadlock detection"],
+    ),
+    "atomicity": (
+        [["all or nothing", "all-or-nothing", "all of it", "none of them", "whole transaction", "whole thing", "either every operation", "fully or"],
+         ["commit", "commits", "undo", "undone", "revert", "reverts", "roll back", "rolled back", "succeeds", "operations"]],
+        ["some of its operations", "split into smaller", "always commits"],
+    ),
+    "consistency": (
+        [["valid state", "invariants", "invariant", "rules", "correctness", "preserves", "satisfies"],
+         ["committed", "after", "from before to after", "database"]],
+        ["same value twice", "identical numbers", "violate rules"],
+    ),
+    "isolation": (
+        [["concurrent", "running at the same time", "simultaneous", "despite concurrency", "other transactions"],
+         ["uncommitted", "partial", "hidden", "cannot observe", "on its own", "appears to run"],
+         ["transaction", "transactions"]],
+        ["never concurrently", "read uncommitted writes", "deletes data"],
+    ),
+    "durability": (
+        [["committed", "commit"],
+         ["survive", "remain", "not lost", "keeps", "durable", "after a restart", "power failure", "crash"]],
+        ["erased", "deleted", "never written", "shut down after every commit"],
+    ),
+    "two-phase locking": (
+        [["phase", "first", "then", "later", "stage"],
+         ["acquires", "acquire", "acquiring", "releases", "release", "releasing", "shrink", "grow", "locks"]],
+        ["same instant", "alternates", "rule about transaction names"],
+    ),
+    "write-ahead logging": (
+        [["log", "records"],
+         ["before", "first", "afterwards", "after"],
+         ["page", "pages", "disk", "written"]],
+        ["writes data pages before any log", "never flushed", "only after the transaction"],
+    ),
+    "serializability": (
+        [["concurrent", "overlap", "schedule"],
+         ["equivalent", "same result", "matches", "behaves like"],
+         ["serial", "one at a time", "non-overlapping", "ordering"]],
+        ["same table", "one statement long", "no transaction ever commits"],
+    ),
+    "savepoint": (
+        [["marker", "point", "name a point", "savepoint"],
+         ["roll back", "rollback", "undo", "revert", "revert changes"],
+         ["transaction", "part of", "after that point"]],
+        ["commits the transaction immediately", "whole database stored offsite", "after a transaction has ended"],
+    ),
+    "fcfs": (
+        [["arrival", "arrive", "arrived", "first come", "order"],
+         ["first", "earliest", "served in the order", "does not reorder", "in arrival order"]],
+        ["shortest job", "fixed time slice", "highest priority"],
+    ),
+    "sjf": (
+        [["shortest", "briefest", "smallest", "brief", "short jobs"],
+         ["next", "burst", "job", "jobs", "process"],
+         ["first", "runs", "chosen", "preferred", "takes"]],
+        ["waited the longest", "same time quantum", "largest job first"],
+    ),
+    "round robin": (
+        [["turns", "cyclic", "circular", "round", "repeating", "next one"],
+         ["fixed", "same", "equal", "time slice", "slice", "quantum"],
+         ["timer", "process", "processes", "receiving", "queue", "interrupts", "ready list"]],
+        ["without a timer", "until it finishes", "shortest burst", "memory size"],
+    ),
+    "time quantum": (
+        [["fixed", "maximum", "time slice", "slice", "quantum"],
+         ["cpu", "time", "slice"],
+         ["switched", "turn", "next", "before moving"]],
+        ["total time a process needs", "memory reserved", "delay before a process arrives"],
+    ),
+    "preemption": (
+        [["interrupt", "take the cpu", "lose the cpu", "switch away", "can switch", "switching"],
+         ["running", "before it finishes", "without waiting"]],
+        ["keeps the cpu", "voluntarily finishes", "share the same address space", "increases the priority"],
+    ),
+    "starvation": (
+        [["wait forever", "never gets", "indefinite", "continually overlooked", "waits indefinitely"],
+         ["others", "other jobs", "priority", "chosen instead", "taking priority", "postponement", "overlooked", "continually"]],
+        ["deadlock on the same resource", "exactly equal share", "ends a process immediately"],
+    ),
+    "aging": (
+        [["increase", "increases", "boost", "boosted", "boosting", "raising", "raised", "promoted", "slowly"],
+         ["waiting", "waited", "priority", "time passes", "step by step"]],
+        ["lowers the priority", "randomly", "deletes processes"],
+    ),
+    "turnaround time": (
+        [["submission", "submitted", "arrival", "creation"],
+         ["completion", "finishes", "finish", "completed"],
+         ["total time", "elapsed", "interval", "measures", "from"]],
+        ["only the time spent waiting", "first cpu burst", "length of one time quantum"],
+    ),
+}
+
+
+def _core_claim(reference: str) -> tuple[str, str]:
+    """Return (concept label, boilerplate-free claim) from a bank reference."""
+    import re
+
+    text = reference or ""
+    for phrase in _BOILERPLATE_PHRASES:
+        text = text.replace(phrase, " ")
+    text = re.sub(r"\s+", " ", text).strip(" .:")
+
+    label = ""
+    claim = text
+    parenthesis = re.search(r"\(([^)]+)\)", text)
+    if parenthesis:
+        claim = parenthesis.group(1)
+        label = text[: parenthesis.start()]
+    else:
+        for marker in ("means", "gives"):
+            match = re.search(r"\b" + marker + r"\s+(.+?)(?:\.|$)", text)
+            if match:
+                claim = match.group(1)
+                label = text[: match.start()]
+                break
+        else:
+            if ":" in text:
+                label, claim = text.split(":", 1)
+    return label.strip(" :.,"), claim.strip(" .:")
+
+
+def _contains_cue(text: str, cue: str) -> bool:
+    import re
+
+    normalised = re.sub(r"[^a-z0-9]+", " ", (text or "").lower())
+    words = re.findall(r"[a-z0-9]+", (cue or "").lower())
+    if not words:
+        return False
+    return re.search(r"\b" + r"\s+".join(map(re.escape, words)) + r"\b", normalised) is not None
+
+
+def _claim_rule(label: str, question_text: str = "") -> tuple[list[list[str]], list[str]] | None:
+    haystack = f"{label} {question_text}".lower()
+    for key in sorted(_CLAIM_RULES, key=len, reverse=True):
+        if key in haystack:
+            return _CLAIM_RULES[key]
+    return None
+
+
 def evaluate_answer_provisional(question: Question, student_answer: str) -> dict:
-    """Deterministic keyword + embedding similarity fallback (no network)."""
+    """Deterministic claim-aware scorer for offline demo answers (no LLM)."""
     import numpy as np
+
     reference = question.reference_answer or question.question_text or ""
-    a, b = _tokens(student_answer), _tokens(reference)
+    label, claim = _core_claim(reference)
+    a, b = _tokens(student_answer), _tokens(claim)
     keyword = len(a & b) / max(1, len(b))
     embedding = 0.0
     try:
         from app.services.validation_service import embed_texts
-        vectors = embed_texts([student_answer, reference])
+        vectors = embed_texts([student_answer, claim])
         if vectors.shape[0] == 2 and vectors.shape[1] > 0:
             norm = np.linalg.norm(vectors, axis=1)
             embedding = float(vectors[0] @ vectors[1] / max(1e-9, norm[0] * norm[1]))
-    except Exception as exc:  # embedding model unavailable: keyword signal still works
+    except Exception as exc:  # embedding model unavailable: cue/keyword signal still works
         logger.warning("Provisional evaluator embedding unavailable: %s", exc)
-    combined = max(0.0, min(1.0, 0.6 * keyword + 0.4 * max(0.0, embedding)))
-    overall = round(combined * 100.0, 2)
+
+    rule = _claim_rule(label, question.question_text or "")
+    if rule:
+        groups, contradictions = rule
+        hits = sum(
+            any(_contains_cue(student_answer, cue) for cue in group)
+            for group in groups
+        )
+        cue_score = hits / max(1, len(groups))
+        semantic = max(0.0, min(1.0, (max(0.0, embedding) - 0.20) / 0.50))
+        combined = 0.30 * semantic + 0.70 * cue_score
+        if any(_contains_cue(student_answer, cue) for cue in contradictions):
+            combined = min(combined, 0.35)
+    else:
+        # Unknown reference: keep the old bounded keyword + embedding behaviour.
+        combined = max(0.0, min(1.0, 0.6 * keyword + 0.4 * max(0.0, embedding)))
+
+    overall = round(max(0.0, min(1.0, combined)) * 100.0, 2)
     score_10 = int(round(combined * 10))
     return {
         "scores": {criterion: score_10 for criterion in RUBRIC_CRITERIA},
