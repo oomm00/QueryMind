@@ -72,19 +72,11 @@ def generate_questions(
     """
     deadline = time.monotonic() + settings.generation_deadline_seconds
 
-    # ── Adaptive selection (one ordered ladder, from mastery_records) ─────────
     bloom_level = payload.bloom_level
     difficulty = payload.difficulty
     generation_topic = (payload.topic or "").strip() or "Uploaded notes"
     generation_subject = (payload.subject or "").strip() or "General"
     adaptive_reason: str | None = None
-    if payload.adaptive:
-        recommendation = adaptive_recommendation(
-            current_user.id, generation_subject, generation_topic, db
-        )
-        bloom_level = recommendation["bloom_level"]
-        difficulty = recommendation["difficulty"]
-        adaptive_reason = recommendation["reason"]
 
     # Uploaded-only retrieval must run even offline: the PDF is real material and
     # the deterministic offline question is grounded in it. Normal offline runs
@@ -116,6 +108,24 @@ def generate_questions(
                     f"No uploaded material covers '{generation_topic}'. "
                     "Upload a document first."
                 )
+
+    # ── Adaptive selection (one ordered ladder, from mastery_records) ─────────
+    # For uploaded-only questions the ladder belongs to the stored PDF topic,
+    # not the title the student happened to type: an answer moves the same rung
+    # whichever wording led to the question.
+    adaptive_topic = generation_topic
+    adaptive_subject = generation_subject
+    if payload.uploaded_only and context_chunks:
+        adaptive_topic = str(context_chunks[0].get("topic") or generation_topic)
+        adaptive_subject = str(context_chunks[0].get("subject") or generation_subject)
+        generation_subject = adaptive_subject
+    if payload.adaptive:
+        recommendation = adaptive_recommendation(
+            current_user.id, adaptive_subject, adaptive_topic, db
+        )
+        bloom_level = recommendation["bloom_level"]
+        difficulty = recommendation["difficulty"]
+        adaptive_reason = recommendation["reason"]
 
     alignment_client = None
     if not settings.offline_demo_mode:
