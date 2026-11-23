@@ -53,7 +53,13 @@ export async function gradeGeneratedAnswer(question, answerText, userId) {
     )
     const score = normaliseScore(result?.score)
     if (score == null) return null
-    return { score, feedback: String(result?.feedback_text ?? '').trim() }
+    return {
+      score,
+      overall_score: result?.overall_score,
+      feedback: String(result?.feedback_text ?? '').trim(),
+      evaluation_mode: result?.evaluation_mode,
+      correct_answer: result?.correct_answer,
+    }
   } catch (error) {
     // A database outage is temporary and the answer is still in the browser.
     // Let the session show a friendly Retry instead of silently marking the

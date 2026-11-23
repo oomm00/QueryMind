@@ -113,10 +113,13 @@ export function adaptSubmitAttemptResponse(backendData) {
 
   return {
     score: backendData.score ?? 0,
+    overall_score: backendData.overall_score ?? undefined,
     criteria_scores: backendData.criteria_scores ?? undefined, // NEVER FABRICATE
     feedback_text: backendData.feedback_text ?? backendData.feedback ?? '',
     correct_answer: backendData.correct_answer ?? undefined,
     attempt_id: backendData.attempt_id ?? undefined,
+    evaluation_mode: backendData.evaluation_mode ?? undefined,
+    duplicate_submission: backendData.duplicate_submission ?? false,
   }
 }
 
