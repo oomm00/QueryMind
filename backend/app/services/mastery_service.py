@@ -31,7 +31,7 @@ import math
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.orm import Session
 
@@ -347,14 +347,18 @@ def _adaptive_state(
     The EMA in ``mastery_records`` stays for display only; this replay uses the
     actual attempt scores so one good or bad answer changes the next question
     immediately (with one-rung and hysteresis guards).
+
+    Matched by topic (case-insensitive) so that bank fallbacks (e.g. OS-tagged
+    bank questions for a student practicing Deadlocks) and uploaded notes advance
+    the same adaptive ladder seamlessly.
     """
+    key_topic = (topic or "").strip().lower()
     rows = (
         db.query(Attempt.score)
         .join(Question, Attempt.question_id == Question.id)
         .filter(
             Attempt.user_id == user_id,
-            Question.subject == subject,
-            Question.topic == topic,
+            func.lower(Question.topic) == key_topic,
         )
         .order_by(Attempt.created_at.asc(), Attempt.id.asc())
         .limit(ADAPTIVE_HISTORY_LIMIT)
