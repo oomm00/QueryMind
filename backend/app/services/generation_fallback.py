@@ -429,6 +429,7 @@ def generate_one(
                     extra_instruction="\n".join(notes),
                     timeout=settings.generation_call_timeout_seconds,
                     max_models=settings.generation_max_fallback_models,
+                    deadline=deadline,
                 )
                 validation = validation_service.validate_question(
                     generated=generated.model_dump(),

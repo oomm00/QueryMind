@@ -295,3 +295,47 @@ def test_evaluate_answer_without_api_key_raises_clean_503(monkeypatch):
     assert err.status_code == 503
     assert err.code == "LLM_NOT_CONFIGURED"
     assert "GEMINI_API_KEY" in err.detail
+
+
+def test_generation_deadline_caps_the_whole_retry_loop():
+    """A 503 storm must not outlive /generate's budget and the browser timeout.
+
+    Four retries at the per-call timeout used to add up to ~60s, so the
+    frontend aborted before the bank/cache fallback could run. The caller's
+    deadline now bounds the whole loop.
+    """
+    import time as _time
+
+    calls: list[str] = []
+
+    class _SlowClient:
+        def generate_content(self, prompt: str) -> Any:
+            calls.append(prompt)
+            _time.sleep(2)
+            raise RuntimeError("should not reach a response")
+
+    started = _time.monotonic()
+    with pytest.raises(LLMUnavailableError):
+        llm_utils.generate_with_retry(
+            _SlowClient(),
+            "p",
+            sleep=lambda _: None,
+            timeout=5,
+            deadline=_time.monotonic() + 0.6,
+        )
+    elapsed = _time.monotonic() - started
+
+    assert elapsed < 1.8, f"deadline was not enforced (took {elapsed:.1f}s)"
+    assert len(calls) == 1, "the retry loop should stop once the deadline is spent"
+
+
+def test_expired_generation_deadline_makes_no_llm_call():
+    """An already-spent budget must fall back immediately, not call the model."""
+    class _NeverCalled:
+        def generate_content(self, prompt: str) -> Any:  # pragma: no cover
+            raise AssertionError("LLM must not be called after the deadline")
+
+    with pytest.raises(LLMUnavailableError):
+        llm_utils.generate_with_retry(
+            _NeverCalled(), "p", sleep=lambda _: None, deadline=0.0
+        )

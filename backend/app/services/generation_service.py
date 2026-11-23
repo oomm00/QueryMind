@@ -656,6 +656,7 @@ def generate_question(
     extra_instruction: str = "",
     timeout: Optional[float] = None,
     max_models: Optional[int] = None,
+    deadline: Optional[float] = None,
 ) -> GeneratedQuestion:
     """Generate a Bloom-taxonomy-aligned question grounded in retrieved context.
 
@@ -769,7 +770,8 @@ def generate_question(
     # `time.sleep` is threaded through so tests can patch it at the module level.
     def _request(prompt_text: str) -> str:
         return llm_utils.request_text(
-            client, prompt_text, sleep=time.sleep, models=model_chain, timeout=timeout
+            client, prompt_text, sleep=time.sleep, models=model_chain, timeout=timeout,
+            deadline=deadline,
         )
 
     def _parse(raw: dict) -> GeneratedQuestion:
