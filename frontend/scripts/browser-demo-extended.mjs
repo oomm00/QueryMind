@@ -23,6 +23,20 @@ const pdfPath = args.pdf ?? path.resolve(
   process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
   'opencode', 'qm_demo_upload.pdf'
 )
+const uploadFixtures = {
+  paging: args.pdfpaging ?? path.resolve(
+    process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
+    'opencode', 'qm_pdf_os_paging.pdf'
+  ),
+  primer: args.pdfprimer ?? path.resolve(
+    process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
+    'opencode', 'virtual-memory-primer.pdf'
+  ),
+  deadlocks: args.pdfdeadlocks ?? path.resolve(
+    process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
+    'opencode', 'qm_pdf_dbms_deadlocks.pdf'
+  ),
+}
 const shotDir = path.resolve(
   process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
   'opencode', `qm_e2e_${suite}_${mode}`
@@ -140,6 +154,29 @@ const register = async () => {
   return email
 }
 
+const uploadDocument = async ({ tag, file, subject, topic }) => {
+  assert.ok(fs.existsSync(file), `missing PDF ${file}`)
+  await page.goto(`${base}/notes`, { waitUntil: 'networkidle' })
+  await page.getByLabel('Subject').fill(subject)
+  await page.getByLabel('Topic').fill(topic)
+  const responsePromise = page.waitForResponse(
+    (response) => response.url().includes('/documents/upload'),
+    { timeout: 120000 }
+  )
+  await page.locator('#qm-upload-input').setInputFiles(file)
+  await page.getByRole('button', { name: /Upload 1 file/ }).click()
+  const response = await responsePromise
+  await page.getByText('1 file uploaded').waitFor({ timeout: 60000 })
+  await shot(`${tag}-uploaded`)
+  return {
+    status: response.status(),
+    body: await response.json(),
+    subject: await page.getByLabel('Subject').inputValue(),
+    topic: await page.getByLabel('Topic').inputValue(),
+    visible: (await visibleText()).slice(0, 1200),
+  }
+}
+
 const openGenerate = async ({ topic, count = 1, uploadedOnly = false }) => {
   await page.goto(`${base}/practice`, { waitUntil: 'networkidle' })
   await page.locator('#generate-topic').fill(topic)
@@ -196,6 +233,8 @@ const generate = async ({ tag, topic, count = 1, uploadedOnly = false }) => {
 const answerAndSubmit = async ({ tag, answer, retryButtonName = 'Submit' }) => {
   await page.getByRole('button', { name: /^Start (practice|with 1 question)$/ }).click()
   await page.waitForURL(/\/practice\/[^/]+$/)
+  const servedBadge = await page.getByText(/Served topic:/).first()
+    .textContent().catch(() => null)
   await page.getByLabel('Your answer').fill(answer)
   await shot(`${tag}-answer`)
   const submitPromise = page.waitForResponse(
@@ -210,7 +249,7 @@ const answerAndSubmit = async ({ tag, answer, retryButtonName = 'Submit' }) => {
     await page.waitForURL(/\/practice\/[^/]+\/results$/)
     await shot(`${tag}-results`)
   }
-  return { status: response.status(), body }
+  return { status: response.status(), body, servedBadge }
 }
 
 const table = (headers, rows) => {
@@ -411,8 +450,161 @@ try {
       assert.equal(pdfGen.question.source, 'live', 'uploaded-only question must come from the PDF context')
       assert.ok(pdfGen.question.source_chunks?.length, 'uploaded-only question must cite the PDF chunk')
     } else {
-      assert.ok(['bank', 'cache'].includes(pdfGen.question.source), 'offline demo must degrade to a usable question')
-      assert.match(pdfGen.question.context_warning ?? '', /offline|seeded bank/i)
+      assert.equal(pdfGen.question.source, 'uploaded', 'offline uploaded-only must be grounded in the PDF')
+      assert.ok(pdfGen.question.source_chunks?.includes('qm_demo_upload.pdf') || pdfGen.question.source_chunks?.length)
+      assert.match(pdfGen.question.context_warning ?? '', /offline|uploaded/i)
+    }
+  }
+
+  if (suite === 'uploads') {
+    const exactTopic = 'Paging and Virtual Memory'
+    const mismatchTopic = 'Virtual Memory'
+    const uploads = [
+      await uploadDocument({ tag: '01-pdf-paging', file: uploadFixtures.paging, subject: 'OS', topic: exactTopic }),
+      await uploadDocument({ tag: '02-pdf-primer', file: uploadFixtures.primer, subject: 'OS', topic: 'Virtual Memory Primer' }),
+      await uploadDocument({ tag: '03-pdf-deadlocks', file: uploadFixtures.deadlocks, subject: 'DBMS', topic: 'Deadlocks' }),
+    ]
+
+    // Uploaded-only must survive four real answers and move the adaptive rung.
+    const ladder = []
+    for (let step = 1; step <= 4; step += 1) {
+      const generated = await generate({
+        tag: `04-exact-${step}`, topic: exactTopic, uploadedOnly: true,
+      })
+      assert.equal(generated.status, 200)
+      assert.equal(JSON.parse(generated.payload).uploaded_only, true)
+      assert.ok(generated.question.source_chunks?.includes('qm_pdf_os_paging.pdf'))
+      const submitted = await answerAndSubmit({
+        tag: `04-exact-${step}-answer`,
+        answer: generated.question.correct_answer || 'A page is a fixed-size block of virtual address space.',
+      })
+      ladder.push({
+        step,
+        source: generated.question.source,
+        source_chunk: generated.question.source_chunks?.[0],
+        rung: rungOf(generated.question),
+        answer_score: submitted.body.score,
+      })
+    }
+
+    // The PDF's stored title differs from the typed topic: no title-string guard.
+    const titleDiffers = await generate({
+      tag: '05-title-differs', topic: mismatchTopic, uploadedOnly: true,
+    })
+    assert.equal(titleDiffers.status, 200)
+    assert.equal(JSON.parse(titleDiffers.payload).subject, null)
+    assert.ok(titleDiffers.question.source_chunks?.includes('virtual-memory-primer.pdf'))
+    assert.equal(titleDiffers.question.served_topic, 'Virtual Memory Primer')
+    assert.doesNotMatch(titleDiffers.visible, /No uploaded material covers this topic/i)
+    const notice = titleDiffers.visible.match(
+      /No exact match for “Virtual Memory”.+?recorded under “Virtual Memory Primer”./
+    )?.[0] ?? ''
+    const titleAnswer = await answerAndSubmit({
+      tag: '05-title-differs-answer',
+      answer: titleDiffers.question.correct_answer || 'The page table',
+    })
+
+    // Two PDFs on two subjects: a DBMS query must not fall into the OS PDF.
+    const dbms = await generate({ tag: '06-two-pdfs-dbms', topic: 'Deadlocks', uploadedOnly: true })
+    assert.equal(dbms.status, 200)
+    assert.ok(dbms.question.source_chunks?.includes('qm_pdf_dbms_deadlocks.pdf'))
+    assert.equal(dbms.question.served_topic, 'Deadlocks')
+    const dbmsAnswer = await answerAndSubmit({
+      tag: '06-two-pdfs-dbms-answer', answer: dbms.question.correct_answer || 'A deadlock is a cycle of waiting.',
+    })
+
+    const osAfterTwo = await generate({
+      tag: '07-two-pdfs-os', topic: mismatchTopic, uploadedOnly: true,
+    })
+    assert.equal(osAfterTwo.status, 200)
+    assert.ok(osAfterTwo.question.source_chunks?.includes('virtual-memory-primer.pdf'))
+    assert.ok(!osAfterTwo.question.source_chunks?.includes('qm_pdf_dbms_deadlocks.pdf'))
+
+    result = {
+      mode, suite, email,
+      uploads: uploads.map((upload) => ({
+        status: upload.status, document: upload.body.document,
+        subject: upload.subject, topic: upload.topic, chunks: upload.body.chunks_ingested,
+      })),
+      ladder,
+      titleDiffers: {
+        requested: mismatchTopic,
+        served: titleDiffers.question.served_topic,
+        source: titleDiffers.question.source,
+        source_chunks: titleDiffers.question.source_chunks,
+        question: titleDiffers.question.question,
+        notice,
+        served_badge: titleAnswer.servedBadge,
+        answer_score: titleAnswer.body.score,
+        visible: titleDiffers.visible,
+      },
+      twoPdfs: {
+        dbms: { source_chunks: dbms.question.source_chunks, served: dbms.question.served_topic, question: dbms.question.question },
+        dbms_answer_score: dbmsAnswer.body.score,
+        os: { source_chunks: osAfterTwo.question.source_chunks, served: osAfterTwo.question.served_topic, question: osAfterTwo.question.question },
+      },
+    }
+    console.log('\n' + table(['step', 'source', 'chunk', 'rung', 'score'], ladder.map((row) => [
+      row.step, row.source, row.source_chunk, row.rung, row.answer_score,
+    ])) + '\n')
+    console.log('title-differs UI text:', notice)
+    console.log('title-differs served badge:', titleAnswer.servedBadge)
+    console.log('two PDFs:', JSON.stringify(result.twoPdfs, null, 2))
+    assert.deepEqual(ladder.map((row) => row.rung), [0, 1, 2, 3])
+    assert.ok(ladder.every((row) => row.answer_score >= 0.75))
+    assert.match(notice, /recorded under “Virtual Memory Primer”/)
+    assert.match(titleAnswer.servedBadge ?? '', /Served topic: Virtual Memory Primer/)
+  }
+
+  if (suite === 'novel') {
+    const novel = 'Amoeba Tax Accounting'
+    const steps = []
+    for (let step = 1; step <= 4; step += 1) {
+      const generated = await generate({ tag: `novel-${step}`, topic: novel })
+      assert.equal(generated.status, 200)
+      const served = generated.question.served_topic || generated.question.topic || novel
+      const expectedNotice = served.toLowerCase() === novel.toLowerCase()
+        ? null
+        : `No exact match for “${novel}”. This is a related practice question from “${served}”. Your answer will be recorded under “${served}”.`
+      if (expectedNotice) {
+        assert.ok(generated.visible.includes(expectedNotice), `missing fallback notice: ${expectedNotice}`)
+      }
+      const submitted = await answerAndSubmit({
+        tag: `novel-${step}-answer`,
+        answer: generated.question.correct_answer || 'A brief answer.',
+      })
+      if (expectedNotice) {
+        assert.equal(submitted.servedBadge, `Served topic: ${served}`)
+      }
+      steps.push({
+        step,
+        source: generated.question.source,
+        requested: novel,
+        served,
+        notice: Boolean(expectedNotice),
+        badge: submitted.servedBadge,
+        score: submitted.body.score,
+      })
+    }
+
+    const token = await page.evaluate(() => localStorage.getItem('qm_token'))
+    const me = await (await fetch(`${apiBase}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })).json()
+    const history = await (await fetch(`${apiBase}/attempts/history/${me.user_id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })).json()
+    const latest = history[0]
+    assert.equal(latest.topic, steps.at(-1).served, 'attempt must be stored under the served topic')
+
+    result = { mode, suite, email, novel, steps, latest_history: latest }
+    console.log('\n' + table(['step', 'source', 'served topic', 'notice', 'badge', 'score'], steps.map((row) => [
+      row.step, row.source, row.served, String(row.notice), row.badge ?? '-', row.score,
+    ])) + '\n')
+    console.log('latest attempt:', JSON.stringify(latest))
+    assert.equal(steps.length, 4)
+    if (mode === 'offline') {
+      assert.ok(steps.some((row) => row.notice), 'offline fallback must say when the served topic differs')
     }
   }
 
