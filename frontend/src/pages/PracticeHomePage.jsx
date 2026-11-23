@@ -70,6 +70,7 @@ const SCOPE_LABELS = {
   retry: 'Retry',
   custom: 'Chosen topics',
   generated: 'Generated',
+  adaptive: 'Adaptive',
 }
 
 const LEVEL_LABELS = {
@@ -94,14 +95,22 @@ function SessionRow({ session, title, onResume }) {
     () => resolveQuestions(session.questionIds ?? [], session.questions ?? []),
     [session.questionIds, session.questions]
   )
-  const score = useMemo(
-    () => scoreSession(questions, session.answers ?? {}, session.selfMarks ?? {}),
-    [questions, session.answers, session.selfMarks]
-  )
+  const score = useMemo(() => {
+    if (session.history && session.history.length > 0) {
+      const earned = session.history.reduce((sum, h) => sum + (Number(h.score) || 0), 0)
+      const available = session.history.length
+      return {
+        earned: Math.round(earned * 10) / 10,
+        available,
+        percent: available > 0 ? earned / available : null,
+      }
+    }
+    return scoreSession(questions, session.answers ?? {}, session.selfMarks ?? {})
+  }, [questions, session.answers, session.selfMarks, session.history])
 
   const unfinished = session.status !== 'submitted'
   const when = formatWhen(session.createdAt)
-  const answered = Object.keys(session.answers ?? {}).length
+  const answered = session.history?.length ?? Object.keys(session.answers ?? {}).length
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
@@ -112,8 +121,7 @@ function SessionRow({ session, title, onResume }) {
           {unfinished && <Badge tone="warning" label="In progress" />}
         </div>
         <p className="mt-0.5 text-xs text-muted">
-          {LEVEL_LABELS[session.level] ?? sentenceCase(session.level ?? '')} level ·{' '}
-          {questions.length} question{questions.length === 1 ? '' : 's'} ·{' '}
+          {session.scope === 'adaptive' ? 'Adaptive' : (LEVEL_LABELS[session.level] ?? sentenceCase(session.level ?? ''))} level ·{' '}
           {answered} answered
           {when ? ` · ${when}` : ''}
         </p>
