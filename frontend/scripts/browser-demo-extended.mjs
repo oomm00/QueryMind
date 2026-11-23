@@ -599,6 +599,7 @@ try {
         requested: novel,
         served,
         notice: Boolean(expectedNotice),
+        noticeText: expectedNotice ?? null,
         badge: submitted.servedBadge,
         score: submitted.body.score,
       })
@@ -618,6 +619,7 @@ try {
     console.log('\n' + table(['step', 'source', 'served topic', 'notice', 'badge', 'score'], steps.map((row) => [
       row.step, row.source, row.served, String(row.notice), row.badge ?? '-', row.score,
     ])) + '\n')
+    console.log('fallback notice:', steps.find((row) => row.noticeText)?.noticeText ?? '(no fallback needed)')
     console.log('latest attempt:', JSON.stringify(latest))
     assert.equal(steps.length, 4)
     if (mode === 'offline') {
