@@ -117,6 +117,18 @@ def test_irrelevant_answer_scores_low():
     assert result["overall_score"] < 30
 
 
+def test_verbatim_reference_is_full_marks_without_calling_the_judge():
+    """An exact reference must not be marked down for being terse."""
+    question = _question()
+    client = _mock_client(LOW_JUDGE_JSON)
+
+    result = evaluate_answer(question, question.reference_answer, llm_client=client)
+
+    assert result["overall_score"] == 100.0
+    assert result["evaluation_mode"] == "exact_reference"
+    client.generate_content.assert_not_called()
+
+
 def test_empty_answer_is_rejected():
     """Blank answers are invalid input, not a zero score."""
     client = _mock_client(GOOD_JUDGE_JSON)
