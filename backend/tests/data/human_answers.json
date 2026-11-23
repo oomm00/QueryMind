@@ -1,0 +1,161 @@
+{
+  "instructions": "Normal-student answers for the first 10 demo-bank questions. Append more objects to the answers array using the same shape: bank_index, expected_band, answer. Do not change the scorer to make this file pass.",
+  "bands": {
+    "good": "overall score >= 75",
+    "half-right": "40 <= overall score < 75",
+    "wrong": "overall score < 40"
+  },
+  "answers": [
+    {
+      "bank_index": 1,
+      "expected_band": "good",
+      "answer": "Only one process can hold the resource at a time."
+    },
+    {
+      "bank_index": 1,
+      "expected_band": "half-right",
+      "answer": "It is about a resource held by a process."
+    },
+    {
+      "bank_index": 1,
+      "expected_band": "wrong",
+      "answer": "It is the time slice a process gets before the scheduler switches it out."
+    },
+    {
+      "bank_index": 2,
+      "expected_band": "good",
+      "answer": "A process holds some resources while it asks for more."
+    },
+    {
+      "bank_index": 2,
+      "expected_band": "half-right",
+      "answer": "A process can ask for more."
+    },
+    {
+      "bank_index": 2,
+      "expected_band": "wrong",
+      "answer": "It means the process releases everything before asking again."
+    },
+    {
+      "bank_index": 3,
+      "expected_band": "good",
+      "answer": "The resource cannot be forcibly taken away from its holder."
+    },
+    {
+      "bank_index": 3,
+      "expected_band": "half-right",
+      "answer": "The system normally lets the process that has the resource keep using it."
+    },
+    {
+      "bank_index": 3,
+      "expected_band": "wrong",
+      "answer": "It means the operating system may reclaim any resource immediately."
+    },
+    {
+      "bank_index": 4,
+      "expected_band": "good",
+      "answer": "There is a cycle of processes, each waiting for the next one's resource."
+    },
+    {
+      "bank_index": 4,
+      "expected_band": "half-right",
+      "answer": "Processes are stuck in a waiting chain."
+    },
+    {
+      "bank_index": 4,
+      "expected_band": "wrong",
+      "answer": "It is a straight queue ordered by process arrival time."
+    },
+    {
+      "bank_index": 5,
+      "expected_band": "good",
+      "answer": "It is a directed graph of process nodes and resource allocations."
+    },
+    {
+      "bank_index": 5,
+      "expected_band": "half-right",
+      "answer": "It is a graph that shows the resources in the system."
+    },
+    {
+      "bank_index": 5,
+      "expected_band": "wrong",
+      "answer": "It is a bar chart of CPU temperature over time."
+    },
+    {
+      "bank_index": 6,
+      "expected_band": "good",
+      "answer": "It is a state where every process can still finish in some order."
+    },
+    {
+      "bank_index": 6,
+      "expected_band": "half-right",
+      "answer": "It is a state where completion is still possible."
+    },
+    {
+      "bank_index": 6,
+      "expected_band": "wrong",
+      "answer": "It is a state where no process may ever make another request."
+    },
+    {
+      "bank_index": 7,
+      "expected_band": "good",
+      "answer": "It periodically checks the allocation graph for cycles."
+    },
+    {
+      "bank_index": 7,
+      "expected_band": "half-right",
+      "answer": "It looks for deadlocks regularly."
+    },
+    {
+      "bank_index": 7,
+      "expected_band": "wrong",
+      "answer": "It refuses every new request without inspecting the system."
+    },
+    {
+      "bank_index": 8,
+      "expected_band": "good",
+      "answer": "A process is rolled back to break the deadlock."
+    },
+    {
+      "bank_index": 8,
+      "expected_band": "half-right",
+      "answer": "The victim process is sent back to an earlier state."
+    },
+    {
+      "bank_index": 8,
+      "expected_band": "wrong",
+      "answer": "It allocates a new resource instead of undoing work."
+    },
+    {
+      "bank_index": 9,
+      "expected_band": "good",
+      "answer": "Mutual exclusion means only one process may hold a resource at a time, so it controls when the system can proceed."
+    },
+    {
+      "bank_index": 9,
+      "expected_band": "half-right",
+      "answer": "It affects behaviour by deciding which holder keeps using a resource."
+    },
+    {
+      "bank_index": 9,
+      "expected_band": "wrong",
+      "answer": "It lets every process use the same resource at once."
+    },
+    {
+      "bank_index": 10,
+      "expected_band": "good",
+      "answer": "Hold and wait means a process keeps resources while requesting more, which affects how the system proceeds."
+    },
+    {
+      "bank_index": 10,
+      "expected_band": "half-right",
+      "answer": "A process keeps what it already has."
+    },
+    {
+      "bank_index": 10,
+      "expected_band": "wrong",
+      "answer": "The process must release all resources before it asks again."
+    }
+  ],
+  "APPEND_NEW_ANSWERS_HERE": []
+}
