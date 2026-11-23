@@ -169,7 +169,7 @@ const generate = async ({ tag, topic, count = 1, uploadedOnly = false }) => {
     await shot(`${tag}-friendly-error`)
     return {
       status: response.status(), body, payload, elapsed, progressVisible,
-      visible: (await visibleText()).slice(0, 1000),
+      visible: (await visibleText()).slice(0, 4000),
     }
   }
   const question = body.questions?.[0]
@@ -177,7 +177,7 @@ const generate = async ({ tag, topic, count = 1, uploadedOnly = false }) => {
     await shot(`${tag}-friendly-error`)
     return {
       status: 200, body, payload, elapsed, progressVisible,
-      visible: (await visibleText()).slice(0, 1000),
+      visible: (await visibleText()).slice(0, 4000),
     }
   }
   await reasons.waitFor({ state: 'visible', timeout: 20000 })
@@ -189,7 +189,7 @@ const generate = async ({ tag, topic, count = 1, uploadedOnly = false }) => {
     elapsed,
     progressVisible,
     reason: (await reasons.textContent()).trim(),
-    visible: (await visibleText()).slice(0, 1000),
+    visible: (await visibleText()).slice(0, 4000),
   }
 }
 
@@ -235,7 +235,26 @@ const rungOf = (question) => {
 
 let result = {}
 try {
-  const email = await register()
+  let email = null
+  if (suite === 'dbdown') {
+    const seed = JSON.parse(fs.readFileSync(path.resolve(
+      process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
+      'opencode', 'qm_db_seed.json'
+    ), 'utf8'))
+    await page.addInitScript(({ token, sessionsKey, sessionsValue }) => {
+      localStorage.setItem('qm_token', token)
+      localStorage.setItem(sessionsKey, sessionsValue)
+    }, seed)
+    // /auth/me needs the DB. Freeze the identity captured before the outage so
+    // the UI can render; the submit below still hits the real 503 endpoint.
+    await page.route('**/auth/me', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(seed.user),
+    }))
+  } else {
+    email = await register()
+  }
 
   if (suite === 'middle') {
     const topic = 'Deadlocks'
@@ -433,55 +452,63 @@ try {
 
   if (suite === 'dbdown') {
     const topic = 'Paging and Virtual Memory'
-    await openGenerate({ topic })
-    const startedGenerate = performance.now()
-    const generateResponsePromise = page.waitForResponse(
-      (response) => response.url().includes('/questions/generate') && response.status() >= 500,
+    const generated = await generate({ tag: 'dbdown-generate', topic })
+
+    // Submit needs a question already on screen; the session URL is captured
+    // before the DB is stopped.
+    const seed = JSON.parse(fs.readFileSync(path.resolve(
+      process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp',
+      'opencode', 'qm_db_seed.json'
+    ), 'utf8'))
+    const sessionUrl = seed.sessionUrl
+    await page.goto(sessionUrl, { waitUntil: 'networkidle' })
+    const answerInput = page.getByLabel('Your answer')
+    for (let index = 0; index < 6 && !(await answerInput.count()); index += 1) {
+      await page.getByRole('button', { name: 'Next' }).click()
+    }
+    await answerInput.waitFor({ timeout: 10000 })
+    await answerInput.fill('a short answer')
+    // "Review and submit" only appears on the last question.
+    const reviewButton = page.getByRole('button', { name: 'Review and submit' })
+    for (let index = 0; index < 6 && !(await reviewButton.count()); index += 1) {
+      await page.getByRole('button', { name: 'Next' }).click()
+    }
+    await reviewButton.waitFor({ timeout: 10000 })
+    const submitResponsePromise = page.waitForResponse(
+      (response) => response.url().includes('/attempts/submit') && response.status() >= 500,
       { timeout: 60000 }
     )
-    await page.getByRole('button', { name: 'Generate questions' }).click()
-    const generateResponse = await generateResponsePromise
-    const generateBody = await generateResponse.json()
+    await reviewButton.click()
+    const confirmDialog = page.getByRole('dialog')
+    await confirmDialog.waitFor({ timeout: 10000 })
+    await confirmDialog.getByRole('button', { name: 'Submit' }).click()
+    const submitResponse = await submitResponsePromise
+    const submitBody = await submitResponse.json()
     await page.getByText(/database is temporarily unavailable/i).first().waitFor({ timeout: 10000 })
-    await shot('dbdown-generate')
-    const generateView = await visibleText()
-
-    // Submit needs a question already on screen; with the DB down we drive it
-    // from an existing session opened before the outage.
-    await page.goto(`${base}/practice`, { waitUntil: 'networkidle' })
-    const existing = await page.getByRole('button', { name: /Continue|Resume|Start/ }).first()
-    const hasSession = await existing.count()
-    let submitBody = { skipped: true }
-    if (hasSession) {
-      await existing.click()
-      await page.waitForURL(/\/practice\/[^/]+$/)
-      await page.getByLabel('Your answer').fill('a short answer')
-      const submitResponsePromise = page.waitForResponse(
-        (response) => response.url().includes('/attempts/submit') && response.status() >= 500,
-        { timeout: 60000 }
-      )
-      await page.getByRole('button', { name: 'Review and submit' }).click()
-      const submitResponse = await submitResponsePromise
-      submitBody = await submitResponse.json()
-      await page.getByText(/database is temporarily unavailable/i).first().waitFor({ timeout: 10000 })
-      await shot('dbdown-submit')
-    }
+    await shot('dbdown-submit')
+    const submitView = await visibleText()
+    const retryVisible = await page.getByRole('dialog').getByRole('button', { name: 'Retry' }).isVisible()
 
     result = {
       mode, suite, email,
-      generate: { status: generateResponse.status(), body: generateBody, view: generateView, seconds: (performance.now() - startedGenerate) / 1000 },
-      submit: submitBody,
+      generate: { status: generated.status, code: generated.body?.code, view: generated.visible, elapsed: generated.elapsed },
+      submit: { body: submitBody, view: submitView, retryVisible },
     }
     console.log('\n' + table(['action', 'HTTP', 'code', 'friendly message shown', 'Retry shown'], [
-      ['generate', generateResponse.status(), generateBody.code,
-        String(/database is temporarily unavailable/i.test(generateView)),
-        String(await page.getByRole('button', { name: /Retry|Generate questions/ }).count() > 0)],
-      ['submit', submitBody.skipped ? '-' : '503', submitBody.code ?? '-',
-        String(/database is temporarily unavailable/i.test(generateView)), '-'],
+      ['generate', generated.status, generated.body?.code,
+        String(/database is temporarily unavailable/i.test(generated.visible ?? '')),
+        String(await page.getByRole('button', { name: 'Generate questions' }).isVisible().catch(() => false))],
+      ['submit', submitResponse.status(), submitBody.code,
+        String(/database is temporarily unavailable/i.test(submitView)),
+        String(retryVisible)],
     ]) + '\n')
-    assert.equal(generateResponse.status(), 503)
-    assert.equal(generateBody.code, 'DB_UNAVAILABLE')
-    assert.match(generateView, /database is temporarily unavailable/i)
+    assert.equal(generated.status, 503)
+    assert.equal(generated.body?.code, 'DB_UNAVAILABLE')
+    assert.match(generated.visible ?? '', /database is temporarily unavailable/i)
+    assert.equal(submitResponse.status(), 503)
+    assert.equal(submitBody.code, 'DB_UNAVAILABLE')
+    assert.match(submitView, /database is temporarily unavailable/i)
+    assert.equal(retryVisible, true)
   }
 
   result.consoleErrors = consoleErrors
