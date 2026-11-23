@@ -70,6 +70,12 @@ describe('a successful generation', () => {
           bloom_level: undefined,
           difficulty: undefined,
           topic: undefined,
+          // Topic provenance is part of the response contract: the UI must be
+          // able to say when a fallback served a different topic.
+          requested_topic: undefined,
+          served_topic: undefined,
+          source_chunks: [],
+          context_warning: undefined,
           starter_code: undefined,
           test_cases: undefined,
           hints: undefined,

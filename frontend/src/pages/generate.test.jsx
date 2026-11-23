@@ -373,7 +373,7 @@ describe('a run', () => {
     expect(topic.value).toBe('Deadlocks')
   })
 
-  it('says there is no material at all when nothing is even close', async () => {
+  it('asks about a topic that is not an exact document title before saying there is no material', async () => {
     const user = userEvent.setup()
     const topic = await openAnyTopic(user)
 
@@ -383,11 +383,15 @@ describe('a run', () => {
     await user.type(topic, 'Quantum error correction')
     await user.click(screen.getByRole('button', { name: 'Generate questions' }))
 
+    // A typed title that is not an exact stored topic is not proof of "no
+    // material": the backend ranks every uploaded PDF by meaning. The request
+    // must therefore reach /questions/generate; only the backend may decide.
+    expect(pending).toHaveLength(1)
+    await answerWithCode('NO_CONTEXT', 404)
+
     expect(
       await screen.findByText('No uploaded material covers this topic. Add notes in My notes > Documents.')
     ).toBeTruthy()
-    // Nothing came within reach of the topic, so nothing was asked for.
-    expect(pending).toHaveLength(0)
   })
 })
 
