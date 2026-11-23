@@ -53,6 +53,27 @@ logger = logging.getLogger("querymind.questions")
 router = APIRouter()
 
 
+def resolve_served_topic(
+    *,
+    requested: str,
+    source: str | None,
+    generated_topic: str | None,
+    generated_served_topic: str | None,
+    uploaded_topic: str | None = None,
+) -> str:
+    """Return the topic the learner should be graded under.
+
+    A live LLM may paraphrase the requested title; that must not split mastery
+    records. A real fallback to a bank/cache question *does* move the record to
+    the topic actually served, as does an uploaded-only PDF lookup.
+    """
+    if uploaded_topic:
+        return uploaded_topic
+    if source in {"bank", "cache"} and (generated_served_topic or generated_topic):
+        return generated_served_topic or generated_topic or requested
+    return requested
+
+
 @router.post(
     "/generate",
     response_model=GeneratedQuestionsResponse,
@@ -164,12 +185,16 @@ def generate_questions(
         # A bank/cache fallback may answer a different topic than the one typed.
         # The student must see it, and the attempt must be filed where it belongs.
         generated.requested_topic = generation_topic
-        if payload.uploaded_only and context_chunks:
-            # The LLM may echo the typed title back; the document metadata is the
-            # topic actually served for an uploaded-only question.
-            served_topic = str(context_chunks[0].get("topic") or generation_topic)
-        else:
-            served_topic = generated.served_topic or generated.topic or generation_topic
+        served_topic = resolve_served_topic(
+            requested=generation_topic,
+            source=generated.source,
+            generated_topic=generated.topic,
+            generated_served_topic=generated.served_topic,
+            uploaded_topic=(
+                str(context_chunks[0].get("topic") or "")
+                if payload.uploaded_only and context_chunks else None
+            ),
+        )
         generated.served_topic = served_topic
         generated.topic = served_topic
         if generated.question_id is None:
@@ -181,7 +206,12 @@ def generate_questions(
                 question_type=payload.question_type,
             )
             generated.question_id = persisted.id
-        mark_served(current_user.id, served_topic, generated.question_id)
+        # Track the id under BOTH names. Lookups for the next question use the
+        # typed topic, while an uploaded-only PDF is keyed by its stored topic;
+        # without the requested key a bank fallback repeats the same question.
+        mark_served(current_user.id, generation_topic, generated.question_id)
+        if served_topic != generation_topic:
+            mark_served(current_user.id, served_topic, generated.question_id)
         served.add(generated.question_id)
         results.append(generated)
         excluded_texts.add(generated.question)
