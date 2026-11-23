@@ -141,6 +141,7 @@ export function GeneratePanel() {
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState(null)
   const [noContext, setNoContext] = useState(false)
+  const [sourceNotice, setSourceNotice] = useState(null)
   const [ready, setReady] = useState([])
 
   const abortRef = useRef(null)
@@ -191,6 +192,7 @@ export function GeneratePanel() {
   const reset = () => {
     setError(null)
     setNoContext(false)
+    setSourceNotice(null)
     setReady([])
     setProgress({ ready: 0, target: count, skipped: 0 })
   }
@@ -204,12 +206,15 @@ export function GeneratePanel() {
     setElapsed(0)
     startedAtRef.current = Date.now()
 
-    const subject = hasDocuments ? subjectForTopic(trimmed, rows) : GENERAL_SUBJECT
+    const matchedSubject = subjectForTopic(trimmed, rows)
+    // A title mismatch is not "no material": uploaded-only retrieval ranks all
+    // the student's PDFs by meaning when no stored topic matches the typed one.
+    // The guard still refuses the run when there is nothing uploaded at all.
+    const subject = hasDocuments
+      ? (matchedSubject === GENERAL_SUBJECT ? null : matchedSubject)
+      : GENERAL_SUBJECT
 
-    // "Use only my uploaded material" is checked before a call is made: if the
-    // topic matches nothing the student uploaded, no prompt will find material
-    // for it either, and the honest answer is the closest topic they do have.
-    if (uploadedOnly && subject === GENERAL_SUBJECT) {
+    if (uploadedOnly && !hasDocuments) {
       setRunning(false)
       setNoContext(true)
       return
@@ -241,14 +246,22 @@ export function GeneratePanel() {
         return
       }
       setReady(outcome.questions)
-      // A topic the student typed becomes a concept of its own, so the answers
-      // to its questions move mastery like any other concept's and the number
-      // shows up in the library beside the authored ones.
-      registerCustomConcept({
-        id: customConceptId(trimmed),
-        title: trimmed,
-        subject,
-      })
+      const served = outcome.questions.find(
+        (question) => question.served_topic && question.served_topic.toLowerCase() !== trimmed.toLowerCase()
+      )
+      if (served) {
+        setSourceNotice(
+          `No exact match for “${trimmed}”. This is a related practice question from “${served.served_topic}”. Your answer will be recorded under “${served.served_topic}”.`
+        )
+      }
+      // Register the topic actually served as well as the one typed: a bank or
+      // uploaded-PDF fallback must move mastery under its own concept.
+      for (const conceptTitle of [trimmed, ...outcome.questions.map(
+        (question) => question.served_topic || question.topic
+      ).filter(Boolean)]) {
+        const id = customConceptId(conceptTitle)
+        if (id) registerCustomConcept({ id, title: conceptTitle, subject: subject ?? 'General' })
+      }
     } finally {
       setRunning(false)
       abortRef.current = null
@@ -267,9 +280,12 @@ export function GeneratePanel() {
   const startPractice = () => {
     if (ready.length === 0) return
     const trimmed = topic.trim()
+    const matchedSubject = subjectForTopic(trimmed, rows)
     const session = newSession({
       scope: 'generated',
-      subject: hasDocuments ? subjectForTopic(trimmed, rows) : GENERAL_SUBJECT,
+      subject: hasDocuments
+        ? (matchedSubject === GENERAL_SUBJECT ? null : matchedSubject)
+        : GENERAL_SUBJECT,
       level: difficulty,
       label: trimmed,
       questionIds: ready.map((question) => question.question_id),
@@ -473,6 +489,12 @@ export function GeneratePanel() {
               No uploaded material covers this topic. Add notes in My notes &gt; Documents.
             </p>
           )}
+        </Panel>
+      )}
+
+      {sourceNotice && (
+        <Panel className="p-5" role="note">
+          <p className="text-sm text-ink">{sourceNotice}</p>
         </Panel>
       )}
 

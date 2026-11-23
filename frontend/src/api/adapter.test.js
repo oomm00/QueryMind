@@ -28,6 +28,16 @@ describe('adaptGenerateQuestionsRequest', () => {
     expect(payload).not.toHaveProperty('difficulty')
   })
 
+  it('keeps a null subject for uploaded-only search across the learner’s PDFs', () => {
+    const payload = adaptGenerateQuestionsRequest(
+      { topic: 'Virtual Memory', subject: null, uploaded_only: true },
+      'user-1'
+    )
+
+    expect(payload.subject).toBeNull()
+    expect(payload.uploaded_only).toBe(true)
+  })
+
   it('keeps bloom_level and difficulty as an explicit manual override', () => {
     const payload = adaptGenerateQuestionsRequest(
       {
@@ -56,6 +66,10 @@ describe('adaptGenerateQuestionsResponse', () => {
           question_text: 'Why paging?',
           bloom_level: 'apply',
           source: 'live',
+          requested_topic: 'Virtual Memory',
+          served_topic: 'Virtual Memory Primer',
+          source_chunks: ['virtual-memory-primer.pdf'],
+          context_warning: 'Grounded in uploaded text.',
           adaptive_reason: 'moving up after strong answers',
         },
       ],
@@ -67,6 +81,10 @@ describe('adaptGenerateQuestionsResponse', () => {
       question_text: 'Why paging?',
       bloom_level: 'apply',
       source: 'live',
+      requested_topic: 'Virtual Memory',
+      served_topic: 'Virtual Memory Primer',
+      source_chunks: ['virtual-memory-primer.pdf'],
+      context_warning: 'Grounded in uploaded text.',
       adaptive_reason: 'moving up after strong answers',
     })
   })

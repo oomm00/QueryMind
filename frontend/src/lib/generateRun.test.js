@@ -299,6 +299,24 @@ describe('a generated question in the session’s shape', () => {
     expect(mapped.question_id).toBe('generated:custom:deadlocks:0')
   })
 
+  it('files a fallback under the topic actually served, not the one typed', () => {
+    const mapped = generatedToSessionQuestion(
+      {
+        question_text: 'What is a deadlock?',
+        requested_topic: 'Quantum Paging',
+        served_topic: 'Deadlocks',
+        source: 'bank',
+      },
+      { topic: 'Quantum Paging', fallbackId: 'generated:quantum:0' }
+    )
+
+    expect(mapped.requested_topic).toBe('Quantum Paging')
+    expect(mapped.served_topic).toBe('Deadlocks')
+    expect(mapped.topic).toBe('Deadlocks')
+    expect(mapped.conceptId).toBe('custom:deadlocks')
+    expect(mapped.conceptTitle).toBe('Deadlocks')
+  })
+
   it('carries the source and the adaptive reason through to the session', () => {
     const mapped = generatedToSessionQuestion(
       {

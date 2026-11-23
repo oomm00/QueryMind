@@ -349,6 +349,12 @@ export default function SessionPage() {
               {current.origin === 'generated' && (
                 <Badge tone="neutral" label={current.originLabel ?? 'Generated'} />
               )}
+              {current.served_topic && current.served_topic !== current.requested_topic && (
+                <Badge
+                  tone="warning"
+                  label={`Served topic: ${current.served_topic}`}
+                />
+              )}
               <MarksLabel question={current} />
             </div>
 

@@ -114,6 +114,9 @@ export function generatedToSessionQuestion(raw, meta = {}) {
   }
 
   const type = options.length > 0 && correctIndex !== undefined ? 'mcq' : 'short'
+  const requestedTopic = raw?.requested_topic ?? meta.topic ?? ''
+  const servedTopic = raw?.served_topic ?? raw?.topic ?? requestedTopic
+  const conceptId = servedTopic ? customConceptId(servedTopic) : ''
 
   return {
     question_id: raw?.question_id ?? meta.fallbackId,
@@ -127,9 +130,11 @@ export function generatedToSessionQuestion(raw, meta = {}) {
     rubric: Array.isArray(raw?.rubric) ? raw.rubric : [],
     explanation: raw?.explanation ?? '',
     needsHumanCheck: type !== 'mcq',
-    topic: meta.topic ?? raw?.topic ?? '',
-    conceptId: meta.conceptId ?? '',
-    conceptTitle: meta.topic ?? '',
+    topic: servedTopic,
+    requested_topic: requestedTopic,
+    served_topic: servedTopic,
+    conceptId: meta.conceptId ?? conceptId,
+    conceptTitle: servedTopic,
     topicId: '',
     origin: 'generated',
     originLabel: GENERATED_ORIGIN_LABEL,
@@ -138,6 +143,8 @@ export function generatedToSessionQuestion(raw, meta = {}) {
     hints: Array.isArray(raw?.hints) ? raw.hints : [],
     resources: [],
     source: raw?.source ?? undefined,
+    source_chunks: Array.isArray(raw?.source_chunks) ? raw.source_chunks : [],
+    context_warning: raw?.context_warning ?? undefined,
     adaptive_reason: raw?.adaptive_reason ?? undefined,
   }
 }
