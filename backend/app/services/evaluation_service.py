@@ -606,6 +606,28 @@ def evaluate_answer_provisional(question: Question, student_answer: str) -> dict
     }
 
 
+def _normalised_answer(text: str) -> str:
+    """Order-independent token form, so punctuation/case cannot cost marks."""
+    return " ".join(sorted(_tokens(text)))
+
+
+def _is_exact_reference(question: Question, student_answer: str) -> bool:
+    reference = question.reference_answer or ""
+    return bool(reference.strip()) and _normalised_answer(student_answer) == _normalised_answer(reference)
+
+
+def _full_marks_for_reference() -> dict:
+    return {
+        "scores": {criterion: SCORE_MAX for criterion in RUBRIC_CRITERIA},
+        "criteria_scores": {criterion: SCORE_MAX for criterion in RUBRIC_CRITERIA},
+        "overall_score": 100.0,
+        "feedback": "Your answer matches the reference answer.",
+        "missing_points": [],
+        "strengths": ["Matches the stored reference answer."],
+        "evaluation_mode": "exact_reference",
+    }
+
+
 def evaluate_answer(
     question: Question,
     student_answer: str,
@@ -631,6 +653,12 @@ def evaluate_answer(
     """
     if not student_answer or not student_answer.strip():
         raise ValidationError("student answer must not be empty")
+
+    # A verbatim reference is full marks in every mode. The live judge used to
+    # give a short correct reference (e.g. "A page") 74% at an Analyze rung,
+    # which broke the one-rung demo and punished the student for being exact.
+    if _is_exact_reference(question, student_answer):
+        return _full_marks_for_reference()
 
     if settings.offline_demo_mode:
         return evaluate_answer_provisional(question, student_answer)
