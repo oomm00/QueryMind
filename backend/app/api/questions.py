@@ -97,6 +97,7 @@ def generate_questions(
                 # A typed title need not equal the stored PDF topic: rank all
                 # uploaded chunks by meaning rather than exact metadata strings.
                 strict_metadata=not payload.uploaded_only,
+                user_id=str(current_user.id) if payload.uploaded_only else None,
             )
             if not context_chunks and not payload.uploaded_only:
                 context_chunks = retrieve_context(
