@@ -97,6 +97,14 @@ band 40–75% does not move the rung, and promotion needs two consecutive high s
   `DB_UNAVAILABLE`; the UI shows “The database is temporarily unavailable…” with **Retry**.
   Restart with `docker compose start db`. Never delete volumes.
 
+## Notes for live edits during the demo
+
+If you need to fix any backend Python file mid-demo:
+```powershell
+# After editing backend code, rerun start-demo.ps1.
+cd D:\querymind; .\start-demo.ps1 -Offline   # or -Live
+```
+
 ## 7. Offline mode (optional final 30 seconds)
 
 ```powershell
@@ -106,6 +114,19 @@ curl.exe http://localhost:8000/health
 
 Repeat steps 2–5. Expected: deterministic provisional grading, no LLM call, bank/cache fallback,
 same real DB writes and same UI. Return to `-Live` with the same script.
+
+## Proof results
+
+| Suite | Result | Screenshot dir |
+|-------|--------|----------------|
+| uploads (PDF bug) | **PASS offline** | `C:\Users\omsat\AppData\Local\Temp\opencode\qm_e2e_uploads_offline\` |
+| novel topic fallback | **PASS offline** | `C:\Users\omsat\AppData\Local\Temp\opencode\qm_e2e_novel_offline\` |
+| scorer trust (30 answers) | **30/30 correct, 0 misclassifications** | — |
+| middle-band adaptive | **PASS offline** (commit 1d278e2) | `C:\Users\omsat\AppData\Local\Temp\opencode\qm_e2e_middle_offline\` |
+| network resilience | **PASS offline** | `C:\Users\omsat\AppData\Local\Temp\opencode\qm_e2e_network_offline\` |
+| DB-down 503 | see below | `C:\Users\omsat\AppData\Local\Temp\opencode\qm_e2e_dbdown_offline\` |
+
+Backend tests: 339+ passed. Frontend tests: 343+ passed.
 
 ## Rehearsal and backup artifacts
 
