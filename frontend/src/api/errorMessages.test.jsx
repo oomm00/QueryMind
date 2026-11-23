@@ -124,8 +124,10 @@ describe('the sentence for each code', () => {
     // matches a `code` the backend returns. A generation run asks for many
     // questions, so two of the codes only ever arrive mid-run: a duplicate the
     // run asks again at another Bloom, and a level the model could not hit.
+    // DB_UNAVAILABLE comes from the global 503 handler when the DB is stopped.
     expect(Object.keys(GENERATION_ERROR_MESSAGES).sort()).toEqual([
       'BLOOM_ALIGNMENT_MISMATCH',
+      'DB_UNAVAILABLE',
       'DUPLICATE_QUESTION',
       'LLM_NOT_CONFIGURED',
       'LLM_QUOTA_EXHAUSTED',
@@ -137,6 +139,7 @@ describe('the sentence for each code', () => {
     expect(Object.keys(GENERATION_ERROR_MESSAGES)).not.toContain('LLM_CALL_FAILED')
     expect(Object.keys(GENERATION_ERROR_MESSAGES)).not.toContain('LLM_MODELS_EXHAUSTED')
     expect([...RETRYABLE_GENERATION_CODES].sort()).toEqual([
+      'DB_UNAVAILABLE',
       'LLM_QUOTA_EXHAUSTED',
       'LLM_UNAVAILABLE',
       'RATE_LIMIT_EXCEEDED',
