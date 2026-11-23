@@ -730,7 +730,12 @@ try {
   console.log(JSON.stringify(result, null, 2))
   if (suite !== 'dbdown') {
     assert.deepEqual(pageErrors, [])
-    assert.deepEqual(consoleErrors, [])
+    // The custom suite deliberately triggers a 404 no-material response; Chromium
+    // logs that expected HTTP status as a console error.
+    const expected404 = suite === 'custom' && consoleErrors.every(
+      (message) => /404 \(Not Found\)/.test(message)
+    )
+    assert.deepEqual(expected404 ? [] : consoleErrors, [])
   }
   console.log(`PASS ${mode}/${suite}`)
 } catch (error) {
