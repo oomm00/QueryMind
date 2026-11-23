@@ -9,8 +9,14 @@ Start the demo backend (docker compose) and the redesign frontend together.
 param(
     [string]$BackendRepo = 'D:\querymind',
     [string]$FrontendRepo = 'D:\querymind-frontend',
-    [switch]$Offline
+    [switch]$Offline,
+    # Accepted for symmetry with the demo script; live is the default.
+    [switch]$Live
 )
+
+if ($Offline -and $Live) {
+    throw 'Choose either -Offline or -Live, not both.'
+}
 
 $ErrorActionPreference = 'Stop'
 
@@ -33,9 +39,46 @@ function Assert-PortFree {
     Write-Host "OK port free: $Port"
 }
 
+function Stop-DemoFrontend {
+    <# A rerun after a backend edit must not fail on the frontend it started
+       last time. Only a Vite process from this repo is stopped; any other
+       listener is left alone and reported. #>
+    param([string]$FrontendRepo)
+    $listeners = Get-NetTCPConnection -LocalPort 5174 -State Listen -ErrorAction SilentlyContinue
+    if (-not $listeners) { return }
+    foreach ($owner in ($listeners.OwningProcess | Sort-Object -Unique)) {
+        $process = Get-CimInstance Win32_Process -Filter "ProcessId = $owner" -ErrorAction SilentlyContinue
+        $command = [string]$process.CommandLine
+        if ($command -like "*querymind-frontend*") {
+            Write-Host "Stopping existing demo frontend (PID $owner)"
+            Stop-Process -Id $owner -Force -ErrorAction SilentlyContinue
+        } else {
+            throw "Port 5174 is in use by PID $owner ($command). Stop it first."
+        }
+    }
+    Start-Sleep -Milliseconds 700
+}
+
 Assert-RepoBranch -Repo $BackendRepo -Expected 'hardening'
 Assert-RepoBranch -Repo $FrontendRepo -Expected 'frontend-redesign'
+
+# The backend code is bind-mounted and uvicorn has no auto-reload, so an old
+# container would silently serve stale Python. Stop it first: the port check
+# below would otherwise refuse to run, and `up --force-recreate` could not
+# replace a container that is still holding port 8000.
+Push-Location $BackendRepo
+try {
+    $existingBackend = docker compose ps -q backend 2>$null
+    if ($existingBackend) {
+        Write-Host 'Stopping existing backend container so the new code is loaded'
+        docker compose stop backend | Out-Host
+    }
+} finally {
+    Pop-Location
+}
+
 Assert-PortFree -Port 8000
+Stop-DemoFrontend -FrontendRepo $FrontendRepo
 Assert-PortFree -Port 5174
 
 $allowed = 'http://localhost:5174,http://127.0.0.1:5174,http://localhost:5173,http://127.0.0.1:5173'
