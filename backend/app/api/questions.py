@@ -21,6 +21,7 @@ from app.core.exceptions import (
     BloomAlignmentError,
     DuplicateQuestionError,
     LLMNotConfiguredError,
+    NoContextError,
     NotFoundError,
     ValidationError,
     QueryMindError,
@@ -85,22 +86,35 @@ def generate_questions(
         difficulty = recommendation["difficulty"]
         adaptive_reason = recommendation["reason"]
 
-    # Retrieval is skipped entirely in offline demo mode.
+    # Uploaded-only retrieval must run even offline: the PDF is real material and
+    # the deterministic offline question is grounded in it. Normal offline runs
+    # keep skipping retrieval and use the seeded bank.
     context_chunks: list[dict] = []
-    if not settings.offline_demo_mode:
+    if payload.uploaded_only or not settings.offline_demo_mode:
         with stage("retrieve"):
+            retrieval_subject = (
+                None if generation_subject.lower() == "general" else generation_subject
+            )
             context_chunks = retrieve_context(
-                topic=None if payload.uploaded_only and not payload.topic else generation_topic,
-                subject=None if payload.uploaded_only and not payload.topic else generation_subject,
+                topic=generation_topic,
+                subject=retrieval_subject,
                 bloom_level=bloom_level,
                 difficulty=difficulty,
                 public_only=not payload.uploaded_only,
                 college_only=payload.uploaded_only,
+                # A typed title need not equal the stored PDF topic: rank all
+                # uploaded chunks by meaning rather than exact metadata strings.
+                strict_metadata=not payload.uploaded_only,
             )
             if not context_chunks and not payload.uploaded_only:
                 context_chunks = retrieve_context(
                     topic=generation_topic, subject=None, bloom_level=bloom_level,
                     difficulty=difficulty, public_only=True,
+                )
+            if payload.uploaded_only and not context_chunks:
+                raise NoContextError(
+                    f"No uploaded material covers '{generation_topic}'. "
+                    "Upload a document first."
                 )
 
     alignment_client = None
@@ -131,20 +145,27 @@ def generate_questions(
                 served_ids=served,
                 deadline=deadline,
                 adaptive_reason=adaptive_reason,
+                uploaded_only=payload.uploaded_only,
             )
         if payload.adaptive:
             generated.adaptive = True
             generated.adaptive_reason = generated.adaptive_reason or adaptive_reason
+        # A bank/cache fallback may answer a different topic than the one typed.
+        # The student must see it, and the attempt must be filed where it belongs.
+        generated.requested_topic = generation_topic
+        served_topic = generated.served_topic or generated.topic or generation_topic
+        generated.served_topic = served_topic
+        generated.topic = served_topic
         if generated.question_id is None:
             persisted = persist_generated_question(
                 db=db,
                 generated=generated,
                 subject=generation_subject,
-                topic=generation_topic,
+                topic=served_topic,
                 question_type=payload.question_type,
             )
             generated.question_id = persisted.id
-        mark_served(current_user.id, generation_topic, generated.question_id)
+        mark_served(current_user.id, served_topic, generated.question_id)
         served.add(generated.question_id)
         results.append(generated)
         excluded_texts.add(generated.question)

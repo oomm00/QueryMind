@@ -258,17 +258,23 @@ def _query_collection(
     subject: Optional[str],
     topic: Optional[str],
     n_results: int = 5,
+    strict_metadata: bool = True,
 ) -> list[dict]:
     """Execute metadata-filtered similarity query on a Chroma collection.
 
     ``subject=None`` performs a topic-only search across every subject (used as a
     fallback when the caller has no reliable subject — e.g. the frontend derives
-    ``subject`` from the free-text topic).
+    ``subject`` from the free-text topic). Set ``strict_metadata=False`` to keep
+    only the source-type filter and let the embedding rank every uploaded chunk:
+    that is how a PDF titled "Virtual Memory Primer" can answer "Virtual Memory"
+    without a title-string match.
     """
     filters = [{"source_type": source_type}]
     if subject is not None:
         filters.append({"subject": subject})
-    if topic is not None:
+    # Only the stored *topic title* is relaxed for uploaded-only search; a
+    # subject we actually recognised still narrows the candidate set.
+    if strict_metadata and topic is not None:
         filters.append({"topic": topic})
     where_filter: dict[str, Any] = (
         filters[0] if len(filters) == 1 else {"$and": filters}
@@ -305,6 +311,10 @@ def _query_collection(
             "source_type": meta.get("source_type", source_type),
             "score": similarity_score,
             "source_doc": meta.get("source_doc", "unknown"),
+            # The topic/subject actually stored with the uploaded chunk. The
+            # generator uses it as the served topic when the typed title differs.
+            "topic": meta.get("topic"),
+            "subject": meta.get("subject"),
         })
 
     # Sort descending by similarity score
@@ -368,6 +378,7 @@ def retrieve_context(
     collection: Optional[Collection] = None,
     public_only: bool = False,
     college_only: bool = False,
+    strict_metadata: bool = True,
 ) -> list[dict]:
     """Retrieve grounded context chunks with Two-Tier college priority and public fallback.
 
@@ -378,7 +389,10 @@ def retrieve_context(
     (college preferred); [] is returned only when both tiers are empty.
 
     Pass ``subject=None`` to search by topic across every subject (used as a
-    fallback when the caller cannot supply a reliable subject).
+    fallback when the caller cannot supply a reliable subject). Pass
+    ``strict_metadata=False`` for uploaded-only generation: the embedding ranks
+    all uploaded chunks instead of requiring the typed title to equal the stored
+    topic string.
 
     Results are cached in-process for :data:`RETRIEVAL_CACHE_TTL_SECONDS`, keyed
     on ``(subject, topic, query_text)``. The cache is bypassed whenever a
@@ -402,7 +416,7 @@ def retrieve_context(
     retrieval_mode = (
         "public" if public_only else "college" if college_only else "tiered"
     )
-    cache_key = (subject, topic, f"{retrieval_mode}:{search_query}")
+    cache_key = (subject, topic, f"{retrieval_mode}:{strict_metadata}:{search_query}")
 
     # Early cache lookup — before touching Chroma. A hit must NOT pay for client
     # construction / collection resolution, which is the dominant per-request
@@ -445,6 +459,7 @@ def retrieve_context(
         top_k=top_k,
         public_only=public_only,
         college_only=college_only,
+        strict_metadata=strict_metadata,
     )
 
     if not injected:
@@ -461,6 +476,7 @@ def _retrieve_uncached(
     top_k: int,
     public_only: bool = False,
     college_only: bool = False,
+    strict_metadata: bool = True,
 ) -> list[dict]:
     """Two-tier retrieval (no caching) — the body behind :func:`retrieve_context`."""
     if public_only:
@@ -471,6 +487,7 @@ def _retrieve_uncached(
             subject=subject,
             topic=topic,
             n_results=top_k,
+            strict_metadata=strict_metadata,
         )
         if not public_chunks:
             public_chunks = _retrieve_web_context(search_query)
@@ -491,6 +508,7 @@ def _retrieve_uncached(
         subject=subject,
         topic=topic,
         n_results=top_k,
+        strict_metadata=strict_metadata,
     )
 
     if college_only:
@@ -540,6 +558,7 @@ def _retrieve_uncached(
         subject=subject,
         topic=topic,
         n_results=top_k,
+        strict_metadata=strict_metadata,
     )
 
     if public_chunks and public_chunks[0]["score"] >= SIMILARITY_THRESHOLD:

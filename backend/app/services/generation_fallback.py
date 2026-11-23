@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 import uuid
@@ -22,6 +23,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.exceptions import NoContextError
 from app.models.models import Question
 from app.schemas.schemas import GeneratedQuestion
 from app.services import generation_service, validation_service
@@ -251,6 +253,81 @@ def _question_from_bank(
     )
 
 
+def _question_from_uploaded_context(
+    context_chunks: list[dict],
+    *,
+    topic: str,
+    bloom_level: str,
+    difficulty: str,
+    excluded_texts: set[str],
+    reason: str,
+) -> GeneratedQuestion:
+    """Build a gradeable question directly from retrieved uploaded text.
+
+    Offline demo mode has no LLM, and a live LLM call can still fail. Neither is
+    a reason to leave uploaded-only generation: the retrieved chunk is real
+    study material, so turn one of its sentences into a cloze question and keep
+    the source document and the stored topic as provenance.
+    """
+    chunk = context_chunks[0]
+    text = str(chunk.get("text", "")).strip()
+    source_doc = str(chunk.get("source_doc") or "uploaded document")
+    served_topic = str(chunk.get("topic") or topic)
+
+    # PDFs put the title on its own line. Split on newlines as well as sentence
+    # punctuation so the title is not glued to the first useful sentence.
+    sentences = [
+        part.strip()
+        for part in re.split(r"(?<=[.!?])\s+|\n+", text)
+        if part.strip()
+    ]
+    informative = [part for part in sentences if len(part.split()) >= 6] or sentences or [text]
+
+    def build(sentence: str) -> tuple[str, str]:
+        clean = sentence.rstrip(".!?")
+        match = re.search(
+            r"\b(A|An|The)\s+([^.!?]+?)\s+"
+            r"(is|are|means|refers to|happens when|loads|stores|maps|requires|holds|waits for)\s+"
+            r"(.+)$",
+            clean,
+            re.IGNORECASE,
+        )
+        if match:
+            subject_phrase = f"{match.group(1)} {match.group(2)}".strip()
+            verb = match.group(3).lower()
+            rest = match.group(4).strip()
+            return (
+                f"According to your uploaded material, what {verb} {rest}?",
+                subject_phrase,
+            )
+        return (
+            f"According to your uploaded material, what is the key point about {served_topic}?",
+            clean,
+        )
+
+    candidates = [build(sentence) for sentence in informative]
+    question, answer = next(
+        (pair for pair in candidates if pair[0] not in excluded_texts),
+        candidates[0],
+    )
+    return GeneratedQuestion(
+        question=question,
+        correct_answer=answer,
+        explanation=f"Grounded in the uploaded document {source_doc}.",
+        bloom_level=bloom_level,
+        difficulty=difficulty,
+        topic=served_topic,
+        requested_topic=topic,
+        served_topic=served_topic,
+        source_chunks=[source_doc],
+        source="uploaded",
+        context_warning=(
+            f"{reason} Grounded in uploaded text from {source_doc}; "
+            f"stored topic is '{served_topic}'."
+        ),
+    )
+
+
 def _fallback(
     db: Session, *, subject: str, topic: str, bloom_level: str,
     excluded_texts: set[str], served_ids: set[uuid.UUID], reason: str,
@@ -284,10 +361,41 @@ def generate_one(
     deadline: float,
     adaptive_reason: str | None = None,
     served_ids: Optional[set[uuid.UUID]] = None,
+    uploaded_only: bool = False,
 ) -> GeneratedQuestion:
     """Return one usable question, trying live generation within the deadline."""
     served_ids = served_ids or set()
     chunk_texts = [str(c.get("text", "")) for c in context_chunks]
+
+    if uploaded_only and not context_chunks:
+        raise NoContextError(
+            f"No uploaded material covers '{topic}'. Upload a document first."
+        )
+
+    if uploaded_only and settings.offline_demo_mode:
+        return _question_from_uploaded_context(
+            context_chunks,
+            topic=topic,
+            bloom_level=bloom_level,
+            difficulty=difficulty,
+            excluded_texts=excluded_texts,
+            reason="Offline demo mode; no LLM call was made.",
+        )
+
+    def fallback(reason: str) -> GeneratedQuestion:
+        if uploaded_only and context_chunks:
+            return _question_from_uploaded_context(
+                context_chunks,
+                topic=topic,
+                bloom_level=bloom_level,
+                difficulty=difficulty,
+                excluded_texts=excluded_texts,
+                reason=reason,
+            )
+        return _fallback(
+            db, subject=subject, topic=topic, bloom_level=bloom_level,
+            excluded_texts=excluded_texts, served_ids=served_ids, reason=reason,
+        )
 
     if not settings.offline_demo_mode:
         tolerance = settings.tolerance_for(bloom_level)
@@ -295,11 +403,7 @@ def generate_one(
         for attempt in range(settings.generation_max_attempts):
             remaining = deadline - time.monotonic()
             if remaining < 2.0:
-                return _fallback(
-                    db, subject=subject, topic=topic, bloom_level=bloom_level,
-                    excluded_texts=excluded_texts, served_ids=served_ids,
-                    reason="deadline exhausted",
-                )
+                return fallback("deadline exhausted")
 
             notes: list[str] = []
             if excluded_texts:
@@ -381,11 +485,9 @@ def generate_one(
             # Other validation failures: one retry, then fallback.
             continue
 
-    return _fallback(
-        db, subject=subject, topic=topic, bloom_level=bloom_level,
-        excluded_texts=excluded_texts, served_ids=served_ids,
-        reason=("offline demo mode" if settings.offline_demo_mode
-                else "live generation unavailable or invalid"),
+    return fallback(
+        "offline demo mode" if settings.offline_demo_mode
+        else "live generation unavailable or invalid"
     )
 
 

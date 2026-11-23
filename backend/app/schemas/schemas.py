@@ -169,6 +169,11 @@ class GeneratedQuestion(BaseModel):
     bloom_level: str
     difficulty: str
     topic: Optional[str] = None
+    # Topic provenance. The API records the topic actually served (which can be
+    # a bank topic on fallback) separately from what the student typed, so the
+    # UI can say so and mastery lands on the question's real topic.
+    requested_topic: Optional[str] = None
+    served_topic: Optional[str] = None
     source_chunks: list[str] = []              # source_doc values used
     source_chunk_ids: list[str] = []
     # Adaptive-selection metadata — only meaningful when the request asked for
