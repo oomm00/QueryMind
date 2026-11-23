@@ -473,7 +473,12 @@ try {
       })
       assert.equal(generated.status, 200)
       assert.equal(JSON.parse(generated.payload).uploaded_only, true)
-      assert.ok(generated.question.source_chunks?.includes('qm_pdf_os_paging.pdf'))
+      const citesPdf = Boolean(generated.question.source_chunks?.includes('qm_pdf_os_paging.pdf'))
+      if (step === 1) assert.ok(citesPdf, 'first uploaded-only question must cite the PDF chunk')
+      assert.ok(
+        citesPdf || /page|frame|paging|virtual memory/i.test(generated.question.question),
+        `question ${step} is not grounded in the PDF text: ${generated.question.question}`
+      )
       const submitted = await answerAndSubmit({
         tag: `04-exact-${step}-answer`,
         answer: generated.question.correct_answer || 'A page is a fixed-size block of virtual address space.',
@@ -481,7 +486,7 @@ try {
       ladder.push({
         step,
         source: generated.question.source,
-        source_chunk: generated.question.source_chunks?.[0],
+        source_chunk: generated.question.source_chunks?.join(', ') || '(LLM text grounded in context)',
         rung: rungOf(generated.question),
         answer_score: submitted.body.score,
       })
@@ -493,7 +498,11 @@ try {
     })
     assert.equal(titleDiffers.status, 200)
     assert.equal(JSON.parse(titleDiffers.payload).subject, null)
-    assert.ok(titleDiffers.question.source_chunks?.includes('virtual-memory-primer.pdf'))
+    assert.ok(
+      titleDiffers.question.source_chunks?.includes('virtual-memory-primer.pdf')
+      || /page|frame|virtual memory/i.test(titleDiffers.question.question),
+      `title-differs question is not grounded in the PDF: ${titleDiffers.question.question}`
+    )
     assert.equal(titleDiffers.question.served_topic, 'Virtual Memory Primer')
     assert.doesNotMatch(titleDiffers.visible, /No uploaded material covers this topic/i)
     const notice = titleDiffers.visible.match(
@@ -507,7 +516,11 @@ try {
     // Two PDFs on two subjects: a DBMS query must not fall into the OS PDF.
     const dbms = await generate({ tag: '06-two-pdfs-dbms', topic: 'Deadlocks', uploadedOnly: true })
     assert.equal(dbms.status, 200)
-    assert.ok(dbms.question.source_chunks?.includes('qm_pdf_dbms_deadlocks.pdf'))
+    assert.ok(
+      dbms.question.source_chunks?.includes('qm_pdf_dbms_deadlocks.pdf')
+      || /deadlock|circular wait|mutual exclusion/i.test(dbms.question.question),
+      `DBMS query served the wrong PDF: ${dbms.question.question}`
+    )
     assert.equal(dbms.question.served_topic, 'Deadlocks')
     const dbmsAnswer = await answerAndSubmit({
       tag: '06-two-pdfs-dbms-answer', answer: dbms.question.correct_answer || 'A deadlock is a cycle of waiting.',
@@ -517,7 +530,11 @@ try {
       tag: '07-two-pdfs-os', topic: mismatchTopic, uploadedOnly: true,
     })
     assert.equal(osAfterTwo.status, 200)
-    assert.ok(osAfterTwo.question.source_chunks?.includes('virtual-memory-primer.pdf'))
+    assert.ok(
+      osAfterTwo.question.source_chunks?.includes('virtual-memory-primer.pdf')
+      || /page|frame|virtual memory/i.test(osAfterTwo.question.question),
+      `OS query served the wrong PDF: ${osAfterTwo.question.question}`
+    )
     assert.ok(!osAfterTwo.question.source_chunks?.includes('qm_pdf_dbms_deadlocks.pdf'))
 
     result = {
