@@ -554,8 +554,19 @@ def evaluate_answer_provisional(question: Question, student_answer: str) -> dict
     except Exception as exc:  # embedding model unavailable: cue/keyword signal still works
         logger.warning("Provisional evaluator embedding unavailable: %s", exc)
 
+    # An exact restatement of the bank answer is full marks even when the
+    # reference contains boilerplate or a cue that looks like a contradiction
+    # in a *student* answer (e.g. "cannot be forcibly taken").
+    student_norm = " ".join(sorted(_tokens(student_answer)))
+    exact_match = student_norm in {
+        " ".join(sorted(_tokens(reference))),
+        " ".join(sorted(_tokens(claim))),
+    }
+
     rule = _claim_rule(label, question.question_text or "")
-    if rule:
+    if exact_match:
+        combined = 1.0
+    elif rule:
         groups, contradictions = rule
         hits = sum(
             any(_contains_cue(student_answer, cue) for cue in group)
