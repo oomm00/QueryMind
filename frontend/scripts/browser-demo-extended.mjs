@@ -177,26 +177,56 @@ const uploadDocument = async ({ tag, file, subject, topic }) => {
   }
 }
 
-const openGenerate = async ({ topic, count = 1, uploadedOnly = false }) => {
+const openGenerate = async ({ topic, uploadedOnly = false }) => {
   await page.goto(`${base}/practice`, { waitUntil: 'networkidle' })
   await page.locator('#generate-topic').fill(topic)
-  await page.getByLabel('Any number of questions').fill(String(count))
-  const uploaded = page.getByLabel('Use only my uploaded material')
-  if (await uploaded.isVisible()) {
+  const uploaded = page.getByLabel('Use only my uploaded notes')
+  if (await uploaded.isVisible().catch(() => false)) {
     if (uploadedOnly) await uploaded.check()
     else await uploaded.uncheck()
   }
 }
 
 const generate = async ({ tag, topic, count = 1, uploadedOnly = false }) => {
-  await openGenerate({ topic, count, uploadedOnly })
+  const url = page.url()
+  if (url.includes('/practice/') && !url.endsWith('/practice')) {
+    const nextBtn = page.getByRole('button', { name: /Next question/ })
+    if (await nextBtn.isVisible().catch(() => false)) {
+      const started = performance.now()
+      const responsePromise = page.waitForResponse(
+        (response) => response.url().includes('/questions/generate'),
+        { timeout: 60000 }
+      )
+      await nextBtn.click()
+      const progressVisible = await page.getByRole('status').first().isVisible().catch(() => false)
+      const response = await responsePromise
+      const elapsed = (performance.now() - started) / 1000
+      const body = await response.json()
+      const payload = response.request().postData()
+      const question = body.questions?.[0] || body
+      const reasons = page.getByTestId('adaptive-reason')
+      await reasons.waitFor({ state: 'visible', timeout: 20000 })
+      await shot(`${tag}-generate`)
+      return {
+        status: 200,
+        payload,
+        question,
+        elapsed,
+        progressVisible,
+        reason: (await reasons.textContent()).trim(),
+        visible: (await visibleText()).slice(0, 4000),
+      }
+    }
+  }
+
+  await openGenerate({ topic, uploadedOnly })
   const reasons = page.getByTestId('adaptive-reason')
   const started = performance.now()
   const responsePromise = page.waitForResponse(
     (response) => response.url().includes('/questions/generate'),
     { timeout: 60000 }
   )
-  await page.getByRole('button', { name: 'Generate questions' }).click()
+  await page.getByRole('button', { name: 'Start practice' }).click()
   const progressVisible = await page.getByRole('status').first().isVisible().catch(() => false)
   const response = await responsePromise
   const elapsed = (performance.now() - started) / 1000
@@ -209,7 +239,7 @@ const generate = async ({ tag, topic, count = 1, uploadedOnly = false }) => {
       visible: (await visibleText()).slice(0, 4000),
     }
   }
-  const question = body.questions?.[0]
+  const question = body.questions?.[0] || body
   if (!question) {
     await shot(`${tag}-friendly-error`)
     return {
@@ -231,22 +261,21 @@ const generate = async ({ tag, topic, count = 1, uploadedOnly = false }) => {
 }
 
 const answerAndSubmit = async ({ tag, answer, retryButtonName = 'Submit' }) => {
-  await page.getByRole('button', { name: /^Start (practice|with 1 question)$/ }).click()
-  await page.waitForURL(/\/practice\/[^/]+$/)
   const servedBadge = await page.getByText(/Served topic:/).first()
     .textContent().catch(() => null)
-  await page.getByLabel('Your answer').fill(answer)
+  const answerInput = page.getByLabel('Your answer')
+  await answerInput.waitFor({ state: 'visible', timeout: 20000 })
+  await answerInput.fill(answer)
   await shot(`${tag}-answer`)
   const submitPromise = page.waitForResponse(
     (response) => response.url().includes('/attempts/submit'),
     { timeout: 120000 }
   )
-  await page.getByRole('button', { name: 'Review and submit' }).click()
-  await page.getByRole('dialog').getByRole('button', { name: retryButtonName }).click()
+  await page.getByRole('button', { name: 'Submit answer' }).click()
   const response = await submitPromise
   const body = await response.json()
   if (response.status() === 200) {
-    await page.waitForURL(/\/practice\/[^/]+\/results$/)
+    await page.getByTestId('evaluation-result').waitFor({ state: 'visible', timeout: 20000 })
     await shot(`${tag}-results`)
   }
   return { status: response.status(), body, servedBadge }

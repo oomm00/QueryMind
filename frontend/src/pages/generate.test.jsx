@@ -1,14 +1,13 @@
 /**
- * The "Pick a topic" form, through the screen a student uses, with a fake fetch
- * standing in for the backend.
+ * The redesigned Practice Setup + Adaptive Session flow, through the screen a student uses.
  *
- * The point of going through fetch rather than mocking the endpoint is that the
- * whole path is exercised: the request the panel builds, the adapter that
- * renames it, the code-to-sentence mapping when the backend refuses, and the
- * run that turns one batch into N questions.
- *
- * The fetch is a queue the test answers by hand, so the single request can be
- * inspected and answered exactly when the test wants - cancellation included.
+ * Verifies the core requirements:
+ * 1. Setup screen: ONLY topic input, suggestion chips, uploaded-notes switch (hidden when no docs),
+ *    and one primary button: "Start practice". No manual/difficulty/bloom/count controls.
+ * 2. One request per question.
+ * 3. Next question requested only after the previous answer is evaluated.
+ * 4. Level ladder reflects the backend rung and surfaces adaptive reason.
+ * 5. Finish session surfaces the end-of-session summary.
  */
 
 import { render, screen, waitFor } from '@testing-library/react'
@@ -19,10 +18,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '../context/AuthContext.jsx'
 import PracticeHomePage from './PracticeHomePage.jsx'
 import SessionPage from './SessionPage.jsx'
-import ResultsPage from './ResultsPage.jsx'
-import { getKnowledgeNodes, resetCustomConcepts } from '../content/registry.js'
-import { estimatesFrom } from '../lib/mastery.js'
-import { readProgress } from '../lib/masteryStore.js'
+import { resetCustomConcepts } from '../content/registry.js'
+
+let mockDocTopics = [{ subject: 'OS', topics: ['Deadlocks', 'Memory Management'] }]
+let mockDocs = [{ title: 'OS Lecture Notes.pdf', topic: 'Deadlocks' }]
 
 vi.mock('../hooks/useCatalog', async () => {
   const fixture = await import('../__fixtures__/practice.js')
@@ -49,8 +48,6 @@ vi.mock('../hooks/usePracticeContext.js', () => ({
 vi.mock('../content/practiceBank.js', async () => {
   const fixture = await import('../__fixtures__/practice.js')
   return {
-    // The second argument is the session's own questions, which is exactly the
-    // one thing a generated session has and a bank session does not.
     resolveQuestions: (ids = [], own = []) =>
       ids
         .map((id) => (own ?? []).find((question) => question.question_id === id) ?? fixture.questionById[id])
@@ -63,7 +60,7 @@ vi.mock('../content/practiceBank.js', async () => {
 
 vi.mock('../hooks/useDocuments.js', () => ({
   useDocumentTopics: () => ({
-    data: [{ subject: 'OS', topics: ['Deadlocks', 'Memory Management'] }],
+    data: mockDocTopics,
     isLoading: false,
     isError: false,
     isSuccess: true,
@@ -71,7 +68,7 @@ vi.mock('../hooks/useDocuments.js', () => ({
     refetch: () => {},
   }),
   useDocuments: () => ({
-    data: [],
+    data: mockDocs,
     isLoading: false,
     isError: false,
     isSuccess: true,
@@ -80,14 +77,22 @@ vi.mock('../hooks/useDocuments.js', () => ({
   }),
 }))
 
-vi.mock('../api/endpoints/attempts.js', () => ({
-  attemptsApi: { submit: vi.fn(async () => ({ score: 0.8, feedback_text: 'Marked.' })) },
+let submitMock = vi.fn(async () => ({
+  score: 0.85,
+  overall_score: 85,
+  feedback_text: 'Strong understanding demonstrated.',
+  evaluation_mode: 'llm',
 }))
 
-// ── A fake fetch the test drives by hand ────────────────────
+vi.mock('../api/endpoints/attempts.js', () => ({
+  attemptsApi: {
+    submit: (...args) => submitMock(...args),
+  },
+}))
+
+// ── Fake fetch for question generation ──────────────────────
 
 let pending = []
-let answered = 0
 
 function jsonResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, statusText: '', json: async () => body }
@@ -95,11 +100,8 @@ function jsonResponse(status, body) {
 
 function installFakeFetch() {
   pending = []
-  answered = 0
 
   vi.stubGlobal('fetch', (url, options = {}) => {
-    // Anything that is not a generation call answers straight away, so the
-    // queue only ever holds the calls this test is about.
     if (!String(url).includes('/questions/generate')) {
       return Promise.resolve(jsonResponse(200, {}))
     }
@@ -110,7 +112,6 @@ function installFakeFetch() {
         body: options.body ? JSON.parse(options.body) : null,
         resolve: (status, body) => resolve(jsonResponse(status, body)),
       })
-      // The panel cancels through an AbortController; a real fetch would reject.
       options.signal?.addEventListener('abort', () => {
         const error = new Error('The operation was aborted.')
         error.name = 'AbortError'
@@ -120,42 +121,12 @@ function installFakeFetch() {
   })
 }
 
-/** The next generation call the panel has made. */
 async function nextCall() {
   await waitFor(() => expect(pending.length).toBeGreaterThan(0))
   return pending.shift()
 }
 
-/** The backend now returns the whole run in ONE response. */
-function questionBatch(count, bloom = 'apply') {
-  return {
-    questions: Array.from({ length: count }, (_, index) => ({
-      question_id: `gen-${index + 1}`,
-      question_text: `A generated ${bloom} question, number ${index + 1}.`,
-      bloom_level: bloom,
-      difficulty: 'medium',
-      source: 'live',
-      adaptive_reason: 'moving up after strong answers',
-    })),
-  }
-}
-
-/** Answer the single generation call with a complete batch. */
-async function answerWithBatch(count = 6, bloom = 'apply') {
-  const call = await nextCall()
-  answered += 1
-  call.resolve(200, questionBatch(count, bloom))
-  return call
-}
-
-/** Answer the next call with a backend refusal. */
-async function answerWithCode(code, status = 400) {
-  const call = await nextCall()
-  call.resolve(status, { detail: 'Written for the logs.', code })
-  return call
-}
-
-// ── The app under test ──────────────────────────────────────
+// ── Render Helpers ──────────────────────────────────────────
 
 let counter = 0
 let userId = ''
@@ -167,7 +138,6 @@ function renderApp(path = '/practice') {
         <Routes>
           <Route path="/practice" element={<PracticeHomePage />} />
           <Route path="/practice/:sessionId" element={<SessionPage />} />
-          <Route path="/practice/:sessionId/results" element={<ResultsPage />} />
           <Route path="*" element={<p>Nothing here</p>} />
         </Routes>
       </AuthProvider>
@@ -175,19 +145,20 @@ function renderApp(path = '/practice') {
   )
 }
 
-/** Open /practice, which opens on the "Pick a topic" tab. */
-async function openAnyTopic(user) {
-  renderApp()
+async function openSetup(user) {
+  renderApp('/practice')
   await user.click(await screen.findByRole('tab', { name: 'Pick a topic' }))
   return screen.getByRole('textbox', { name: 'Topic' })
 }
 
 beforeEach(() => {
   counter += 1
-  userId = `generate-user-${counter}`
+  userId = `adaptive-user-${counter}`
   window.localStorage.setItem('qm_user_id', userId)
   resetCustomConcepts()
-  // The question endpoint is the one thing here that must go to fetch.
+  mockDocTopics = [{ subject: 'OS', topics: ['Deadlocks', 'Memory Management'] }]
+  mockDocs = [{ title: 'OS Lecture Notes.pdf', topic: 'Deadlocks' }]
+  submitMock.mockClear()
   vi.stubEnv('VITE_MOCK_QUESTIONS', 'false')
   installFakeFetch()
 })
@@ -197,236 +168,141 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('the form', () => {
-  it('asks for a topic, not a subject, and never opens a menu', async () => {
+describe('Practice Setup Screen', () => {
+  it('renders ONLY topic input, suggestion chips, uploaded notes switch, and Start practice button', async () => {
     const user = userEvent.setup()
-    await openAnyTopic(user)
+    const topicInput = await openSetup(user)
 
-    expect(screen.getByRole('textbox', { name: 'Topic' })).toBeTruthy()
-    // A <select> would render as a combobox. There is not one on the page, and
-    // no Subject field to pair it with.
-    expect(screen.queryByRole('combobox')).toBeNull()
-    expect(screen.queryByText(/subject/i)).toBeNull()
+    expect(topicInput).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start practice' })).toBeTruthy()
+
+    // Uploaded switch is present when documents exist, and is OFF by default
+    const uploadedSwitch = screen.getByLabelText('Use only my uploaded notes')
+    expect(uploadedSwitch).toBeTruthy()
+    expect(uploadedSwitch.checked).toBe(false)
+
+    // Removed controls MUST NOT be present
+    expect(screen.queryByRole('button', { name: /Adaptive \(recommended\)/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Manual$/i })).toBeNull()
+    expect(screen.queryByRole('heading', { name: /^Difficulty$/i })).toBeNull()
+    expect(screen.queryByRole('heading', { name: /^Bloom levels$/i })).toBeNull()
+    expect(screen.queryByRole('heading', { name: /^Number of questions$/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Generate questions/i })).toBeNull()
   })
 
-  it('starts adaptive, with Manual as an explicit override', async () => {
+  it('hides the uploaded-notes switch completely when user has no documents', async () => {
+    mockDocTopics = []
+    mockDocs = []
+
     const user = userEvent.setup()
-    await openAnyTopic(user)
+    await openSetup(user)
 
-    const adaptive = screen.getByRole('button', { name: 'Adaptive (recommended)' })
-    const manual = screen.getByRole('button', { name: 'Manual' })
-    expect(adaptive.getAttribute('aria-pressed')).toBe('true')
-    expect(manual.getAttribute('aria-pressed')).toBe('false')
-
-    await user.click(manual)
-    expect(manual.getAttribute('aria-pressed')).toBe('true')
-    expect(adaptive.getAttribute('aria-pressed')).toBe('false')
+    expect(screen.queryByLabelText(/Use only my uploaded notes/i)).toBeNull()
   })
 
-  it('starts the chips from the difficulty and lets them be moved', async () => {
+  it('populates topic from suggestion chips', async () => {
     const user = userEvent.setup()
-    await openAnyTopic(user)
+    const topicInput = await openSetup(user)
 
-    // Medium is apply + analyze.
-    expect(screen.getByRole('button', { name: 'Apply' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByRole('button', { name: 'Analyze' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByRole('button', { name: 'Remember' }).getAttribute('aria-pressed')).toBe('false')
-
-    await user.click(screen.getByRole('button', { name: 'Hard' }))
-
-    expect(screen.getByRole('button', { name: 'Evaluate' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByRole('button', { name: 'Create' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByRole('button', { name: 'Apply' }).getAttribute('aria-pressed')).toBe('false')
-
-    await user.click(screen.getByRole('button', { name: 'Remember' }))
-    expect(screen.getByRole('button', { name: 'Remember' }).getAttribute('aria-pressed')).toBe('true')
-  })
-
-  it('offers the topics the student uploaded, and takes the subject from them', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
-
-    await user.type(topic, 'dead')
-
+    await user.type(topicInput, 'dead')
     const suggestion = await screen.findByRole('button', { name: 'Deadlocks' })
     await user.click(suggestion)
 
-    expect(topic.value).toBe('Deadlocks')
-
-    // Free text is still allowed: the suggestions never take the field over.
-    await user.clear(topic)
-    await user.type(topic, 'Something the library has never heard of')
-    expect(topic.value).toBe('Something the library has never heard of')
+    expect(topicInput.value).toBe('Deadlocks')
   })
 })
 
-describe('a run', () => {
-  it('makes ONE call for the whole run, reports the ready count and offers the batch', async () => {
+describe('One-at-a-time Adaptive Session Flow', () => {
+  it('requests ONE question upon start, reflects rung on ladder, and requests next question ONLY after evaluation', async () => {
     const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
+    const topicInput = await openSetup(user)
 
-    await user.type(topic, 'Deadlocks')
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
+    await user.type(topicInput, 'Deadlocks')
+    await user.click(screen.getByRole('button', { name: 'Start practice' }))
 
-    const call = await nextCall()
-    // One request for six questions, filed under the subject of the document it matched.
-    expect(call.body).toMatchObject({
+    // 1. One request per question is issued upon navigating to session
+    const call1 = await nextCall()
+    expect(call1.body).toMatchObject({
       topic: 'Deadlocks',
-      subject: 'OS',
-      num_questions: 6,
+      num_questions: 1,
       adaptive: true,
     })
-    expect(await screen.findByText('0 of 6 ready')).toBeTruthy()
-    expect(screen.getByText(/Analyze questions can take up to 30 seconds/)).toBeTruthy()
 
-    call.resolve(200, questionBatch(6))
-
-    expect(await screen.findByText('6 questions ready')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Start practice' })).toBeTruthy()
-    expect(screen.getAllByText('Generated')).toHaveLength(6)
-    expect(pending).toHaveLength(0)
-  })
-
-  it('shows why the adaptive rung was chosen once the batch is ready', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
-
-    await user.type(topic, 'Deadlocks')
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-    await answerWithBatch(2)
-
-    expect(await screen.findByTestId('adaptive-reason')).toHaveTextContent(
-      'moving up after strong answers'
-    )
-  })
-
-  it('sends the chosen levels when the student switches to Manual', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
-
-    await user.type(topic, 'Deadlocks')
-    await user.click(screen.getByRole('button', { name: 'Manual' }))
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-
-    const call = await nextCall()
-    expect(call.body).toMatchObject({
-      adaptive: false,
-      bloom_level: 'apply',
-      difficulty: 'medium',
-    })
-    call.resolve(200, {
+    // Resolve Q1 at Remember / Easy
+    call1.resolve(200, {
       questions: [
-        { question_id: 'gen-1', question_text: 'A manual question.', bloom_level: 'apply' },
+        {
+          question_id: 'q-adaptive-1',
+          question_text: 'Define what constitutes a deadlock state.',
+          bloom_level: 'remember',
+          difficulty: 'easy',
+          source: 'bank',
+          adaptive_reason: 'No prior attempts for this topic — starting at Remember/Easy.',
+        },
       ],
     })
 
-    expect(await screen.findByText('1 question ready')).toBeTruthy()
-    expect(screen.queryByTestId('adaptive-reason')).toBeNull()
-  })
+    // 2. Ladder reflects the backend rung and surfaces adaptive reason
+    expect(await screen.findByText('Define what constitutes a deadlock state.')).toBeTruthy()
+    const reasonEl = await screen.findByTestId('adaptive-reason')
+    expect(reasonEl).toHaveTextContent(/starting at Remember\/Easy/i)
+    expect(screen.getByTestId('adaptive-ladder')).toHaveTextContent(/Remember/i)
 
-  it('cancels the single request cleanly without inventing questions', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
-
-    await user.type(topic, 'Deadlocks')
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-
-    const call = await nextCall()
-    expect(await screen.findByText('0 of 6 ready')).toBeTruthy()
-
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
-
-    expect(await screen.findByRole('button', { name: 'Generate questions' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /Start with/ })).toBeNull()
-    expect(call.body.num_questions).toBe(6)
-  })
-
-  it('lets the backend own duplicate retries: one call still fills the run', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
-
-    await user.type(topic, 'Deadlocks')
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-
-    const call = await nextCall()
-    // The server retries DUPLICATE_QUESTION with another angle; the browser does
-    // not fan out again, and a full batch still arrives.
-    call.resolve(200, questionBatch(6, 'analyze'))
-    expect(await screen.findByText('6 questions ready')).toBeTruthy()
+    // Verify no second request has been made yet
     expect(pending).toHaveLength(0)
-  })
 
-  it('offers the topic the student does have when the backend reports NO_CONTEXT', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
+    // 3. User provides answer and submits
+    const answerInput = screen.getByRole('textbox', { name: 'Your answer' })
+    await user.type(answerInput, 'A set of processes where each is waiting for a resource held by another.')
+    await user.click(screen.getByRole('button', { name: 'Submit answer' }))
 
-    await user.type(topic, 'Deadlock')
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
+    // Evaluation card appears with score
+    expect(await screen.findByTestId('evaluation-result')).toBeTruthy()
+    expect(screen.getByText('85% score')).toBeTruthy()
+    expect(screen.getByText('Strong understanding demonstrated.')).toBeTruthy()
 
-    await answerWithCode('NO_CONTEXT', 404)
+    // Verify still NO next question requested before clicking "Next question"
+    expect(pending).toHaveLength(0)
 
-    expect(await screen.findByText(/No material found for .Deadlock./)).toBeTruthy()
+    // 4. Click "Next question" -> NOW request #2 is sent
+    await user.click(screen.getByRole('button', { name: 'Next question →' }))
 
-    const fillIn = screen.getByRole('button', { name: /^Use / })
-    await user.click(fillIn)
-
-    expect(topic.value).toBe('Deadlocks')
-  })
-
-  it('asks about a topic that is not an exact document title before saying there is no material', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
-
-    // The box starts on for a student who has documents.
-    expect(screen.getByRole('checkbox', { name: 'Use only my uploaded material' }).checked).toBe(true)
-
-    await user.type(topic, 'Quantum error correction')
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-
-    // A typed title that is not an exact stored topic is not proof of "no
-    // material": the backend ranks every uploaded PDF by meaning. The request
-    // must therefore reach /questions/generate; only the backend may decide.
-    expect(pending).toHaveLength(1)
-    await answerWithCode('NO_CONTEXT', 404)
-
-    expect(
-      await screen.findByText('No uploaded material covers this topic. Add notes in My notes > Documents.')
-    ).toBeTruthy()
-  })
-})
-
-describe('the questions it produced', () => {
-  it('are practised in an ordinary session, and their mastery lands on the typed topic', async () => {
-    const user = userEvent.setup()
-    const topic = await openAnyTopic(user)
-
-    await user.type(topic, 'Deadlocks')
-    await user.click(screen.getByRole('button', { name: 'Generate questions' }))
-    await answerWithBatch(1)
-
-    expect(await screen.findByText('1 question ready')).toBeTruthy()
-    await user.click(await screen.findByRole('button', { name: 'Start with 1 question' }))
-
-    // The same session screen the question bank uses.
-    expect(await screen.findByText(/^Question 1 of 1$/)).toBeTruthy()
-    expect(screen.getByText('Generated')).toBeTruthy()
-
-    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'Two threads each holding a lock.')
-    await user.click(screen.getByRole('button', { name: 'Review and submit' }))
-    await user.click(await screen.findByRole('button', { name: 'Submit' }))
-
-    await waitFor(() => {
-      expect(readProgress(userId).concepts['custom:deadlocks']).toBeTruthy()
+    const call2 = await nextCall()
+    expect(call2.body).toMatchObject({
+      topic: 'Deadlocks',
+      num_questions: 1,
+      adaptive: true,
     })
 
-    const estimates = estimatesFrom(readProgress(userId).concepts)
-    const nodes = getKnowledgeNodes(estimates)
-    const node = nodes.find((entry) => entry.id === 'custom:deadlocks')
+    // Resolve Q2 promoted to Understand / Easy
+    call2.resolve(200, {
+      questions: [
+        {
+          question_id: 'q-adaptive-2',
+          question_text: 'Explain the four Coffman conditions required for deadlock.',
+          bloom_level: 'understand',
+          difficulty: 'easy',
+          source: 'live',
+          adaptive_reason: 'Scored 85% on Remember/Easy -> moving up to Understand/Easy.',
+        },
+      ],
+    })
 
-    expect(node).toBeTruthy()
-    expect(node.custom).toBe(true)
-    expect(node.title).toBe('Deadlocks')
-    expect(node.subject).toBe('OS')
-    expect(node.estimate).toBeGreaterThan(0)
+    // Ladder updates to Understand
+    expect(await screen.findByText('Explain the four Coffman conditions required for deadlock.')).toBeTruthy()
+    const updatedReason = await screen.findByTestId('adaptive-reason')
+    expect(updatedReason).toHaveTextContent(/moving up to Understand\/Easy/i)
+
+    // 5. Click "Finish session" -> Surfaces End-of-session summary
+    await user.click(screen.getByRole('button', { name: 'Finish session' }))
+    // Confirm dialog
+    const confirmBtn = await screen.findByRole('button', { name: 'Confirm finish' })
+    await user.click(confirmBtn)
+
+    expect(await screen.findByTestId('session-summary')).toBeTruthy()
+    expect(screen.getByText('Session Complete')).toBeTruthy()
+    expect(screen.getByText('Questions Answered')).toBeTruthy()
+    expect(screen.getByText('Average Score')).toBeTruthy()
+    expect(screen.getByText('Highest Rung Reached')).toBeTruthy()
   })
 })

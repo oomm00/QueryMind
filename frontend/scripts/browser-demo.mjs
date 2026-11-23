@@ -77,19 +77,52 @@ const shot = async (name) => {
 }
 
 const generate = async (tag, topic) => {
+  const url = page.url()
+  if (url.includes('/practice/') && !url.endsWith('/practice')) {
+    const nextBtn = page.getByRole('button', { name: /Next question/ })
+    if (await nextBtn.isVisible().catch(() => false)) {
+      const responsePromise = page.waitForResponse(
+        (response) => response.url().includes('/questions/generate') && response.status() === 200,
+        { timeout: 60000 }
+      )
+      await nextBtn.click()
+      const response = await responsePromise
+      const body = await response.json()
+      const question = body.questions?.[0] || body
+      const reasons = page.getByTestId('adaptive-reason')
+      await reasons.waitFor({ state: 'visible', timeout: 20000 })
+      const reason = (await reasons.textContent()).trim()
+      await shot(`${tag}-generate`)
+      return {
+        rung: rungOf(question),
+        bloom_level: question.bloom_level,
+        difficulty: question.difficulty,
+        source: question.source,
+        question_id: question.question_id,
+        reason,
+        correct_answer: question.correct_answer,
+      }
+    }
+  }
+
   await page.goto(`${base}/practice`, { waitUntil: 'networkidle' })
   await page.locator('#generate-topic').fill(topic)
-  await page.getByLabel('Any number of questions').fill('1')
-  await page.getByLabel('Use only my uploaded material').uncheck()
-  const reasons = page.getByTestId('adaptive-reason')
+  const uploaded = page.getByLabel('Use only my uploaded notes')
+  if (await uploaded.isVisible().catch(() => false)) {
+    await uploaded.uncheck()
+  }
+
   const responsePromise = page.waitForResponse(
     (response) => response.url().includes('/questions/generate') && response.status() === 200,
     { timeout: 60000 }
   )
-  await page.getByRole('button', { name: 'Generate questions' }).click()
+  await page.getByRole('button', { name: 'Start practice' }).click()
+  await page.waitForURL(/\/practice\/[^/]+$/)
+
   const response = await responsePromise
   const body = await response.json()
-  const question = body.questions[0]
+  const question = body.questions?.[0] || body
+  const reasons = page.getByTestId('adaptive-reason')
   await reasons.waitFor({ state: 'visible', timeout: 20000 })
   const reason = (await reasons.textContent()).trim()
   await shot(`${tag}-generate`)
@@ -105,19 +138,19 @@ const generate = async (tag, topic) => {
 }
 
 const answerAndSubmit = async (tag, answer) => {
-  await page.getByRole('button', { name: /^Start (practice|with 1 question)$/ }).click()
-  await page.waitForURL(/\/practice\/[^/]+$/)
-  await page.getByLabel('Your answer').fill(answer)
+  const answerInput = page.getByLabel('Your answer')
+  await answerInput.waitFor({ state: 'visible', timeout: 20000 })
+  await answerInput.fill(answer)
   await shot(`${tag}-answer`)
+
   const submitPromise = page.waitForResponse(
     (response) => response.url().includes('/attempts/submit') && response.status() === 200,
     { timeout: 120000 }
   )
-  await page.getByRole('button', { name: 'Review and submit' }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Submit' }).click()
+  await page.getByRole('button', { name: 'Submit answer' }).click()
   const response = await submitPromise
   const body = await response.json()
-  await page.waitForURL(/\/practice\/[^/]+\/results$/)
+  await page.getByTestId('evaluation-result').waitFor({ state: 'visible', timeout: 20000 })
   await shot(`${tag}-results`)
   return { score: body.score, evaluation_mode: body.evaluation_mode, duplicate: body.duplicate_submission }
 }
@@ -133,15 +166,42 @@ try {
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 })
   await shot('00-registered')
 
+  // Save explicit requirement after_setup screenshot
+  await page.goto(`${base}/practice`, { waitUntil: 'networkidle' })
+  await page.screenshot({
+    path: path.resolve(process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp', 'opencode', 'after_setup.png'),
+    fullPage: true,
+  })
+
   // Use a bank-backed topic so adaptive mastery is keyed to the served question.
   const topic = 'Deadlocks'
   const first = await generate('01-initial', topic)
+  await page.screenshot({
+    path: path.resolve(process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp', 'opencode', 'session_initial.png'),
+    fullPage: true,
+  })
+
   const good = await answerAndSubmit('01-good', first.correct_answer || 'mutual exclusion')
 
   const second = await generate('02-after-good', topic)
+  await page.screenshot({
+    path: path.resolve(process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp', 'opencode', 'session_level_up.png'),
+    fullPage: true,
+  })
+
   const bad = await answerAndSubmit('02-bad', 'asdf')
 
   const third = await generate('03-after-bad', topic)
+  await page.screenshot({
+    path: path.resolve(process.env.TEMP ?? 'C:\\Users\\omsat\\AppData\\Local\\Temp', 'opencode', 'session_level_down.png'),
+    fullPage: true,
+  })
+
+  // Finish session to test summary
+  await page.getByRole('button', { name: 'Finish session' }).click()
+  await page.getByRole('button', { name: 'Confirm finish' }).click()
+  await page.getByTestId('session-summary').waitFor({ state: 'visible', timeout: 10000 })
+  await shot('04-summary')
 
   console.log(JSON.stringify({ mode, email, topic, first, good, second, bad, third, shots, network, consoleErrors, pageErrors, failedRequests, badResponses }, null, 2))
 
