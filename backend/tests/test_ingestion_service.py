@@ -309,19 +309,22 @@ def test_metadata_shape_matches_retrieval_filter(mem_collection, db_session):
         "held by each other, forming a circular wait. The four Coffman conditions are "
         "mutual exclusion, hold and wait, no preemption, and circular wait."
     )
-    ingest_document(content.encode(), "deadlocks.txt", "OS", "Deadlocks", "college",
-                    db_session, user_id=uuid.uuid4(), collection=mem_collection)
+    owner = uuid.uuid4()
+    source_doc = f"deadlocks-{owner.hex[:8]}.txt"
+    ingest_document(content.encode(), source_doc, "OS", "Deadlocks", "college",
+                    db_session, user_id=owner, collection=mem_collection)
 
-    stored = mem_collection.get(where={"source_doc": "deadlocks.txt"}, include=["metadatas"])
+    stored = mem_collection.get(where={"source_doc": source_doc}, include=["metadatas"])
     assert stored["metadatas"]
     for meta in stored["metadatas"]:
-        assert set(meta.keys()) >= {"source_type", "subject", "topic", "source_doc", "chunk_index"}
+        assert set(meta.keys()) >= {"source_type", "subject", "topic", "source_doc", "chunk_index", "user_id"}
         assert meta["source_type"] == "college"
         assert meta["subject"] == "OS"
         assert meta["topic"] == "Deadlocks"
+        assert meta["user_id"] == str(owner)
 
     # Round-trip through the real retrieval path (same filter retrieve_context uses).
-    chunk_text_value = mem_collection.get(where={"source_doc": "deadlocks.txt"}, include=["documents"])["documents"][0]
+    chunk_text_value = mem_collection.get(where={"source_doc": source_doc}, include=["documents"])["documents"][0]
     results = retrieve_context(
         topic="Deadlocks",
         subject="OS",
@@ -330,7 +333,7 @@ def test_metadata_shape_matches_retrieval_filter(mem_collection, db_session):
     )
     assert results
     assert results[0]["source_type"] == "college"
-    assert results[0]["source_doc"] == "deadlocks.txt"
+    assert results[0]["source_doc"] == source_doc
     assert results[0]["score"] >= 0.75
 
 

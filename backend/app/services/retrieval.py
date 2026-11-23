@@ -259,6 +259,7 @@ def _query_collection(
     topic: Optional[str],
     n_results: int = 5,
     strict_metadata: bool = True,
+    user_id: Optional[str] = None,
 ) -> list[dict]:
     """Execute metadata-filtered similarity query on a Chroma collection.
 
@@ -270,6 +271,8 @@ def _query_collection(
     without a title-string match.
     """
     filters = [{"source_type": source_type}]
+    if user_id is not None:
+        filters.append({"user_id": str(user_id)})
     if subject is not None:
         filters.append({"subject": subject})
     # Only the stored *topic title* is relaxed for uploaded-only search; a
@@ -379,6 +382,7 @@ def retrieve_context(
     public_only: bool = False,
     college_only: bool = False,
     strict_metadata: bool = True,
+    user_id: Optional[str] = None,
 ) -> list[dict]:
     """Retrieve grounded context chunks with Two-Tier college priority and public fallback.
 
@@ -416,7 +420,10 @@ def retrieve_context(
     retrieval_mode = (
         "public" if public_only else "college" if college_only else "tiered"
     )
-    cache_key = (subject, topic, f"{retrieval_mode}:{strict_metadata}:{search_query}")
+    cache_key = (
+        subject, topic,
+        f"{retrieval_mode}:{strict_metadata}:{user_id or ''}:{search_query}",
+    )
 
     # Early cache lookup — before touching Chroma. A hit must NOT pay for client
     # construction / collection resolution, which is the dominant per-request
@@ -460,6 +467,7 @@ def retrieve_context(
         public_only=public_only,
         college_only=college_only,
         strict_metadata=strict_metadata,
+        user_id=user_id,
     )
 
     if not injected:
@@ -477,6 +485,7 @@ def _retrieve_uncached(
     public_only: bool = False,
     college_only: bool = False,
     strict_metadata: bool = True,
+    user_id: Optional[str] = None,
 ) -> list[dict]:
     """Two-tier retrieval (no caching) — the body behind :func:`retrieve_context`."""
     if public_only:
@@ -488,6 +497,7 @@ def _retrieve_uncached(
             topic=topic,
             n_results=top_k,
             strict_metadata=strict_metadata,
+            user_id=user_id,
         )
         if not public_chunks:
             public_chunks = _retrieve_web_context(search_query)
@@ -509,6 +519,7 @@ def _retrieve_uncached(
         topic=topic,
         n_results=top_k,
         strict_metadata=strict_metadata,
+        user_id=user_id,
     )
 
     if college_only:
@@ -559,6 +570,7 @@ def _retrieve_uncached(
         topic=topic,
         n_results=top_k,
         strict_metadata=strict_metadata,
+        user_id=user_id,
     )
 
     if public_chunks and public_chunks[0]["score"] >= SIMILARITY_THRESHOLD:

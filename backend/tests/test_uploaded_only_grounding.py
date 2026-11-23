@@ -35,11 +35,16 @@ def test_uploaded_only_relaxes_the_stored_topic_title():
         subject="OS",
         college_only=True,
         strict_metadata=False,
+        user_id="learner-1",
         collection=collection,
     )
 
     assert collection.query.call_args.kwargs["where"] == {
-        "$and": [{"source_type": "college"}, {"subject": "OS"}]
+        "$and": [
+            {"source_type": "college"},
+            {"user_id": "learner-1"},
+            {"subject": "OS"},
+        ]
     }
     assert chunks[0]["topic"] == "Virtual Memory Primer"
     assert chunks[0]["source_doc"] == "virtual-memory-primer.pdf"

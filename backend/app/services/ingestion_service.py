@@ -59,7 +59,9 @@ CHUNK_OVERLAP_CHARS: int = 250
 MIN_CHUNK_CHARS: int = 80
 
 # Chroma requires scalar metadata values; we store str/int only.
-_METADATA_SCALAR_KEYS = ("source_type", "subject", "topic", "source_doc", "chunk_index")
+_METADATA_SCALAR_KEYS = (
+    "source_type", "subject", "topic", "source_doc", "chunk_index", "user_id"
+)
 
 
 # ── Filename / input validation ───────────────────────────────────────────────
@@ -306,6 +308,7 @@ def _build_metadata(
     topic: str,
     source_type: str,
     chunk_index: int,
+    user_id: Optional[uuid.UUID] = None,
 ) -> dict[str, Any]:
     """Metadata shape that :func:`retrieval.retrieve_context` filters on.
 
@@ -318,6 +321,9 @@ def _build_metadata(
         "topic": topic,
         "source_doc": source_doc,
         "chunk_index": chunk_index,
+        # Uploaded-only retrieval is per learner: without this, another user's
+        # upload (or the seeded demo file with the same topic) can outrank it.
+        "user_id": str(user_id) if user_id is not None else "",
     }
 
 
@@ -431,7 +437,7 @@ def ingest_document(
 
     ids = [_chunk_id(source_doc, i, chunk) for i, chunk in enumerate(chunks)]
     metadatas = [
-        _build_metadata(source_doc, subject, topic, source_type, i)
+        _build_metadata(source_doc, subject, topic, source_type, i, user_id)
         for i in range(len(chunks))
     ]
 
