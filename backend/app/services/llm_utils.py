@@ -282,6 +282,7 @@ def generate_with_retry(
     sleep: Callable[[float], None] = time.sleep,
     model: Optional[str] = None,
     timeout: Optional[float] = None,
+    deadline: Optional[float] = None,
 ) -> Any:
     """Call ``client.generate_content(prompt)`` with exponential-backoff retries.
 
@@ -300,13 +301,23 @@ def generate_with_retry(
     last_exc: Optional[Exception] = None
 
     for attempt in range(attempts):
+        # A caller-supplied deadline bounds the WHOLE retry loop, not each
+        # attempt: four 503 retries at 15s each used to overrun generation's
+        # 35s budget (and the 60s browser timeout) before the fallback ran.
+        attempt_timeout = timeout if timeout is not None else LLM_CALL_TIMEOUT_SECONDS
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0.5:
+                last_exc = TimeoutError("LLM deadline exhausted before an attempt")
+                break
+            attempt_timeout = min(attempt_timeout, remaining)
         try:
             # Acquire a concurrency slot for the duration of this attempt so at
             # most LLM_MAX_CONCURRENCY Gemini calls are in flight at once.
             with _LLM_SEMAPHORE:
                 return _call_with_timeout(
                     lambda: _invoke_generate(client, prompt, model),
-                    timeout if timeout is not None else LLM_CALL_TIMEOUT_SECONDS,
+                    attempt_timeout,
                 )
         except Exception as exc:  # noqa: BLE001 — re-raised below if not transient
             if not is_transient_error(exc):
@@ -334,6 +345,7 @@ def request_text(
     sleep: Callable[[float], None] = time.sleep,
     models: Optional[list[str]] = None,
     timeout: Optional[float] = None,
+    deadline: Optional[float] = None,
 ) -> str:
     """One round-trip: retry transient errors, unwrap the response, and return raw text.
 
@@ -349,10 +361,12 @@ def request_text(
     """
     if models and len(models) > 1:
         return _request_text_with_fallback(
-            client, prompt, list(models), sleep=sleep, timeout=timeout
+            client, prompt, list(models), sleep=sleep, timeout=timeout, deadline=deadline
         )
     try:
-        response = generate_with_retry(client, prompt, sleep=sleep, timeout=timeout)
+        response = generate_with_retry(
+            client, prompt, sleep=sleep, timeout=timeout, deadline=deadline
+        )
     except QueryMindError:
         raise
     except Exception as exc:
@@ -369,6 +383,7 @@ def _request_text_with_fallback(
     *,
     sleep: Callable[[float], None] = time.sleep,
     timeout: Optional[float] = None,
+    deadline: Optional[float] = None,
 ) -> str:
     """Try each model in *models* in order until one answers.
 
@@ -386,7 +401,8 @@ def _request_text_with_fallback(
     for index, model in enumerate(models):
         try:
             response = generate_with_retry(
-                client, prompt, sleep=sleep, model=model, timeout=timeout
+                client, prompt, sleep=sleep, model=model, timeout=timeout,
+                deadline=deadline,
             )
         except QueryMindError as exc:
             if not is_model_fallback_error(exc):
