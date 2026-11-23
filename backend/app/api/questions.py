@@ -164,7 +164,12 @@ def generate_questions(
         # A bank/cache fallback may answer a different topic than the one typed.
         # The student must see it, and the attempt must be filed where it belongs.
         generated.requested_topic = generation_topic
-        served_topic = generated.served_topic or generated.topic or generation_topic
+        if payload.uploaded_only and context_chunks:
+            # The LLM may echo the typed title back; the document metadata is the
+            # topic actually served for an uploaded-only question.
+            served_topic = str(context_chunks[0].get("topic") or generation_topic)
+        else:
+            served_topic = generated.served_topic or generated.topic or generation_topic
         generated.served_topic = served_topic
         generated.topic = served_topic
         if generated.question_id is None:
