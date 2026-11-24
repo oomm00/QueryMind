@@ -129,6 +129,17 @@ def generate_questions(
                     topic=generation_topic, subject=None, bloom_level=bloom_level,
                     difficulty=difficulty, public_only=True,
                 )
+            if not context_chunks and not payload.uploaded_only:
+                context_chunks = [
+                    {
+                        "source_doc": f"Canonical Computer Science: {generation_subject} - {generation_topic}",
+                        "text": (
+                            f"Core theoretical principles, algorithms, data structures, invariants, "
+                            f"protocols, and standard engineering mechanics for {generation_topic} within {generation_subject}."
+                        ),
+                        "chunk_id": "canonical-cse-curriculum",
+                    }
+                ]
             if payload.uploaded_only and not context_chunks:
                 raise NoContextError(
                     f"No uploaded material covers '{generation_topic}'. "

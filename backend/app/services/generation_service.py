@@ -717,23 +717,10 @@ def generate_question(
 
     # ── Source material grounding ─────────────────────────────────────────────
     if not context_chunks:
-        if uploaded_only:
-            raise NoContextError(
-                f"No study material exists for {subject} / {topic} yet. "
-                "Upload a college or public document for this subject and topic first."
-            )
-        # For general curriculum technical practice without private uploaded notes,
-        # provide canonical academic context so the AI model generates properly grounded questions.
-        context_chunks = [
-            {
-                "source_doc": f"Canonical Computer Science: {subject} - {topic}",
-                "text": (
-                    f"Core theoretical principles, algorithms, data structures, invariants, "
-                    f"protocols, and standard engineering mechanics for {topic} within {subject}."
-                ),
-                "chunk_id": "canonical-cse-curriculum",
-            }
-        ]
+        raise NoContextError(
+            f"No study material exists for {subject} / {topic} yet. "
+            "Upload a college or public document for this subject and topic first."
+        )
 
     logger.info(
         "Retrieved %d context chunks for %s / %s (bloom=%s, diff=%s)",

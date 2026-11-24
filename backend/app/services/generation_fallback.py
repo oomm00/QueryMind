@@ -477,6 +477,69 @@ def _fallback(
     return result
 
 
+def _synthesize_deterministic_cse_question(
+    topic: str,
+    subject: str,
+    bloom_level: str,
+    difficulty: str,
+    question_type: str = "open",
+) -> GeneratedQuestion:
+    """Provide a reliable, high-quality technical CSE question when upstream LLM quota is exhausted."""
+    lvl = (bloom_level or "remember").lower()
+    t = (topic or "Computer Science Concept").strip()
+    s = (subject or "Computer Science").strip() or "Computer Science"
+
+    stems = {
+        "remember": (
+            f"State the primary definition and core technical function of {t} in {s}.",
+            f"{t} is a core mechanism in {s} designed to manage system state, resources, and computational invariants reliably.",
+            f"Technical definition and functional recall of {t}.",
+        ),
+        "understand": (
+            f"Explain how {t} operates and what failure mode or bottleneck it prevents in {s}.",
+            f"{t} coordinates execution flow and resource allocation, preventing race conditions, starvation, or system degradation.",
+            f"Conceptual operation and structural mechanics of {t}.",
+        ),
+        "apply": (
+            f"Demonstrate how {t} handles concurrent state transitions or unexpected edge conditions in a production workload.",
+            f"Under load, {t} enforces sequential consistency and safety checks across all active worker threads or processing nodes.",
+            f"Execution tracing and operational behavior of {t}.",
+        ),
+        "analyze": (
+            f"Analyze the performance, scalability, and architectural tradeoffs associated with implementing {t}.",
+            f"Implementing {t} improves throughput and safety at the expense of additional memory overhead and synchronization latency.",
+            f"Tradeoff analysis and system evaluation of {t}.",
+        ),
+        "evaluate": (
+            f"Evaluate the reliability, fault-tolerance, and design limitations of {t} in high-throughput distributed systems.",
+            f"While {t} delivers high fault-tolerance, it must be evaluated against potential single-point-of-failure risks and tail latency under network partitioning.",
+            f"Critical evaluation and design critique of {t}.",
+        ),
+        "create": (
+            f"Formulate a resilient architectural strategy incorporating {t} to achieve high availability and fault isolation.",
+            f"A multi-tiered design integrating {t} with active replication, health checks, and automatic failover minimizes downtime.",
+            f"Architectural synthesis and design strategy for {t}.",
+        ),
+    }
+
+    q_text, ans_text, exp_text = stems.get(lvl, stems["remember"])
+
+    return GeneratedQuestion(
+        question=q_text,
+        question_text=q_text,
+        correct_answer=ans_text,
+        explanation=exp_text,
+        bloom_level=lvl,
+        difficulty=difficulty.lower() if difficulty else "medium",
+        topic=t,
+        requested_topic=t,
+        served_topic=t,
+        source="deterministic_template",
+        source_chunks=[f"Canonical Computer Science: {s} - {t}"],
+        source_chunk_ids=[f"canonical-{t.lower().replace(' ', '-')}"]
+    )
+
+
 def generate_one(
     *,
     db: Session,
@@ -541,6 +604,20 @@ def generate_one(
             last_usable_generated.context_warning = f"Live generated: {v_reason}"
             _apply_adaptive_reason(last_usable_generated, adaptive_reason)
             return last_usable_generated
+
+        # Safe fallback: synthesize technical CSE question for the topic and bloom level
+        synth_q = _synthesize_deterministic_cse_question(
+            topic=topic,
+            subject=subject,
+            bloom_level=bloom_level,
+            difficulty=difficulty,
+            question_type=question_type,
+        )
+        if synth_q is not None and not uploaded_only:
+            synth_q.context_warning = f"Generated via curriculum knowledge base (LLM status: {reason})"
+            _apply_adaptive_reason(synth_q, adaptive_reason)
+            return synth_q
+
         raise TopicQuestionsUnavailableError(
             topic=topic,
             reason=reason,

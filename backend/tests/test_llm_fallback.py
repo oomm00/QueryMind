@@ -134,7 +134,8 @@ def _valid_eval_json() -> str:
 
 # ── 1. Settings ───────────────────────────────────────────────────────────────
 
-def test_fallback_models_default_empty():
+def test_fallback_models_default_empty(monkeypatch):
+    monkeypatch.delenv("LLM_FALLBACK_MODELS", raising=False)
     assert Settings(_env_file=None).fallback_models == []
 
 
