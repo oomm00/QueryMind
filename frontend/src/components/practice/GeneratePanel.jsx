@@ -75,11 +75,9 @@ export function GeneratePanel() {
     if (!trimmed) return
 
     const matchedSubject = subjectForTopic(trimmed, rows)
-    const subject = hasDocuments
-      ? matchedSubject === GENERAL_SUBJECT
-        ? null
-        : matchedSubject
-      : GENERAL_SUBJECT
+    const subject = hasDocuments && matchedSubject && matchedSubject !== GENERAL_SUBJECT
+      ? matchedSubject
+      : null
 
     const session = newSession({
       scope: 'adaptive',

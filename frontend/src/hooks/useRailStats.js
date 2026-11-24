@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query'
 import { attemptsApi, masteryApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 
-const WEEKLY_MINUTES_TARGET = 120 // 2 hour weekly study goal
+const WEEKLY_QUESTIONS_TARGET = 20
 
 function isThisWeek(timestamp) {
   if (!timestamp) return false
@@ -49,20 +49,23 @@ export function useRailStats() {
     weakAreaCount = 0
   }
 
-  let studiedMinutes = 0
+  let weekAttempts = 0
   try {
     const history = Array.isArray(historyQuery.data)
       ? historyQuery.data
       : historyQuery.data?.attempts ?? []
-    const weekAttempts = history.filter((a) => isThisWeek(a.submitted_at || a.created_at)).length
-    // Each evaluated question represents ~5 minutes of deliberate technical practice
-    studiedMinutes = weekAttempts * 5
+    weekAttempts = history.filter((a) => isThisWeek(a.submitted_at || a.created_at)).length
   } catch {
-    studiedMinutes = 0
+    weekAttempts = 0
   }
 
   return {
     weakAreaCount,
-    weekly: { minutes: studiedMinutes, targetMinutes: WEEKLY_MINUTES_TARGET },
+    weekly: {
+      questionsAnswered: weekAttempts,
+      targetQuestions: WEEKLY_QUESTIONS_TARGET,
+      minutes: weekAttempts * 5,
+      targetMinutes: 100,
+    },
   }
 }

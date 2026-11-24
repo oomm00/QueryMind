@@ -5,15 +5,41 @@
 
 export const DEFAULT_MOCK_SETTINGS = {
   auth: false,
-  questions: true,
-  attempts: true,
-  documents: true,
-  profile_goal: true,
-  next_params: true,
-  profile: true,
-  history: true,
-  catalog: true,
-  content: true,
+  questions: false,
+  attempts: false,
+  documents: false,
+  profile_goal: false,
+  next_params: false,
+  profile: false,
+  history: false,
+  catalog: false,
+  content: false,
+}
+
+/**
+ * Dynamic learner API domains backed by FastAPI backend routes.
+ * If any of these are mocked, a visible "MOCK DATA ACTIVE" banner is displayed.
+ */
+export const LEARNER_API_DOMAINS = [
+  'auth',
+  'questions',
+  'attempts',
+  'documents',
+  'profile',
+  'history',
+  'profile_goal',
+  'next_params',
+]
+
+/**
+ * Returns true if ANY backend learner API domain is mocked or global mocks are enabled.
+ */
+export function isAnyMockEnabled() {
+  if (import.meta.env.VITE_USE_MOCKS === 'true') return true
+  for (const domain of LEARNER_API_DOMAINS) {
+    if (isMocked(domain)) return true
+  }
+  return false
 }
 
 /**

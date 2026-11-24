@@ -101,6 +101,9 @@ try {
   const hasRecentSessions = await recentSessionsHeading.isVisible().catch(() => false)
   assert.equal(hasRecentSessions, false, '"Recent sessions" MUST NOT exist on the Practice page')
 
+  // Verify mock data banner is NOT visible (real API is in use)
+  assert.equal(await page.locator('[data-testid="mock-data-banner"]').count(), 0, 'No mock banner should be visible when mocks are off')
+
   // Verify controls that must NOT exist
   assert.equal(await page.getByRole('radio', { name: /Manual/i }).count(), 0)
   assert.equal(await page.getByLabel(/Difficulty/i).count(), 0)
@@ -142,7 +145,7 @@ try {
   await page.getByRole('button', { name: /Next question/i }).click()
   const gen2Response = await gen2Promise
   const q2Data = (await gen2Response.json()).questions?.[0]
-  await page.getByTestId('adaptive-reason').waitFor({ state: 'visible', timeout: 20000 })
+  await page.locator('[data-testid="adaptive-active-rung"]:has-text("Understand")').waitFor({ state: 'visible', timeout: 20000 })
   await shot('05_session_q2_promoted')
   const rung1 = await page.getByTestId('adaptive-active-rung').textContent()
   console.log(`Q2 active rung after promotion: ${rung1}`)
@@ -165,7 +168,7 @@ try {
   await page.getByRole('button', { name: /Next question/i }).click()
   const gen3Response = await gen3Promise
   const q3Data = (await gen3Response.json()).questions?.[0]
-  await page.getByTestId('adaptive-reason').waitFor({ state: 'visible', timeout: 20000 })
+  await page.locator('[data-testid="adaptive-active-rung"]:has-text("Apply")').waitFor({ state: 'visible', timeout: 20000 })
   await shot('07_session_q3_promoted')
   const rung2 = await page.getByTestId('adaptive-active-rung').textContent()
   console.log(`Q3 active rung: ${rung2}`)
@@ -188,7 +191,7 @@ try {
   await page.getByRole('button', { name: /Next question/i }).click()
   const gen4Response = await gen4Promise
   const q4Data = (await gen4Response.json()).questions?.[0]
-  await page.getByTestId('adaptive-reason').waitFor({ state: 'visible', timeout: 20000 })
+  await page.locator('[data-testid="adaptive-active-rung"]:has-text("Understand")').waitFor({ state: 'visible', timeout: 20000 })
   await shot('09_session_q4_demoted')
   const rung3 = await page.getByTestId('adaptive-active-rung').textContent()
   console.log(`Q4 active rung after demotion: ${rung3}`)
@@ -206,30 +209,84 @@ try {
   await shot('10_q4_evaluated')
   console.log(`Q4 score: ${sub4.score}`)
 
-  // Finish session
-  console.log('=== Finishing session ===')
+  // Calculate exact expected mastery score from known EMA update formula:
+  // Attempt 1: score=1.0, diff=easy (weight 0.8) -> seed = 0.8
+  // Attempt 2: score=1.0, diff=easy (weight 0.8) -> 0.3*0.8 + 0.7*0.8 = 0.8
+  // Attempt 3: score=0.0, diff=medium (weight 1.0) -> 0.3*0.0 + 0.7*0.8 = 0.56
+  // Attempt 4: score=sub4.score, diff=easy (weight 0.8) -> 0.3*(sub4.score * 0.8) + 0.7*0.56
+  const weighted4 = Math.min(1.0, Math.max(0.0, sub4.score * 0.8))
+  const expectedMastery = 0.3 * weighted4 + 0.7 * 0.56
+  const expectedPct = Math.round(expectedMastery * 100)
+  console.log(`Expected Deadlocks mastery: ${expectedMastery.toFixed(4)} (${expectedPct}%)`)
+
+  // Finish session 1
+  console.log('=== Finishing session 1 ===')
   await page.getByRole('button', { name: 'Finish session' }).click()
   await page.getByRole('button', { name: 'Confirm finish' }).click()
   await page.getByTestId('session-summary').waitFor({ state: 'visible', timeout: 15000 })
   await shot('11_session_summary')
 
+  // === Step 3b: Practice CPU Scheduling with 3 bad answers to trigger Weak Area ===
+  console.log('=== Step 3b: Practice CPU Scheduling with 3 bad answers ===')
+  await page.goto(`${base}/practice`, { waitUntil: 'networkidle' })
+  await page.locator('#generate-topic').fill('CPU Scheduling')
+  const genCpuPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/questions/generate') && resp.status() === 200,
+    { timeout: 60000 }
+  )
+  await page.getByRole('button', { name: 'Start practice' }).click()
+  await page.waitForURL(/\/practice\/[^/]+$/, { timeout: 30000 })
+  await genCpuPromise
+
+  for (let round = 1; round <= 3; round++) {
+    console.log(`Answering CPU Scheduling Q${round} with wrong answer...`)
+    await page.getByLabel('Your answer').fill('completely wrong answer with no facts')
+    const submitP = page.waitForResponse((r) => r.url().includes('/attempts/submit') && r.status() === 200)
+    await page.getByRole('button', { name: 'Submit answer' }).click()
+    await submitP
+    await page.getByTestId('evaluation-result').waitFor({ state: 'visible', timeout: 20000 })
+    if (round < 3) {
+      const nextP = page.waitForResponse((r) => r.url().includes('/questions/generate') && r.status() === 200)
+      await page.getByRole('button', { name: /Next question/i }).click()
+      await nextP
+    }
+  }
+  await page.getByRole('button', { name: 'Finish session' }).click()
+  await page.getByRole('button', { name: 'Confirm finish' }).click()
+  await page.getByTestId('session-summary').waitFor({ state: 'visible', timeout: 15000 })
+
   // === Step 4: Verify /mastery ===
   console.log('=== Step 4: Verify /mastery ===')
   await page.goto(`${base}/mastery`, { waitUntil: 'networkidle' })
   await page.getByTestId('mastery-page').waitFor({ state: 'visible', timeout: 15000 })
-  const masteryRow = page.locator('[data-testid^="mastery-row-"]').first()
-  await masteryRow.waitFor({ state: 'visible', timeout: 15000 })
-  const masteryRowText = await masteryRow.textContent()
+  const deadlockRows = page.locator('[data-testid^="mastery-row-"][data-testid$="-Deadlocks"]')
+  assert.equal(await deadlockRows.count(), 1, 'Expected exactly ONE mastery row for Deadlocks (no split across subjects)')
+  const masteryRowText = await deadlockRows.first().textContent()
   console.log(`Mastery row text: ${masteryRowText}`)
   assert.match(masteryRowText, /Deadlocks/)
-  assert.match(masteryRowText, /attempt/)
+  assert.match(masteryRowText, /4 attempts/)
+  assert.match(masteryRowText, new RegExp(`${expectedPct}%`))
   await shot('12_user1_mastery')
 
   // === Step 5: Verify /weak-areas ===
   console.log('=== Step 5: Verify /weak-areas ===')
   await page.goto(`${base}/weak-areas`, { waitUntil: 'networkidle' })
   await page.getByTestId('weak-areas-page').waitFor({ state: 'visible', timeout: 15000 })
+  const cpuWeakCard = page.getByTestId('weak-topic-CPU Scheduling')
+  await cpuWeakCard.waitFor({ state: 'visible', timeout: 15000 })
+  const cpuWeakText = await cpuWeakCard.textContent()
+  console.log(`CPU Scheduling weak card text: ${cpuWeakText}`)
+  assert.match(cpuWeakText, /CPU Scheduling/)
+  assert.match(cpuWeakText, /3 attempts evaluated/)
   await shot('13_user1_weak_areas')
+
+  // Click "Practice this" on CPU Scheduling
+  console.log('=== Clicking Practice this on Weak Area ===')
+  const practiceThisBtn = cpuWeakCard.getByRole('button', { name: 'Practice this' })
+  await practiceThisBtn.click()
+  await page.waitForURL(/\/practice\/[^/]+$/, { timeout: 15000 })
+  console.log(`Navigated to practice session from weak areas: ${page.url()}`)
+  assert.ok(page.url().includes('/practice/'))
 
   // === Step 6: Verify /analytics ===
   console.log('=== Step 6: Verify /analytics ===')
@@ -244,17 +301,18 @@ try {
   console.log('=== Step 7: Verify /history ===')
   await page.goto(`${base}/history`, { waitUntil: 'networkidle' })
   await page.getByTestId('history-page').waitFor({ state: 'visible', timeout: 15000 })
-  const historyGroup = page.locator('[data-testid^="history-group-"]').first()
+  const historyGroup = page.locator('[data-testid="history-group-Deadlocks"]')
   await historyGroup.waitFor({ state: 'visible', timeout: 15000 })
-  const historyText = await historyGroup.textContent()
-  console.log(`History text: ${historyText}`)
-  assert.match(historyText, /Deadlocks/)
-  assert.match(historyText, /answered/i)
+  const qLabels = await historyGroup.locator('span.w-5').allTextContents()
+  console.log(`Deadlocks history labels: ${qLabels.join(', ')}`)
+  assert.deepEqual(qLabels, ['Q1', 'Q2', 'Q3', 'Q4'], 'Questions in history must be chronologically ordered Q1..Q4')
   await shot('15_user1_history')
 
-  // === Step 8: Capture all other pages for design audit ===
-  console.log('=== Step 8: Capture other pages ===')
+  // === Step 8: Verify Dashboard and Source of Truth Agreement ===
+  console.log('=== Step 8: Verify Dashboard and other pages ===')
   await page.goto(`${base}/dashboard`, { waitUntil: 'networkidle' })
+  assert.ok(await page.getByText('Deadlocks').isVisible())
+  assert.ok(await page.getByText('CPU Scheduling').isVisible())
   await shot('16_user1_dashboard')
 
   await page.goto(`${base}/settings`, { waitUntil: 'networkidle' })

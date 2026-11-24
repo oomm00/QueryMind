@@ -113,14 +113,20 @@ export default function HistoryPage() {
       map.get(key).attempts.push(item)
     }
 
-    // Compute session aggregates
+    // Compute session aggregates and sort attempts chronologically (Q1 = first answered)
     return groups.map((g) => {
-      const totalScore = g.attempts.reduce((sum, a) => sum + (Number(a.score) || 0), 0)
-      const avgScore = Math.round((totalScore / g.attempts.length) * 100)
+      const sortedAttempts = [...g.attempts].sort((a, b) => {
+        const ta = new Date(a.submitted_at || a.created_at || 0).getTime()
+        const tb = new Date(b.submitted_at || b.created_at || 0).getTime()
+        return ta - tb
+      })
+      const totalScore = sortedAttempts.reduce((sum, a) => sum + (Number(a.score) || 0), 0)
+      const avgScore = Math.round((totalScore / sortedAttempts.length) * 100)
       return {
         ...g,
+        attempts: sortedAttempts,
         avgScore,
-        count: g.attempts.length,
+        count: sortedAttempts.length,
       }
     })
   }, [history])

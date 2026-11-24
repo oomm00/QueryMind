@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { profileApi } from '../api/index.js'
+import { profileApi, masteryApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { selectPerTopicAverages, selectPerBloomAverages } from '../api/adapter.js'
@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const { userId, user } = useAuth()
   useBreadcrumbs([{ label: 'Workspace', to: '/dashboard' }, { label: 'Dashboard' }])
   const [profile, setProfile] = useState(null)
+  const [masteryRecords, setMasteryRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -58,10 +59,15 @@ export default function DashboardPage() {
       return
     }
 
-    profileApi
-      .getProfile(userId)
-      .then((data) => {
-        if (active) setProfile(data)
+    Promise.all([
+      profileApi.getProfile(userId).catch(() => null),
+      masteryApi.getMyMastery().catch(() => []),
+    ])
+      .then(([prof, recs]) => {
+        if (active) {
+          setProfile(prof)
+          setMasteryRecords(Array.isArray(recs) ? recs : [])
+        }
       })
       .catch((err) => {
         if (active) setError(err.message ?? 'Failed to load profile')
@@ -118,12 +124,29 @@ export default function DashboardPage() {
   }
 
   const breakdown = profile?.mastery_breakdown ?? []
-  const topicAverages = selectPerTopicAverages(breakdown)
+  const topicAverages = masteryRecords.length > 0
+    ? masteryRecords.map((r) => ({
+        topic: r.topic,
+        subject: r.subject,
+        average_score: r.mastery_score ?? 0,
+        total_attempts: r.attempts_count ?? 0,
+      }))
+    : selectPerTopicAverages(breakdown)
   const bloomAverages = selectPerBloomAverages(breakdown)
 
-  const overallPct = Math.round((profile?.average_score ?? 0) * 100)
-  const attemptCount = profile?.total_attempts ?? 0
-  const weakAreaCount = topicAverages.filter((item) => item.average_score < 0.7).length
+  const overallPct = masteryRecords.length > 0
+    ? Math.round(
+        (masteryRecords.reduce((sum, r) => sum + (r.mastery_score ?? 0), 0) / masteryRecords.length) * 100
+      )
+    : Math.round((profile?.average_score ?? 0) * 100)
+
+  const attemptCount = masteryRecords.length > 0
+    ? masteryRecords.reduce((sum, r) => sum + (r.attempts_count ?? 0), 0)
+    : (profile?.total_attempts ?? 0)
+
+  const weakAreaCount = masteryRecords.length > 0
+    ? masteryRecords.filter((r) => (r.attempts_count || 0) >= 2 && (r.mastery_score || 0) < 0.7).length
+    : topicAverages.filter((item) => item.average_score < 0.7).length
 
   return (
     <div>

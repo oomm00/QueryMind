@@ -18,6 +18,7 @@ import { CommandPalette } from './components/CommandPalette'
 import { FlashHost } from './components/routing/FlashHost.jsx'
 import { useTheme } from './hooks/useTheme'
 import { useRailStats } from './hooks/useRailStats'
+import { isAnyMockEnabled } from './api/mocks/config.js'
 import { NAV_ITEMS, MOBILE_TABS, MOBILE_MORE_ITEMS, WORKSPACE_LABEL, breadcrumbFor } from './navigation'
 import { BreadcrumbProvider, BreadcrumbContext } from './hooks/useBreadcrumbs'
 import { Tooltip } from './components/ui/Tooltip'
@@ -261,10 +262,10 @@ function AppShell({ children }) {
     return <div className="min-h-screen bg-page text-ink">{children}</div>
   }
 
-  const goalMinutes = weekly.minutes
-  const goalTarget = weekly.targetMinutes
-  const goalPct = Math.min(100, (goalMinutes / goalTarget) * 100)
-  const goalLabel = `Weekly goal ${formatHours(goalMinutes)} of ${formatHours(goalTarget)}`
+  const questionsCount = weekly?.questionsAnswered ?? 0
+  const targetQuestions = weekly?.targetQuestions ?? 20
+  const goalPct = Math.min(100, Math.round((questionsCount / targetQuestions) * 100))
+  const goalLabel = `Weekly practice: ${questionsCount} of ${targetQuestions} questions answered`
 
   return (
     <div className="min-h-screen bg-page text-ink" style={{ '--rail-w': collapsed ? '72px' : '232px' }}>
@@ -331,13 +332,13 @@ function AppShell({ children }) {
             <div className="rounded-panel border border-line bg-surface-raised p-3">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <IconTarget size={13} />
-                Weekly goal
+                Weekly practice
               </div>
               <p className="mt-1.5 text-sm font-semibold text-ink">
-                {formatHours(goalMinutes)} <span className="font-normal text-muted">/ {formatHours(goalTarget)}</span>
+                {questionsCount} <span className="font-normal text-muted">/ {targetQuestions} questions</span>
               </p>
               <ProgressLine className="mt-2" percentage={goalPct} />
-              <p className="mt-2 text-[11px] leading-tight text-muted">A little every day adds up.</p>
+              <p className="mt-2 text-[11px] leading-tight text-muted">Real answered questions this week.</p>
             </div>
           )}
 
@@ -469,6 +470,15 @@ function AppShell({ children }) {
             </div>
           </div>
         </header>
+
+        {isAnyMockEnabled() && (
+          <div
+            data-testid="mock-data-banner"
+            className="flex items-center justify-center gap-2 border-b border-warning/40 bg-warning-tint px-4 py-1 text-xs font-semibold text-warning"
+          >
+            <span>⚠️ MOCK DATA ACTIVE — Local mock fixtures in use</span>
+          </div>
+        )}
 
         <main
           id="main-content"

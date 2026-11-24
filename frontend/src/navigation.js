@@ -25,7 +25,7 @@ export const NAV_ITEMS = [
   { to: '/analytics', label: 'Analytics', icon: IconAnalytics },
   { to: '/history', label: 'History', icon: IconClock },
   { to: '/notes', label: 'My Notes', icon: IconNotes },
-  { to: '/courses', label: 'My courses', icon: IconLearning },
+  { to: '/courses', label: 'Study material', icon: IconLearning },
   { to: '/settings', label: 'Settings', icon: IconSettings },
 ]
 
@@ -40,8 +40,8 @@ const SEGMENT_LABELS = {
   dashboard: 'Dashboard',
   mastery: 'Mastery',
   explore: 'Explore',
-  courses: 'My courses',
-  learning: 'My courses',
+  courses: 'Study material',
+  learning: 'Study material',
   analytics: 'Analytics',
   'weak-areas': 'Weak Areas',
   notes: 'My Notes',

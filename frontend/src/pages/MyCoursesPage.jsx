@@ -168,12 +168,12 @@ export default function MyCoursesPage() {
 
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">My courses</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Study material</p>
       <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">
-        Your courses and what they know
+        Study Material & Lessons
       </h1>
       <p className="mt-1 max-w-2xl text-sm text-muted">
-        The subjects you have added, with the progress your answers have produced.
+        Authored courses and reference lessons to support your technical practice.
       </p>
 
       {rows.length > 0 && (

@@ -7,6 +7,7 @@ import MasteryPage from './MasteryPage'
 import WeakAreasPage from './WeakAreasPage'
 import AnalyticsPage from './AnalyticsPage'
 import SettingsPage from './SettingsPage'
+import HistoryPage from './HistoryPage'
 import * as masteryApiModule from '../api/endpoints/mastery.js'
 import * as attemptsApiModule from '../api/endpoints/attempts.js'
 import * as authContextModule from '../context/AuthContext.jsx'
@@ -218,5 +219,64 @@ describe('SettingsPage', () => {
     expect(signOutBtn).toBeInTheDocument()
     fireEvent.click(signOutBtn)
     expect(logoutMock).toHaveBeenCalled()
+  })
+})
+
+describe('HistoryPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authContextModule.useAuth.mockReturnValue({
+      userId: 'user-123',
+      user: { email: 'learner@example.com' },
+    })
+  })
+
+  it('numbers questions chronologically within a session (Q1 = earliest answered)', async () => {
+    // API returns newest first (Q4 -> Q1)
+    vi.spyOn(attemptsApiModule.attemptsApi, 'getHistory').mockResolvedValue([
+      {
+        attempt_id: 'att-4',
+        topic: 'Deadlocks',
+        bloom_level: 'understand',
+        score: 0.62,
+        created_at: '2026-11-24T08:15:00Z',
+      },
+      {
+        attempt_id: 'att-3',
+        topic: 'Deadlocks',
+        bloom_level: 'apply',
+        score: 0.0,
+        created_at: '2026-11-24T08:10:00Z',
+      },
+      {
+        attempt_id: 'att-2',
+        topic: 'Deadlocks',
+        bloom_level: 'understand',
+        score: 1.0,
+        created_at: '2026-11-24T08:05:00Z',
+      },
+      {
+        attempt_id: 'att-1',
+        topic: 'Deadlocks',
+        bloom_level: 'remember',
+        score: 1.0,
+        created_at: '2026-11-24T08:00:00Z',
+      },
+    ])
+
+    render(
+      <MemoryRouter>
+        <HistoryPage />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('Practice History')).toBeInTheDocument()
+    // Find all question labels
+    const qLabels = screen.getAllByText(/^Q[1-4]$/).map((el) => el.textContent)
+    expect(qLabels).toEqual(['Q1', 'Q2', 'Q3', 'Q4'])
+
+    // Verify Q1 corresponds to the earliest attempt (att-1: Remember, score 100%)
+    const q1Row = screen.getByText('Q1').closest('div')
+    expect(q1Row).toHaveTextContent(/Remember/i)
   })
 })

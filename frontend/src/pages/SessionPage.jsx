@@ -106,6 +106,7 @@ export default function SessionPage() {
   const [autoSummaryOffer, setAutoSummaryOffer] = useState(false)
 
   const abortRef = useRef(null)
+  const isFetchingRef = useRef(false)
 
   // ══════════════════════════════════════════════════════════
   // BANK SESSION FLOW (Course Practice)
@@ -137,8 +138,8 @@ export default function SessionPage() {
 
   // Generate 1 adaptive question
   const fetchAdaptiveQuestion = async () => {
-    if (!session?.topic || generating) return
-
+    if (!session?.topic || isFetchingRef.current || generating) return
+    isFetchingRef.current = true
     setGenerating(true)
     setGenerateError(null)
     setSubmitError(null)
@@ -183,6 +184,7 @@ export default function SessionPage() {
         setGenerateError(err)
       }
     } finally {
+      isFetchingRef.current = false
       setGenerating(false)
       abortRef.current = null
     }
