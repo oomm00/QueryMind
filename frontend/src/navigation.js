@@ -19,7 +19,6 @@ export const WORKSPACE_LABEL = 'Your workspace'
 
 export const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: IconDashboard },
-  { to: '/my-learning', label: 'My Learning', icon: IconLearning },
   { to: '/mastery', label: 'Mastery', icon: IconTarget },
   { to: '/practice', label: 'Practice', icon: IconTarget },
   { to: '/weak-areas', label: 'Weak Areas', icon: IconWeakAreas, badgeKey: 'weakAreas' },
@@ -39,7 +38,6 @@ export const MOBILE_MORE_ITEMS = NAV_ITEMS.filter((item) => !MOBILE_TAB_PATHS.in
 
 const SEGMENT_LABELS = {
   dashboard: 'Dashboard',
-  'my-learning': 'My Learning',
   mastery: 'Mastery',
   explore: 'Explore',
   courses: 'Study material',
