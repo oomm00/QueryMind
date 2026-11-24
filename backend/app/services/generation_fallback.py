@@ -512,6 +512,9 @@ def generate_one(
             reason="Offline demo mode; no LLM call was made.",
         )
 
+    last_usable_generated: GeneratedQuestion | None = None
+    last_validation: dict | None = None
+
     def fallback(reason: str) -> GeneratedQuestion:
         if uploaded_only and context_chunks:
             return _question_from_uploaded_context(
@@ -526,13 +529,23 @@ def generate_one(
             db, subject=subject, topic=topic, bloom_level=bloom_level,
             excluded_texts=excluded_texts, served_ids=served_ids, reason=reason,
         )
-        if fb_result is None:
-            raise TopicQuestionsUnavailableError(
-                topic=topic,
-                reason=reason,
-                offline=settings.offline_demo_mode,
+        if fb_result is not None:
+            return fb_result
+        if last_usable_generated is not None:
+            v_reason = (last_validation or {}).get("reason", "validation advisory")
+            logger.warning(
+                "No bank questions for topic '%s'. Serving live-generated question despite notice (%s) to maintain session continuity.",
+                topic,
+                v_reason,
             )
-        return fb_result
+            last_usable_generated.context_warning = f"Live generated: {v_reason}"
+            _apply_adaptive_reason(last_usable_generated, adaptive_reason)
+            return last_usable_generated
+        raise TopicQuestionsUnavailableError(
+            topic=topic,
+            reason=reason,
+            offline=settings.offline_demo_mode,
+        )
 
     if not settings.offline_demo_mode:
         tolerance = settings.tolerance_for(bloom_level)
@@ -583,6 +596,9 @@ def generate_one(
                     existing=existing_candidates,
                 )
                 logger.info("Validation result attempt %d: passed=%s reason_code=%s reason=%s", attempt + 1, validation.get("passed"), validation.get("reason_code"), validation.get("reason"))
+                if not validation.get("duplicate_check", {}).get("is_duplicate", False) or last_usable_generated is None:
+                    last_usable_generated = generated
+                    last_validation = validation
             except Exception as exc:  # LLM/quota/parse failures all degrade gracefully
                 logger.warning("Live generation attempt %d failed: %s", attempt + 1, exc)
                 if remaining > 5.0 and attempt < settings.generation_max_attempts - 1:
