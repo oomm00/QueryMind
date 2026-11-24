@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ValidationError
 from app.models.models import Attempt, Question
 from app.services.evaluation_service import evaluate_answer
-from app.services.generation_fallback import canonical_subject_for_topic
+from app.services.generation_fallback import canonical_subject_for_topic, canonical_topic_key
 from app.services.mastery_service import update_mastery
 from app.services.score_utils import normalize_score
 
@@ -132,7 +132,7 @@ def submit_attempt_core(
     # Capture ORM primitives before any rollback/expire.
     question_id = question.id
     q_subject = question.subject
-    q_topic = question.topic
+    q_topic = canonical_topic_key(question.topic)
     canonical_subj = canonical_subject_for_topic(q_topic, db=db)
     if canonical_subj and (not q_subject or q_subject.lower() == "general"):
         q_subject = canonical_subj

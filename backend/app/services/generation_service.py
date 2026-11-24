@@ -708,9 +708,6 @@ def generate_question(
         )
 
     # ── No source material -> nothing to ground a question on ─────────────────
-    # If neither the college nor the public tier has any material for this
-    # subject + topic, fail fast with a clear 404 rather than asking the LLM to
-    # invent a question from thin air.
     if not context_chunks:
         raise NoContextError(
             f"No study material exists for {subject} / {topic} yet. "

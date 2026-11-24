@@ -46,19 +46,20 @@ def db_session():
 
 def test_bank_has_eight_questions_per_rung_per_topic():
     bank = load_bank()
-    assert len(bank) == 144
     topics = {e["topic"] for e in bank}
-    assert len(topics) == 3
+    assert len(topics) >= 10
+    assert len(bank) == len(topics) * 48
     for topic in topics:
         for rung in ("remember", "understand", "apply", "analyze", "evaluate", "create"):
             assert sum(1 for e in bank if e["topic"] == topic and e["bloom_level"] == rung) == 8
 
 
 def test_bank_seeding_is_idempotent_and_marked(db_session):
-    assert seed_bank(db_session) == 144
-    assert db_session.query(Question).count() == 144
+    bank = load_bank()
+    assert seed_bank(db_session) == len(bank)
+    assert db_session.query(Question).count() == len(bank)
     assert seed_bank(db_session) == 0
-    assert db_session.query(Question).count() == 144
+    assert db_session.query(Question).count() == len(bank)
     assert {q.source for q in db_session.query(Question).all()} == {"bank"}
 
 

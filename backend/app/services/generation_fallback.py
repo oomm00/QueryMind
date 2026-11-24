@@ -23,7 +23,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import NoContextError
+from app.core.exceptions import NoContextError, TopicQuestionsUnavailableError
 from app.models.models import Question
 from app.schemas.schemas import GeneratedQuestion
 from app.services import generation_service, validation_service
@@ -68,8 +68,73 @@ def reset_served_for_tests() -> None:
 def load_bank() -> list[dict[str, Any]]:
     global _BANK_CACHE
     if _BANK_CACHE is None:
-        _BANK_CACHE = json.loads(_BANK_PATH.read_text(encoding="utf-8"))
+        p1 = Path(__file__).resolve().parent / "demo_question_bank.json"
+        p2 = Path(__file__).resolve().parents[1] / "data" / "demo_question_bank.json"
+        path = p1 if p1.exists() else p2
+        _BANK_CACHE = json.loads(path.read_text(encoding="utf-8"))
     return _BANK_CACHE
+
+
+KNOWN_TOPIC_CANONICAL: dict[str, str] = {
+    "race condition": "Race Conditions",
+    "race conditions": "Race Conditions",
+    "deadlock": "Deadlocks",
+    "deadlocks": "Deadlocks",
+    "concurrency": "Concurrency",
+    "semaphore": "Semaphores",
+    "semaphores": "Semaphores",
+    "paging": "Paging and Virtual Memory",
+    "virtual memory": "Paging and Virtual Memory",
+    "paging and virtual memory": "Paging and Virtual Memory",
+    "cpu scheduling": "CPU Scheduling",
+    "scheduling": "CPU Scheduling",
+    "transaction": "Transactions",
+    "transactions": "Transactions",
+    "transactions and acid": "Transactions",
+    "acid": "Transactions",
+    "normalization": "Normalization",
+    "database normalization": "Normalization",
+    "indexing": "Indexing",
+    "database indexing": "Indexing",
+    "sql join": "SQL Joins",
+    "sql joins": "SQL Joins",
+    "join": "SQL Joins",
+    "joins": "SQL Joins",
+    "dynamic programming": "Dynamic Programming",
+    "binary search tree": "Binary Search Trees",
+    "binary search trees": "Binary Search Trees",
+    "bst": "Binary Search Trees",
+    "tcp congestion control": "TCP Congestion Control",
+    "congestion control": "TCP Congestion Control",
+}
+
+TOPIC_TO_SUBJECT: dict[str, str] = {
+    "Race Conditions": "OS",
+    "Deadlocks": "OS",
+    "Semaphores": "OS",
+    "Paging and Virtual Memory": "OS",
+    "CPU Scheduling": "OS",
+    "Transactions and ACID": "DBMS",
+    "Transactions": "DBMS",
+    "Normalization": "DBMS",
+    "Indexing": "DBMS",
+    "SQL Joins": "DBMS",
+    "Dynamic Programming": "DSA",
+    "Binary Search Trees": "DSA",
+    "TCP Congestion Control": "CN",
+}
+
+
+def canonical_topic_key(topic: str | None) -> str:
+    """Normalize and resolve the single authoritative topic key for a topic name."""
+    raw = (topic or "").strip()
+    if not raw:
+        return "General"
+    cleaned = " ".join(raw.split())
+    lowered = cleaned.lower()
+    if lowered in KNOWN_TOPIC_CANONICAL:
+        return KNOWN_TOPIC_CANONICAL[lowered]
+    return cleaned
 
 
 def canonical_subject_for_topic(topic: str, db: Session | None = None) -> str | None:
@@ -78,17 +143,20 @@ def canonical_subject_for_topic(topic: str, db: Session | None = None) -> str | 
     Prevents splitting a student's mastery records across arbitrary subject tags
     (e.g., Deadlocks under both OS and DBMS).
     """
+    canonical = canonical_topic_key(topic)
+    if canonical in TOPIC_TO_SUBJECT:
+        return TOPIC_TO_SUBJECT[canonical]
     key = (topic or "").strip().lower()
     if not key:
         return None
     for entry in load_bank():
-        if entry.get("topic", "").strip().lower() == key:
+        if entry.get("topic", "").strip().lower() in (key, canonical.lower()):
             return entry.get("subject")
     if db is not None:
         row = (
             db.query(Question.subject)
             .filter(
-                func.lower(Question.topic) == key,
+                func.lower(Question.topic).in_([key, canonical.lower()]),
                 Question.source == "bank",
             )
             .first()
@@ -213,28 +281,29 @@ def _bank_candidates(
     demo never shows the same bank question while a fresh one is available.
     """
     seed_bank(db)
-    key = (topic or "").strip().lower()
-    query = db.query(Question).filter(Question.source == "bank")
+    canonical = canonical_topic_key(topic)
+    key = canonical.lower()
+    raw_key = (topic or "").strip().lower()
+    keys_to_match = list({key, raw_key})
+    if "transactions" in key:
+        keys_to_match.extend(["transactions", "transactions and acid"])
+    if "paging" in key:
+        keys_to_match.extend(["paging", "virtual memory", "paging and virtual memory"])
 
-    # 1. Search bank for the requested topic
-    topic_rows = query.filter(func.lower(Question.topic) == key).all()
-    if topic_rows:
-        target_subject = subject
-        if not target_subject or target_subject.lower() == "general":
-            target_subject = canonical_subject_for_topic(topic, db) or subject
-        if target_subject and target_subject.lower() != "general":
-            subj_matches = [r for r in topic_rows if r.subject.lower() == target_subject.lower()]
-            if subj_matches:
-                topic_rows = subj_matches
-        rows = topic_rows
-    else:
-        # Topic not in bank: fall back to general bank pool
-        target_subject = subject
-        if not target_subject or target_subject.lower() == "general":
-            target_subject = canonical_subject_for_topic(topic, db) or subject
-        if target_subject and target_subject.lower() != "general":
-            query = query.filter(func.lower(Question.subject) == target_subject.lower())
-        rows = query.all()
+    query = db.query(Question).filter(Question.source == "bank")
+    topic_rows = query.filter(func.lower(Question.topic).in_(keys_to_match)).all()
+    if not topic_rows:
+        # STRICT DEMO REQUIREMENT: Never serve a question from a different topic!
+        return []
+
+    target_subject = subject
+    if not target_subject or target_subject.lower() == "general":
+        target_subject = canonical_subject_for_topic(canonical, db) or subject
+    if target_subject and target_subject.lower() != "general":
+        subj_matches = [r for r in topic_rows if r.subject.lower() == target_subject.lower()]
+        if subj_matches:
+            topic_rows = subj_matches
+    rows = topic_rows
 
     index = BLOOM_ORDER.index(bloom_level) if bloom_level in BLOOM_ORDER else 0
     rung_order = [index]
@@ -258,30 +327,38 @@ def _bank_candidates(
 def _question_from_bank(
     db: Session, *, subject: str, topic: str, bloom_level: str,
     excluded_texts: set[str], served_ids: set[uuid.UUID],
-) -> GeneratedQuestion:
+) -> Optional[GeneratedQuestion]:
     candidates = _bank_candidates(
         db, topic=topic, bloom_level=bloom_level,
         excluded_texts=excluded_texts, served_ids=served_ids,
         subject=subject,
     )
     if not candidates:
-        # A test/mocked session (or a DB where seeding has not run) can yield no
-        # rows at all. The JSON bank is the source of truth for seeding, so it is
-        # also a valid last-resort source for a usable question.
         bank = load_bank()
-        key = (topic or "").strip().lower()
+        canonical = canonical_topic_key(topic)
+        key = canonical.lower()
+        raw_key = (topic or "").strip().lower()
+        keys_to_match = {key, raw_key}
+        if "transactions" in key:
+            keys_to_match.update(["transactions", "transactions and acid"])
+        if "paging" in key:
+            keys_to_match.update(["paging", "virtual memory", "paging and virtual memory"])
         matches = [
             entry for entry in bank
-            if entry["topic"].strip().lower() == key and entry["bloom_level"] == bloom_level
-        ] or [entry for entry in bank if entry["bloom_level"] == bloom_level] or bank
-        entry = matches[0]
+            if entry.get("topic", "").strip().lower() in keys_to_match
+        ]
+        if not matches:
+            # STRICT DEMO REQUIREMENT: Never serve a question from a different topic!
+            return None
+        level_matches = [e for e in matches if e["bloom_level"] == bloom_level] or matches
+        entry = level_matches[0]
         return GeneratedQuestion(
             question=entry["question"],
             correct_answer=entry["correct_answer"],
             explanation=entry["explanation"],
             bloom_level=entry["bloom_level"],
             difficulty=entry["difficulty"],
-            topic=entry["topic"],
+            topic=canonical,
             source="bank",
         )
     row = candidates[0]
@@ -298,7 +375,7 @@ def _question_from_bank(
         explanation=f"Bank question for {row.topic}/{row.bloom_level}.",
         bloom_level=row.bloom_level,
         difficulty=row.difficulty,
-        topic=row.topic,
+        topic=canonical_topic_key(topic),
         source="bank",
         context_warning=warning,
     )
@@ -382,7 +459,7 @@ def _question_from_uploaded_context(
 def _fallback(
     db: Session, *, subject: str, topic: str, bloom_level: str,
     excluded_texts: set[str], served_ids: set[uuid.UUID], reason: str,
-) -> GeneratedQuestion:
+) -> Optional[GeneratedQuestion]:
     logger.warning("Generation falling back to cache/bank: %s", reason)
     cached = _question_from_cache(
         db, subject=subject, topic=topic, bloom_level=bloom_level,
@@ -392,6 +469,8 @@ def _fallback(
         db, subject=subject, topic=topic, bloom_level=bloom_level,
         excluded_texts=excluded_texts, served_ids=served_ids,
     )
+    if result is None:
+        return None
     result.context_warning = (
         f"{result.context_warning or ''} Fallback reason: {reason}".strip()
     )
@@ -443,16 +522,24 @@ def generate_one(
                 excluded_texts=excluded_texts,
                 reason=reason,
             )
-        return _fallback(
+        fb_result = _fallback(
             db, subject=subject, topic=topic, bloom_level=bloom_level,
             excluded_texts=excluded_texts, served_ids=served_ids, reason=reason,
         )
+        if fb_result is None:
+            raise TopicQuestionsUnavailableError(
+                topic=topic,
+                reason=reason,
+                offline=settings.offline_demo_mode,
+            )
+        return fb_result
 
     if not settings.offline_demo_mode:
         tolerance = settings.tolerance_for(bloom_level)
         strict_note: str | None = None
         for attempt in range(settings.generation_max_attempts):
             remaining = deadline - time.monotonic()
+            logger.info("Starting live generation attempt %d of %d (remaining=%.1fs)", attempt + 1, settings.generation_max_attempts, remaining)
             if remaining < 2.0:
                 return fallback("deadline exhausted")
 
@@ -482,6 +569,9 @@ def generate_one(
                     max_models=settings.generation_max_fallback_models,
                     deadline=deadline,
                 )
+                existing_candidates: list[Question] = []
+                if served_ids:
+                    existing_candidates = db.query(Question).filter(Question.id.in_(served_ids)).all()
                 validation = validation_service.validate_question(
                     generated=generated.model_dump(),
                     subject=subject,
@@ -490,9 +580,14 @@ def generate_one(
                     db=db,
                     requested_bloom=bloom_level,
                     llm_client=alignment_client,
+                    existing=existing_candidates,
                 )
+                logger.info("Validation result attempt %d: passed=%s reason_code=%s reason=%s", attempt + 1, validation.get("passed"), validation.get("reason_code"), validation.get("reason"))
             except Exception as exc:  # LLM/quota/parse failures all degrade gracefully
                 logger.warning("Live generation attempt %d failed: %s", attempt + 1, exc)
+                if remaining > 5.0 and attempt < settings.generation_max_attempts - 1:
+                    time.sleep(1.0)
+                    continue
                 break
 
             if validation["passed"]:
@@ -533,6 +628,12 @@ def generate_one(
                 logger.warning("Bloom mismatch distance %d > 2 after strict retry — falling back", distance)
                 break
             if reason_code == "duplicate":
+                dup_check = validation.get("duplicate_check") or {}
+                sim_text = dup_check.get("similar_to_text")
+                if sim_text:
+                    excluded_texts.add(sim_text)
+                if getattr(generated, "question", None):
+                    excluded_texts.add(generated.question)
                 continue  # next attempt gets an explicit "different angle" note
             # Other validation failures: one retry, then fallback.
             continue

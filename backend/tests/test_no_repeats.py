@@ -25,7 +25,7 @@ def test_thirty_requests_do_not_repeat_until_the_bank_pool_is_exhausted(monkeypa
     monkeypatch.setattr(settings, "chroma_retry_backoff_seconds", 0.0)
     reset_served_for_tests()
 
-    topic = f"No Repeat Lab {uuid.uuid4().hex[:6]}"
+    topic = "Deadlocks"
     with TestClient(create_app()) as client:
         reg = client.post(
             "/auth/register",

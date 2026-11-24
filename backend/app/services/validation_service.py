@@ -42,7 +42,7 @@ from app.models.models import Question
 logger = logging.getLogger("querymind.validation")
 
 # ── Thresholds ────────────────────────────────────────────────────────────────
-DUPLICATE_SIMILARITY_THRESHOLD = 0.90     # > 0.90 cosine similarity => duplicate triggers regeneration
+DUPLICATE_SIMILARITY_THRESHOLD = 0.95     # > 0.95 cosine similarity => duplicate triggers regeneration
 ANSWERABILITY_SIMILARITY_THRESHOLD = 0.50  # answer must match a chunk at least this well
 KEYWORD_OVERLAP_THRESHOLD = 0.30           # secondary signal threshold for grounding
 
@@ -107,10 +107,18 @@ def _query_existing(
     subject: str,
     topic: str,
 ) -> list[Question]:
-    """Stored questions for the same ``subject`` + ``topic`` (duplicate candidates)."""
+    """Stored questions for the same ``subject`` + ``topic`` (duplicate candidates).
+    
+    Excludes offline bank questions so live generation is not rejected simply
+    because the offline fallback bank contains standard definitions.
+    """
     return (
         db.query(Question)
-        .filter(Question.subject == subject, Question.topic == topic)
+        .filter(
+            Question.subject == subject,
+            Question.topic == topic,
+            Question.source != "bank",
+        )
         .all()
     )
 
@@ -163,6 +171,7 @@ def check_duplicate(
         return {
             "is_duplicate": True,
             "similar_to_id": str(existing[best_idx].id),
+            "similar_to_text": existing[best_idx].question_text,
             "similarity": round(best_score, 4),
         }
 
@@ -383,6 +392,8 @@ def validate_question(
     db: Session,
     requested_bloom: Optional[str] = None,
     llm_client: Optional[Any] = None,
+    *,
+    existing: Optional[list[Question]] = None,
 ) -> dict:
     """Run all validation checks and return a combined verdict.
 
@@ -419,7 +430,8 @@ def validate_question(
     # Fetch the duplicate candidates up front, on the CALLER's thread:
     # SQLAlchemy sessions are not thread-safe, so the concurrent checks below
     # must not touch the session themselves.
-    existing = _query_existing(db, subject, topic)
+    if existing is None:
+        existing = _query_existing(db, subject, topic)
 
     # Embed the new question exactly ONCE and share the vector with both checks.
     # Only computed when a check actually needs it:
