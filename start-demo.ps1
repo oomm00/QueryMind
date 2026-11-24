@@ -30,13 +30,17 @@ function Assert-RepoBranch {
 }
 
 function Assert-PortFree {
-    param([int]$Port)
-    $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
-    if ($listeners) {
-        $pids = ($listeners.OwningProcess | Sort-Object -Unique) -join ','
-        throw "Port $Port is already in use by PID $pids. Stop that process and retry."
+    param([int]$Port, [int]$TimeoutSec = 5)
+    for ($i = 0; $i -lt $TimeoutSec; $i++) {
+        $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+        if (-not $listeners) {
+            Write-Host "OK port free: $Port"
+            return
+        }
+        Start-Sleep -Seconds 1
     }
-    Write-Host "OK port free: $Port"
+    $pids = ($listeners.OwningProcess | Sort-Object -Unique) -join ','
+    throw "Port $Port is already in use by PID $pids. Stop that process and retry."
 }
 
 function Stop-DemoFrontend {
