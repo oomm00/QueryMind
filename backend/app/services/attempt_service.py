@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ValidationError
 from app.models.models import Attempt, Question
 from app.services.evaluation_service import evaluate_answer
+from app.services.generation_fallback import canonical_subject_for_topic
 from app.services.mastery_service import update_mastery
 from app.services.score_utils import normalize_score
 
@@ -132,6 +133,9 @@ def submit_attempt_core(
     question_id = question.id
     q_subject = question.subject
     q_topic = question.topic
+    canonical_subj = canonical_subject_for_topic(q_topic, db=db)
+    if canonical_subj and (not q_subject or q_subject.lower() == "general"):
+        q_subject = canonical_subj
     q_bloom = question.bloom_level
     q_difficulty = question.difficulty
     q_reference = question.reference_answer

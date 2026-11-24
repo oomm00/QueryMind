@@ -38,6 +38,7 @@ from app.schemas.schemas import (
 )
 from app.services.attempt_service import submit_attempt_core
 from app.services.generation_fallback import (
+    canonical_subject_for_topic,
     generate_one,
     mark_served,
     persist_generated_question,
@@ -97,6 +98,10 @@ def generate_questions(
     difficulty = payload.difficulty
     generation_topic = (payload.topic or "").strip() or "Uploaded notes"
     generation_subject = (payload.subject or "").strip() or "General"
+    if (not generation_subject or generation_subject.lower() == "general") and not payload.uploaded_only:
+        canonical = canonical_subject_for_topic(generation_topic, db=db)
+        if canonical:
+            generation_subject = canonical
     adaptive_reason: str | None = None
 
     # Uploaded-only retrieval must run even offline: the PDF is real material and

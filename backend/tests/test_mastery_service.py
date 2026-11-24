@@ -515,3 +515,77 @@ def test_generate_non_adaptive_missing_level_is_422(monkeypatch):
         json={"topic": "Transactions", "subject": "DBMS", "question_type": "open"},
     )
     assert resp.status_code == 422
+
+
+def test_mastery_four_answers_exact_ema_single_record(db):
+    """4 sequential answers on Deadlocks produce 1 mastery record with exact EMA.
+
+    Scores: 1.0 (easy), 1.0 (easy), 0.0 (medium), 0.6185 (easy).
+    Difficulty weights: easy=0.8, medium=1.0.
+    1. Seed: 1.0 * 0.8 = 0.8
+    2. EMA: 0.3 * (1.0 * 0.8) + 0.7 * 0.8 = 0.8
+    3. EMA: 0.3 * (0.0 * 1.0) + 0.7 * 0.8 = 0.56
+    4. EMA: 0.3 * (0.6185 * 0.8) + 0.7 * 0.56 = 0.14844 + 0.392 = 0.54044
+    """
+    user = _add_user(db)
+    q1 = Question(
+        subject="OS",
+        topic="Deadlocks",
+        bloom_level="remember",
+        difficulty="easy",
+        question_text="Q1 text",
+        reference_answer="A1",
+        source="live",
+    )
+    q2 = Question(
+        subject="General",
+        topic="Deadlocks",
+        bloom_level="understand",
+        difficulty="easy",
+        question_text="Q2 text",
+        reference_answer="A2",
+        source="live",
+    )
+    q3 = Question(
+        subject="OS",
+        topic="Deadlocks",
+        bloom_level="apply",
+        difficulty="medium",
+        question_text="Q3 text",
+        reference_answer="A3",
+        source="bank",
+    )
+    q4 = Question(
+        subject="OS",
+        topic="Deadlocks",
+        bloom_level="understand",
+        difficulty="easy",
+        question_text="Q4 text",
+        reference_answer="A4",
+        source="live",
+    )
+    db.add_all([q1, q2, q3, q4])
+    db.commit()
+
+    eval_scores = [100.0, 100.0, 0.0, 61.85]
+    for i, (q, score_pct) in enumerate(zip([q1, q2, q3, q4], eval_scores)):
+        attempt_service.submit_attempt_core(
+            db=db,
+            user_id=user.id,
+            question=q,
+            answer_text=f"Student answer {i}",
+            submission_id=f"sub-{i}",
+            evaluator=lambda question, student_answer, pct=score_pct: {
+                "overall_score": pct,
+                "scores": {"correctness": 10},
+                "feedback": "test feedback",
+            },
+        )
+
+    records = get_mastery(user_id=user.id, db=db)
+    assert len(records) == 1
+    rec = records[0]
+    assert rec.topic == "Deadlocks"
+    assert rec.subject == "OS"
+    assert rec.attempts_count == 4
+    assert pytest.approx(rec.mastery_score, abs=0.001) == 0.54044

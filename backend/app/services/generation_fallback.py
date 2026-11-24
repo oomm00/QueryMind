@@ -72,6 +72,32 @@ def load_bank() -> list[dict[str, Any]]:
     return _BANK_CACHE
 
 
+def canonical_subject_for_topic(topic: str, db: Session | None = None) -> str | None:
+    """Return the authoritative subject for a well-known topic.
+
+    Prevents splitting a student's mastery records across arbitrary subject tags
+    (e.g., Deadlocks under both OS and DBMS).
+    """
+    key = (topic or "").strip().lower()
+    if not key:
+        return None
+    for entry in load_bank():
+        if entry.get("topic", "").strip().lower() == key:
+            return entry.get("subject")
+    if db is not None:
+        row = (
+            db.query(Question.subject)
+            .filter(
+                func.lower(Question.topic) == key,
+                Question.source == "bank",
+            )
+            .first()
+        )
+        if row and row[0]:
+            return row[0]
+    return None
+
+
 def seed_bank(db: Session) -> int:
     """Idempotently insert bank questions that are not already in the DB."""
     added = 0
@@ -152,6 +178,11 @@ def _question_from_cache(
         )
         .order_by(Question.created_at.desc())
     )
+    target_subject = subject
+    if not target_subject or target_subject.lower() == "general":
+        target_subject = canonical_subject_for_topic(topic, db) or subject
+    if target_subject and target_subject.lower() != "general":
+        query = query.filter(func.lower(Question.subject) == target_subject.lower())
     if served_ids:
         query = query.filter(Question.id.notin_(served_ids))
     rows = query.limit(50).all()
@@ -174,6 +205,7 @@ def _question_from_cache(
 def _bank_candidates(
     db: Session, *, topic: str, bloom_level: str,
     excluded_texts: set[str], served_ids: set[uuid.UUID],
+    subject: str | None = None,
 ) -> list[Question]:
     """Unserved rows first: target rung, then adjacent rungs, then any rung.
 
@@ -183,6 +215,11 @@ def _bank_candidates(
     seed_bank(db)
     key = (topic or "").strip().lower()
     query = db.query(Question).filter(Question.source == "bank")
+    target_subject = subject
+    if not target_subject or target_subject.lower() == "general":
+        target_subject = canonical_subject_for_topic(topic, db) or subject
+    if target_subject and target_subject.lower() != "general":
+        query = query.filter(func.lower(Question.subject) == target_subject.lower())
     topic_rows = query.filter(func.lower(Question.topic) == key).all()
     rows = topic_rows or query.all()  # unknown topic still gets a valid bank question
 
@@ -212,6 +249,7 @@ def _question_from_bank(
     candidates = _bank_candidates(
         db, topic=topic, bloom_level=bloom_level,
         excluded_texts=excluded_texts, served_ids=served_ids,
+        subject=subject,
     )
     if not candidates:
         # A test/mocked session (or a DB where seeding has not run) can yield no
