@@ -18,6 +18,8 @@ import LoginPage from './pages/LoginPage'
 import SessionPage from './pages/SessionPage'
 import ResultsPage from './pages/ResultsPage'
 import MyCoursesPage from './pages/MyCoursesPage'
+import MyLearningPage from './pages/MyLearningPage'
+import TopicDetailPage from './pages/TopicDetailPage'
 import PracticeHomePage from './pages/PracticeHomePage'
 import DashboardPage from './pages/DashboardPage'
 import ExplorePage from './pages/ExplorePage'
@@ -94,6 +96,22 @@ export default function App() {
           element={
             <Protected>
               <PracticeHomePage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/my-learning"
+          element={
+            <Protected>
+              <MyLearningPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/my-learning/:topicId"
+          element={
+            <Protected>
+              <TopicDetailPage />
             </Protected>
           }
         />

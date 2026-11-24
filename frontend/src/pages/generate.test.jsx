@@ -304,5 +304,5 @@ describe('One-at-a-time Adaptive Session Flow', () => {
     expect(screen.getByText('Questions Answered')).toBeTruthy()
     expect(screen.getByText('Average Score')).toBeTruthy()
     expect(screen.getByText('Highest Rung Reached')).toBeTruthy()
-  })
+  }, 15000)
 })

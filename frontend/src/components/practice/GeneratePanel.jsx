@@ -97,7 +97,7 @@ export function GeneratePanel() {
   return (
     <div className="space-y-4">
       <PanelLarge>
-        <h2 className="text-sm font-semibold text-ink">Pick a topic</h2>
+        <h2 className="text-sm font-semibold text-ink">What do you want to learn?</h2>
         <p className="mt-0.5 max-w-2xl text-xs text-muted">
           Name any topic you want to master. Practice adapts in real time: strong answers
           move you up the difficulty ladder, and mistakes adjust it down.
