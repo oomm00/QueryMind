@@ -30,7 +30,7 @@ export function ProgressLine({
   return (
     <div className={cx('flex items-center gap-2', className)} {...rest}>
       <div
-        className={cx('h-2 w-full overflow-hidden rounded-full bg-line', trackClassName)}
+        className={cx('h-2 w-full overflow-hidden rounded-full bg-white/[0.08] border border-white/[0.04]', trackClassName)}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}

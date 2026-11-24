@@ -126,11 +126,11 @@ function RailItem({ item, collapsed, badge }) {
       title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cx(
-          'group flex h-10 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors',
+          'group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all duration-150',
           collapsed && 'justify-center px-0',
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
           isActive
-            ? 'bg-primary-tint text-primary'
+            ? 'bg-primary/10 text-primary font-semibold border-l-2 border-primary shadow-[inset_0_0_12px_rgba(255,92,0,0.06)]'
             : 'text-muted hover:bg-surface-raised hover:text-ink'
         )
       }
@@ -284,11 +284,11 @@ function AppShell({ children }) {
             collapsed && 'justify-center px-0'
           )}
         >
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-primary text-[15px] font-semibold text-primary-fg">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[#FF5C00] to-[#FF8033] text-[15px] font-bold text-white shadow-[0_0_15px_rgba(255,92,0,0.35)] ring-1 ring-white/20">
             q
           </span>
           {!collapsed && (
-            <span className="text-[15px] font-semibold tracking-tight text-ink">QueryMind</span>
+            <span className="text-[15px] font-bold tracking-tight text-ink">QueryMind</span>
           )}
         </div>
 
@@ -329,9 +329,9 @@ function AppShell({ children }) {
               </Tooltip>
             </div>
           ) : (
-            <div className="rounded-panel border border-line bg-surface-raised p-3">
+            <div className="rounded-2xl border border-line bg-surface/90 p-3.5 backdrop-blur-sm shadow-sm">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
-                <IconTarget size={13} />
+                <IconTarget size={13} className="text-primary" />
                 Weekly practice
               </div>
               <p className="mt-1.5 text-sm font-semibold text-ink">

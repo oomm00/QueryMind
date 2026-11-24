@@ -96,14 +96,20 @@ export function GeneratePanel() {
 
   return (
     <div className="space-y-4">
-      <PanelLarge>
-        <h2 className="text-sm font-semibold text-ink">What do you want to learn?</h2>
-        <p className="mt-0.5 max-w-2xl text-xs text-muted">
+      <PanelLarge className="relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
+
+        <div className="flex items-center gap-2.5 mb-1">
+          <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+          <h2 className="text-base font-semibold text-ink">What do you want to learn?</h2>
+        </div>
+        <p className="max-w-2xl text-xs md:text-sm text-muted">
           Name any topic you want to master. Practice adapts in real time: strong answers
           move you up the difficulty ladder, and mistakes adjust it down.
         </p>
 
-        <form className="mt-5 space-y-4" onSubmit={handleStartPractice}>
+        <form className="mt-6 space-y-5" onSubmit={handleStartPractice}>
           {/* Topic Input & Suggestion Chips */}
           <div className="max-w-xl">
             <Input
@@ -113,16 +119,17 @@ export function GeneratePanel() {
               value={topic}
               autoComplete="off"
               onChange={(event) => setTopic(event.target.value)}
+              className="text-base"
             />
 
             {shownSuggestions.length > 0 && (
-              <ul aria-label="Topic suggestions" className="mt-2 flex flex-wrap gap-1.5">
+              <ul aria-label="Topic suggestions" className="mt-3 flex flex-wrap gap-2">
                 {shownSuggestions.map((value) => (
                   <li key={value}>
                     <button
                       type="button"
                       onClick={() => setTopic(value)}
-                      className="rounded-full border border-line bg-surface-raised px-2.5 py-1 text-xs text-muted transition-colors duration-150 hover:text-ink hover:border-line-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      className="rounded-full border border-line bg-surface/90 px-3 py-1.5 text-xs font-medium text-muted transition-all duration-150 hover:text-ink hover:border-primary/50 hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                     >
                       {value}
                     </button>
@@ -134,7 +141,7 @@ export function GeneratePanel() {
 
           {/* Uploaded Notes Toggle (Hidden if no uploaded notes; OFF by default) */}
           {hasDocuments && (
-            <div className="pt-1 space-y-2">
+            <div className="pt-1 space-y-2.5">
               <label className="flex items-center gap-2.5 text-[13px] text-ink cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -148,7 +155,7 @@ export function GeneratePanel() {
               </label>
 
               {uploadedOnly && (
-                <div className="rounded-control border border-line bg-surface-raised p-3 text-xs text-muted max-w-xl">
+                <div className="rounded-xl border border-line bg-surface-raised/70 p-3.5 text-xs text-muted max-w-xl backdrop-blur-sm">
                   <span className="font-semibold text-ink">Active documents: </span>
                   {docs.length > 0 ? (
                     <span>
@@ -168,12 +175,13 @@ export function GeneratePanel() {
           )}
 
           {/* Primary Action Button */}
-          <div className="pt-2 flex items-center gap-3">
+          <div className="pt-2 flex items-center gap-3.5">
             <Button
               type="submit"
               id="btn-start-practice"
               disabled={!topic.trim()}
-              size="md"
+              size="lg"
+              className="px-6 text-sm"
             >
               Start practice
             </Button>

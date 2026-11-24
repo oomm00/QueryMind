@@ -10,56 +10,55 @@
 :root {
   color-scheme: light;
 
-  --page: #f5f4f1;
+  --page: #f8fafc;
   --surface: #ffffff;
-  --surface-2: #fbfaf8;
-  --ink: #22262b;
-  --muted: #6b7280;
-  --line: #e4e4e0;
-  --line-strong: #d4d4cf;
+  --surface-2: #f1f5f9;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
 
-  --primary: #2f5daa;
+  --primary: #FF5C00;
   --on-primary: #ffffff;
-  --primary-tint: #eaf0fa;
+  --primary-tint: rgba(255, 92, 0, 0.10);
 
-  --success: #2e7d5b;
-  --success-tint: #e7f3ec;
-  --warning: #9a6a12;
-  --warning-tint: #fbf2df;
-  --danger: #b3362f;
-  --danger-tint: #fbeae8;
+  --success: #10b981;
+  --success-tint: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-tint: #fffbeb;
+  --danger: #ef4444;
+  --danger-tint: #fef2f2;
 
-  --focus: #2f5daa;
-  --overlay: rgba(34, 38, 43, 0.45);
-  /* Sticky top bar — translucent surface so content can blur behind it. */
-  --header-bg: rgba(255, 255, 255, 0.8);
+  --focus: #FF5C00;
+  --overlay: rgba(15, 23, 42, 0.5);
+  --header-bg: rgba(255, 255, 255, 0.85);
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --page: #14161a;
-  --surface: #1c1f24;
-  --surface-2: #23272d;
-  --ink: #e9eaec;
-  --muted: #9ba1a9;
-  --line: #2c3037;
-  --line-strong: #3a3f47;
+  --page: #090b10;
+  --surface: #11141d;
+  --surface-2: #161a26;
+  --ink: #f1f5f9;
+  --muted: #8b93a0;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
 
-  --primary: #6e9be0;
-  --on-primary: #14161a;
-  --primary-tint: #1e2a3d;
+  --primary: #FF5C00;
+  --on-primary: #ffffff;
+  --primary-tint: rgba(255, 92, 0, 0.14);
 
-  --success: #5fbf8f;
-  --success-tint: #16281f;
-  --warning: #e0b25a;
-  --warning-tint: #2a2313;
-  --danger: #ef8b84;
-  --danger-tint: #2b1917;
+  --success: #10b981;
+  --success-tint: rgba(16, 185, 129, 0.14);
+  --warning: #f59e0b;
+  --warning-tint: rgba(245, 158, 11, 0.14);
+  --danger: #ef4444;
+  --danger-tint: rgba(239, 68, 68, 0.14);
 
-  --focus: #6e9be0;
-  --overlay: rgba(0, 0, 0, 0.6);
-  --header-bg: rgba(28, 31, 36, 0.8);
+  --focus: #FF5C00;
+  --overlay: rgba(0, 0, 0, 0.75);
+  --header-bg: rgba(12, 14, 20, 0.85);
 }
 
 @layer base {

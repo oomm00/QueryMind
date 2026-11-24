@@ -152,22 +152,30 @@ export default function WeakAreasPage() {
           />
         </PanelLarge>
       ) : (
-        <div className="space-y-3" data-testid="weak-areas-list">
+        <div className="space-y-3.5" data-testid="weak-areas-list">
           {weakTopics.map((item) => {
             const pct = Math.round((item.mastery_score || 0) * 100)
+            const isSevere = pct < 50
             return (
               <Panel
                 key={item.topic}
-                className="p-4 transition-colors hover:border-line-strong space-y-3"
+                className="p-5 transition-all duration-200 hover:border-line-strong hover:shadow-md space-y-4"
                 data-testid={`weak-topic-${item.topic}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-ink">{item.topic}</h3>
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="text-base font-semibold text-ink">{item.topic}</h3>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        isSevere
+                          ? 'border border-rose-500/20 bg-rose-500/10 text-rose-400'
+                          : 'border border-amber-500/20 bg-amber-500/10 text-amber-400'
+                      }`}>
+                        {isSevere ? 'Priority Need' : 'Moderate Need'}
+                      </span>
                       {item.subject && <Badge variant="neutral" label={item.subject} />}
                     </div>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-1 text-xs text-muted">
                       {item.attempts_count} attempt{item.attempts_count !== 1 ? 's' : ''} evaluated • Last practiced:{' '}
                       {item.last_updated ? formatWhen(item.last_updated) : 'Recently'}
                     </p>
@@ -178,15 +186,16 @@ export default function WeakAreasPage() {
                     size="sm"
                     icon={<IconArrowRight size={14} />}
                     onClick={() => startTopicPractice(item.topic, item.subject)}
+                    className="shadow-sm"
                   >
                     Practice this
                   </Button>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-muted">Current mastery</span>
-                    <span className="font-semibold text-danger tabular-nums">{pct}%</span>
+                <div className="pt-1">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-muted font-medium">Mastery score (target: 70%)</span>
+                    <span className="font-bold text-danger tabular-nums text-sm">{pct}%</span>
                   </div>
                   <ProgressLine percentage={pct} tone="danger" />
                 </div>

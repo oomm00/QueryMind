@@ -185,7 +185,7 @@ export default function MasteryPage() {
           />
         </PanelLarge>
       ) : (
-        <div className="space-y-3" data-testid="mastery-records-list">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="mastery-records-list">
           {records.map((record) => {
             const pct = Math.round((record.mastery_score || 0) * 100)
             const rungLabel = getRungLabel(record.bloom_breakdown)
@@ -194,42 +194,48 @@ export default function MasteryPage() {
             return (
               <Panel
                 key={`${record.subject || 'sub'}-${record.topic}`}
-                className="p-4 transition-colors hover:border-line-strong space-y-3"
+                className="p-5 transition-all duration-200 hover:border-line-strong hover:shadow-md flex flex-col justify-between gap-4"
                 data-testid={`mastery-row-${record.subject || 'sub'}-${record.topic}`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-ink">{record.topic}</h3>
-                      {record.subject && <Badge variant="neutral" label={record.subject} />}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${pct >= 70 ? 'bg-emerald-400' : 'bg-[#FF5C00]'}`} />
+                        <h3 className="text-base font-semibold text-ink truncate">{record.topic}</h3>
+                      </div>
+                      {record.subject && (
+                        <p className="mt-0.5 text-xs font-medium text-muted">{record.subject}</p>
+                      )}
                     </div>
-                    <p className="mt-0.5 text-xs text-muted flex items-center gap-2">
-                      <span>{record.attempts_count} attempt{record.attempts_count !== 1 ? 's' : ''}</span>
-                      <span>•</span>
-                      <span>Last practiced: {lastPracticed}</span>
-                    </p>
+                    <Badge variant="primary" label={`Level: ${rungLabel}`} />
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <Badge variant="primary" label={`Level: ${rungLabel}`} />
+                  <p className="mt-2 text-xs text-muted flex items-center gap-2">
+                    <span>{record.attempts_count} attempt{record.attempts_count !== 1 ? 's' : ''}</span>
+                    <span>•</span>
+                    <span>Last practiced: {lastPracticed}</span>
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-line/60">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-muted font-medium">Mastery accuracy</span>
+                    <span className="font-bold text-ink tabular-nums text-sm">{pct}%</span>
+                  </div>
+                  <ProgressLine percentage={pct} tone={scoreTone(pct)} />
+
+                  <div className="mt-3.5 flex justify-end">
                     <Button
                       variant="secondary"
                       size="sm"
                       icon={<IconArrowRight size={14} />}
                       onClick={() => startTopicPractice(record.topic, record.subject)}
+                      className="hover:border-primary/50 hover:text-primary"
                     >
                       Practice
                     </Button>
                   </div>
-                </div>
-
-                {/* Progress bar */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-muted">Mastery score</span>
-                    <span className="font-semibold text-ink tabular-nums">{pct}%</span>
-                  </div>
-                  <ProgressLine percentage={pct} tone={scoreTone(pct)} />
                 </div>
               </Panel>
             )

@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 export const THEME_KEY = 'qm-theme'
 
 export function getInitialTheme() {
-  if (typeof document === 'undefined') return 'light'
+  if (typeof document === 'undefined') return 'dark'
   const attr = document.documentElement.getAttribute('data-theme')
   if (attr === 'light' || attr === 'dark') return attr
   try {
@@ -20,10 +20,7 @@ export function getInitialTheme() {
   } catch {
     /* ignore */
   }
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  }
-  return 'light'
+  return 'dark'
 }
 
 export function applyTheme(theme) {

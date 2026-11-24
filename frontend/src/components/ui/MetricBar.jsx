@@ -42,9 +42,9 @@ export function MetricBar({ label, title, subtitle, value, score, icon, color, t
       {subtitle && <span className="text-[11px] text-muted">{subtitle}</span>}
 
       {pct != null && (
-        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-line">
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/[0.06] border border-white/[0.04]">
           <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
+            className="h-full rounded-full transition-all duration-500 ease-out shadow-sm"
             style={{ width: `${pct}%`, background: swatch }}
             aria-hidden="true"
           />
