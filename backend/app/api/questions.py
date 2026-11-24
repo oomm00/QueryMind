@@ -98,7 +98,7 @@ def generate_questions(
     difficulty = payload.difficulty
     generation_topic = (payload.topic or "").strip() or "Uploaded notes"
     generation_subject = (payload.subject or "").strip() or "General"
-    if (not generation_subject or generation_subject.lower() == "general") and not payload.uploaded_only:
+    if (not generation_subject or generation_subject.lower() in ("general", generation_topic.lower())) and not payload.uploaded_only:
         canonical = canonical_subject_for_topic(generation_topic, db=db)
         if canonical:
             generation_subject = canonical

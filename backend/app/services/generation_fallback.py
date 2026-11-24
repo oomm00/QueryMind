@@ -215,13 +215,26 @@ def _bank_candidates(
     seed_bank(db)
     key = (topic or "").strip().lower()
     query = db.query(Question).filter(Question.source == "bank")
-    target_subject = subject
-    if not target_subject or target_subject.lower() == "general":
-        target_subject = canonical_subject_for_topic(topic, db) or subject
-    if target_subject and target_subject.lower() != "general":
-        query = query.filter(func.lower(Question.subject) == target_subject.lower())
+
+    # 1. Search bank for the requested topic
     topic_rows = query.filter(func.lower(Question.topic) == key).all()
-    rows = topic_rows or query.all()  # unknown topic still gets a valid bank question
+    if topic_rows:
+        target_subject = subject
+        if not target_subject or target_subject.lower() == "general":
+            target_subject = canonical_subject_for_topic(topic, db) or subject
+        if target_subject and target_subject.lower() != "general":
+            subj_matches = [r for r in topic_rows if r.subject.lower() == target_subject.lower()]
+            if subj_matches:
+                topic_rows = subj_matches
+        rows = topic_rows
+    else:
+        # Topic not in bank: fall back to general bank pool
+        target_subject = subject
+        if not target_subject or target_subject.lower() == "general":
+            target_subject = canonical_subject_for_topic(topic, db) or subject
+        if target_subject and target_subject.lower() != "general":
+            query = query.filter(func.lower(Question.subject) == target_subject.lower())
+        rows = query.all()
 
     index = BLOOM_ORDER.index(bloom_level) if bloom_level in BLOOM_ORDER else 0
     rung_order = [index]
