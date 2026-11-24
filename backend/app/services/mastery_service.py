@@ -376,11 +376,55 @@ def _adaptive_state(
     user_id: uuid.UUID, subject: str, topic: str, db: Session
 ) -> tuple[int, bool, list[float], str]:
     """Replay the learner's real attempts to derive the current rung."""
+    import json
     from app.services.generation_fallback import canonical_topic_key
     canonical = canonical_topic_key(topic)
     key_topic = canonical.lower()
     raw_key = (topic or "").strip().lower()
     keys = list({key_topic, raw_key})
+
+    # Check existing mastery record to see if the learner has already mastered prior levels
+    m_rec = (
+        db.query(MasteryRecord)
+        .filter(
+            MasteryRecord.user_id == user_id,
+            func.lower(MasteryRecord.topic).in_(keys),
+        )
+        .first()
+    )
+
+    starting_rung = 0
+    start_reason = _FIRST_RUNG_REASON
+    if m_rec and m_rec.bloom_breakdown:
+        try:
+            b_data = (
+                json.loads(m_rec.bloom_breakdown)
+                if isinstance(m_rec.bloom_breakdown, str)
+                else m_rec.bloom_breakdown
+            )
+            if isinstance(b_data, dict):
+                BLOOM_LEVELS = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+                mastered_count = 0
+                for lvl in BLOOM_LEVELS:
+                    lvl_score = b_data.get(lvl)
+                    if lvl_score is not None and float(lvl_score) >= 0.70:
+                        mastered_count += 1
+                    else:
+                        break
+                if 0 < mastered_count < len(BLOOM_LEVELS):
+                    starting_rung = mastered_count
+                    target_bloom, target_diff = labels_from_rung(starting_rung)
+                    mastered_names = ", ".join(l.capitalize() for l in BLOOM_LEVELS[:mastered_count])
+                    start_reason = (
+                        f"Mastery on {mastered_names} verified (≥70%) — "
+                        f"starting at {target_bloom.capitalize()}/{target_diff.capitalize()}."
+                    )
+                elif mastered_count == len(BLOOM_LEVELS):
+                    starting_rung = len(BLOOM_LEVELS) - 1
+                    target_bloom, target_diff = labels_from_rung(starting_rung)
+                    start_reason = f"All foundational levels mastered — testing at peak {target_bloom.capitalize()}/{target_diff.capitalize()}."
+        except Exception:
+            pass
 
     rows = (
         db.query(Attempt.score)
@@ -394,12 +438,12 @@ def _adaptive_state(
         .all()
     )
     if not rows:
-        return 0, False, [], _FIRST_RUNG_REASON
+        return starting_rung, False, [], start_reason
 
-    rung = 0
+    rung = starting_rung
     demotion_pending = False
     history: list[float] = []
-    reason = _FIRST_RUNG_REASON
+    reason = start_reason
     for (score,) in rows:
         history.append(score)
         target, reason = next_rung(rung, history, demotion_pending=demotion_pending)
