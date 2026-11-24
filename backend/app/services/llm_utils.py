@@ -51,8 +51,8 @@ logger = logging.getLogger("querymind.llm")
 # ── Retry configuration ───────────────────────────────────────────────────────
 # Retries are for *transport/availability* failures (503, 429, timeouts) and are
 # separate from the malformed-JSON retry performed by call_json_with_retry().
-LLM_MAX_RETRIES = 4               # retries after the initial attempt
-LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s, 2s, 4s
+LLM_MAX_RETRIES = 1               # 1 retry (2 attempts total) prevents 50s timeouts during transient spikes
+LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s
 TRANSIENT_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
 
 # Status codes that mean "this particular model is not usable right now" (rate
