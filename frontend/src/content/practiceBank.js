@@ -12,10 +12,11 @@
 
 import { COURSE, getCourse, getTopic } from './os/index.js'
 import { conceptBank } from './questionBank.js'
+import { getAuthoredCourse, allAuthoredCourseIds } from './authoredCourses.js'
 
 /** The courses that actually have content behind them. */
 export function contentCourseIds() {
-  return [COURSE.id]
+  return [COURSE.id, ...allAuthoredCourseIds()]
 }
 
 function conceptQuestions(concept, course, topic) {
@@ -33,6 +34,9 @@ function conceptQuestions(concept, course, topic) {
  * session keeps pointing at the same course the student opened.
  */
 export function practiceCourse(courseId) {
+  const authored = getAuthoredCourse(courseId)
+  if (authored) return authored
+
   const course = getCourse(courseId)
   if (!course) return null
 
@@ -80,8 +84,8 @@ export function questionIndex() {
   for (const courseId of contentCourseIds()) {
     const course = practiceCourse(courseId)
     for (const topic of course?.topics ?? []) {
-      for (const concept of topic.concepts) {
-        for (const question of concept.questions) index.set(question.question_id, question)
+      for (const concept of topic.concepts ?? []) {
+        for (const question of concept.questions ?? []) index.set(question.question_id, question)
       }
     }
   }

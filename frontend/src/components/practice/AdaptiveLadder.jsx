@@ -43,6 +43,7 @@ export function AdaptiveLadder({
   source = '',
   evaluationMode = '',
   lastScore = null,
+  isGenerating = false,
   className = '',
 }) {
   const [animating, setAnimating] = useState(false)
@@ -69,7 +70,7 @@ export function AdaptiveLadder({
       {/* Top Header: Ladder Title & Active Level indicator */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-line">
         <div className="flex items-center gap-2">
-          <span className="flex h-2.5 w-2.5 rounded-full bg-primary animate-pulse" aria-hidden="true" />
+          <span className={`flex h-2.5 w-2.5 rounded-full ${isGenerating ? 'bg-primary animate-ping' : 'bg-primary animate-pulse'}`} aria-hidden="true" />
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
             Adaptive Level Ladder
           </h3>
@@ -83,11 +84,20 @@ export function AdaptiveLadder({
               ↓ Stepped down -1
             </span>
           )}
+          {isGenerating && (
+            <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold bg-primary-tint text-primary animate-pulse">
+              Adapting level...
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-ink" data-testid="adaptive-active-rung">
-            Current rung: <strong className="font-semibold text-primary">{activeRungObj.bloomLabel} ({activeRungObj.diffLabel})</strong>
+            {isGenerating ? (
+              <>Current level: <strong className="font-semibold text-primary">{activeRungObj.bloomLabel} ({activeRungObj.diffLabel})</strong></>
+            ) : (
+              <>Current rung: <strong className="font-semibold text-primary">{activeRungObj.bloomLabel} ({activeRungObj.diffLabel})</strong></>
+            )}
           </span>
           <span className="text-[11px] text-muted tabular-nums">
             (Rung {currentRung + 1} of 6)
@@ -135,8 +145,8 @@ export function AdaptiveLadder({
 
               {isActive && (
                 <div className="mt-2 flex items-center justify-center">
-                  <span className="inline-block rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-fg">
-                    Active
+                  <span className={`inline-block rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-fg ${isGenerating ? 'animate-pulse' : ''}`}>
+                    {isGenerating ? 'Adapting...' : 'Active'}
                   </span>
                 </div>
               )}
@@ -147,14 +157,14 @@ export function AdaptiveLadder({
 
       {/* Backend Reason & Provenance Callout */}
       <div className="mt-3.5 flex flex-col gap-2.5 rounded-control border border-line bg-surface-raised p-3">
-        {reason && (
+        {(reason || isGenerating) && (
           <div className="flex items-start gap-2">
             <span className="shrink-0 text-primary mt-0.5" aria-hidden="true">💡</span>
             <p
               data-testid="adaptive-reason"
               className="text-xs sm:text-sm font-medium leading-relaxed text-ink"
             >
-              {reason}
+              {reason || (isGenerating ? `Calculating your next adaptive question based on ${activeRungObj.bloomLabel} performance...` : '')}
             </p>
           </div>
         )}

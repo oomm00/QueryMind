@@ -249,9 +249,21 @@ export default function SessionPage() {
 
   // Current active rung
   const currentRung = useMemo(() => {
-    if (!currentQuestion) return 0
-    return getRungIndex(currentQuestion.bloom_level, currentQuestion.difficulty)
-  }, [currentQuestion])
+    if (currentQuestion) {
+      return getRungIndex(currentQuestion.bloom_level, currentQuestion.difficulty)
+    }
+    // When generating or between questions, maintain the rung of the most recent question
+    if (history.length > 0) {
+      const last = history[history.length - 1]
+      if (last?.rung !== undefined && last?.rung !== null) return last.rung
+      if (last?.question) return getRungIndex(last.question.bloom_level, last.question.difficulty)
+    }
+    if (previousRung !== null && previousRung !== undefined) return previousRung
+    if (isTargetedStudy && session?.bloom_level) {
+      return getRungIndex(session.bloom_level, session.difficulty || 'medium')
+    }
+    return 0
+  }, [currentQuestion, history, previousRung, isTargetedStudy, session?.bloom_level, session?.difficulty])
 
   // Submit adaptive answer
   const handleAdaptiveSubmit = async () => {
@@ -585,10 +597,11 @@ export default function SessionPage() {
         <AdaptiveLadder
           currentRung={currentRung}
           previousRung={previousRung}
-          reason={currentQuestion?.adaptive_reason || ''}
-          source={currentQuestion?.source || ''}
+          reason={currentQuestion?.adaptive_reason || (history.length > 0 ? history[history.length - 1]?.adaptive_reason : '') || ''}
+          source={currentQuestion?.source || (history.length > 0 ? history[history.length - 1]?.question?.source : '') || ''}
           evaluationMode={lastEvaluation?.evaluation_mode}
           lastScore={lastEvaluation?.score}
+          isGenerating={generating}
         />
 
         {/* Loading State */}
