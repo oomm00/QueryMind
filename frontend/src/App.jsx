@@ -25,7 +25,6 @@ import HistoryPage from './pages/HistoryPage'
 import NotesPage from './pages/NotesPage'
 import NotFoundPage from './pages/NotFoundPage'
 import MasteryPage from './pages/MasteryPage'
-import WeakAreasPage from './pages/WeakAreasPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import LessonPage from './pages/LessonPage'
@@ -134,14 +133,7 @@ export default function App() {
             </Protected>
           }
         />
-        <Route
-          path="/weak-areas"
-          element={
-            <Protected>
-              <WeakAreasPage />
-            </Protected>
-          }
-        />
+        <Route path="/weak-areas" element={<Navigate to="/analytics" replace />} />
         <Route
           path="/analytics"
           element={

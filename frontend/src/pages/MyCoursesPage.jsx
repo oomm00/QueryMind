@@ -38,15 +38,12 @@ const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
 const TABS = [
   { value: 'all', label: 'All' },
   { value: 'in_progress', label: 'In progress' },
-  { value: 'not_started', label: 'Not started yet' },
   { value: 'completed', label: 'Completed' },
 ]
 
-/** Which of the four tabs a course belongs to, from its real figures. */
+/** Which of the tabs a course belongs to, from its real figures. */
 function bucketOf(stats) {
-  if (!stats || stats.concepts === 0) return 'not_started'
-  if (stats.answers === 0) return 'not_started'
-  if (stats.practised >= stats.concepts) return 'completed'
+  if (stats && stats.concepts > 0 && stats.practised >= stats.concepts) return 'completed'
   return 'in_progress'
 }
 
@@ -156,7 +153,6 @@ export default function MyCoursesPage() {
     () => ({
       all: rows.length,
       in_progress: rows.filter((row) => row.bucket === 'in_progress').length,
-      not_started: rows.filter((row) => row.bucket === 'not_started').length,
       completed: rows.filter((row) => row.bucket === 'completed').length,
     }),
     [rows]

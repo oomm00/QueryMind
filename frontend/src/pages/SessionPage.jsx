@@ -82,13 +82,17 @@ export default function SessionPage() {
   const session = storedSession ?? draft
 
   // Determine flow type
+  const isTargetedStudy = Boolean(session?.scope === 'targeted' || session?.mode === 'study')
+  const targetCount = isTargetedStudy ? (session?.target_count || 5) : null
+
   const isAdaptiveSession = Boolean(
     session?.scope === 'adaptive' ||
+    isTargetedStudy ||
     (session?.topic && !session?.courseId && (!session?.questionIds || session?.questionIds?.length === 0))
   )
 
   // ══════════════════════════════════════════════════════════
-  // ADAPTIVE SESSION FLOW
+  // ADAPTIVE & TARGETED SESSION FLOW
   // ══════════════════════════════════════════════════════════
 
   const [history, setHistory] = useState(() => session?.history ?? [])
@@ -107,6 +111,8 @@ export default function SessionPage() {
 
   const abortRef = useRef(null)
   const isFetchingRef = useRef(false)
+  const prefetchedQueueRef = useRef([])
+  const prefetchingRef = useRef(false)
 
   // ══════════════════════════════════════════════════════════
   // BANK SESSION FLOW (Course Practice)
@@ -136,7 +142,7 @@ export default function SessionPage() {
     holdDraft(updated)
   }
 
-  // Generate 1 adaptive question
+  // Generate 1 question (adaptive or targeted)
   const fetchAdaptiveQuestion = async () => {
     if (!session?.topic || isFetchingRef.current || generating) return
     isFetchingRef.current = true
@@ -148,18 +154,20 @@ export default function SessionPage() {
     abortRef.current = controller
 
     try {
-      const response = await questionsApi.generate(
-        {
-          topic: session.topic,
-          subject: session.subject,
-          count: 1,
-          num_questions: 1,
-          adaptive: true,
-          uploaded_only: Boolean(session.uploadedOnly),
-        },
-        userId,
-        { signal: controller.signal }
-      )
+      const payload = {
+        topic: session.topic,
+        subject: session.subject,
+        count: 1,
+        num_questions: 1,
+        adaptive: !isTargetedStudy,
+        uploaded_only: Boolean(session.uploadedOnly),
+      }
+      if (isTargetedStudy && session.bloom_level) {
+        payload.bloom_level = session.bloom_level
+        payload.difficulty = session.difficulty || 'medium'
+      }
+
+      const response = await questionsApi.generate(payload, userId, { signal: controller.signal })
 
       const raw = response.questions?.[0]
       if (!raw) throw new Error('No question was returned by the generator.')
@@ -169,8 +177,8 @@ export default function SessionPage() {
         topic: session.topic,
         conceptId,
         fallbackId: `gen-${Date.now()}`,
-        bloom: raw.bloom_level ?? 'remember',
-        difficulty: raw.difficulty ?? 'easy',
+        bloom: raw.bloom_level ?? (session.bloom_level || 'remember'),
+        difficulty: raw.difficulty ?? (session.difficulty || 'easy'),
       })
 
       setCurrentQuestion(q)
@@ -179,6 +187,47 @@ export default function SessionPage() {
       setLastEvaluation(null)
 
       syncAdaptiveSession({ currentQuestion: q })
+
+      // Pipelined background prefetch for Targeted Study mode
+      if (isTargetedStudy && targetCount > 1 && prefetchedQueueRef.current.length === 0 && !prefetchingRef.current) {
+        const remaining = targetCount - 1
+        if (remaining > 0) {
+          prefetchingRef.current = true
+          questionsApi
+            .generate(
+              {
+                topic: session.topic,
+                subject: session.subject,
+                bloom_level: session.bloom_level,
+                difficulty: session.difficulty,
+                count: remaining,
+                num_questions: remaining,
+                adaptive: false,
+                uploaded_only: Boolean(session.uploadedOnly),
+              },
+              userId
+            )
+            .then((res) => {
+              const items = res.questions ?? []
+              for (const item of items) {
+                const cId = customConceptId(item.served_topic || session.topic)
+                prefetchedQueueRef.current.push(
+                  generatedToSessionQuestion(item, {
+                    topic: session.topic,
+                    conceptId: cId,
+                    fallbackId: `gen-${Date.now()}-${Math.random()}`,
+                    bloom: item.bloom_level ?? session.bloom_level,
+                    difficulty: item.difficulty ?? session.difficulty,
+                  })
+                )
+              }
+            })
+            .catch(() => {})
+            .finally(() => {
+              prefetchingRef.current = false
+            })
+        }
+      }
     } catch (err) {
       if (!controller.signal.aborted) {
         setGenerateError(err)
@@ -285,7 +334,10 @@ export default function SessionPage() {
         answers: { ...(session.answers ?? {}), [currentQuestion.question_id]: { text, selected: selectedOption } },
       })
 
-      if (nextHistory.length === 10) {
+      if (isTargetedStudy && targetCount && nextHistory.length >= targetCount) {
+        setFinished(true)
+        syncAdaptiveSession({ status: 'submitted', history: nextHistory })
+      } else if (nextHistory.length === 10) {
         setAutoSummaryOffer(true)
       }
     } catch (err) {
@@ -297,6 +349,17 @@ export default function SessionPage() {
 
   const handleNextAdaptiveQuestion = () => {
     setPreviousRung(currentRung)
+    // Instant switch if question was prefetched in background
+    if (prefetchedQueueRef.current.length > 0) {
+      const nextQ = prefetchedQueueRef.current.shift()
+      setCurrentQuestion(nextQ)
+      setSelectedOption(null)
+      setAnswerText('')
+      setLastEvaluation(null)
+      syncAdaptiveSession({ currentQuestion: nextQ })
+      return
+    }
+
     setCurrentQuestion(null)
     setSelectedOption(null)
     setAnswerText('')
@@ -446,7 +509,9 @@ export default function SessionPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-              Question {history.length + 1}
+              {isTargetedStudy
+                ? `Question ${history.length + 1} of ${targetCount} · Targeted Study (${(session.bloom_level || 'apply').toUpperCase()})`
+                : `Question ${history.length + 1}`}
             </span>
             <h1 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
               {session.topic || session.label}

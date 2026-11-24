@@ -4,7 +4,6 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import MasteryPage from './MasteryPage'
-import WeakAreasPage from './WeakAreasPage'
 import AnalyticsPage from './AnalyticsPage'
 import SettingsPage from './SettingsPage'
 import HistoryPage from './HistoryPage'
@@ -79,7 +78,7 @@ describe('MasteryPage', () => {
   })
 })
 
-describe('WeakAreasPage', () => {
+describe('AnalyticsPage Focus Areas', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authContextModule.useAuth.mockReturnValue({
@@ -88,51 +87,55 @@ describe('WeakAreasPage', () => {
     })
   })
 
-  it('shows empty state when no topics have < 70% with >= 2 attempts', async () => {
-    vi.spyOn(masteryApiModule.masteryApi, 'getMyMastery').mockResolvedValue([
+  it('shows empty state when no topics have < 70%', async () => {
+    vi.spyOn(attemptsApiModule.attemptsApi, 'getHistory').mockResolvedValue([
       {
-        subject: 'OS',
+        attempt_id: 'att-1',
         topic: 'Paging',
-        mastery_score: 0.88,
-        attempts_count: 3,
-      },
-      {
-        subject: 'OS',
-        topic: 'Deadlocks',
-        mastery_score: 0.35,
-        attempts_count: 1, // Only 1 attempt -> not yet flagged as weak
+        bloom_level: 'understand',
+        difficulty: 'easy',
+        score: 0.88,
+        submitted_at: '2026-11-24T08:00:00Z',
       },
     ])
 
     render(
       <MemoryRouter>
-        <WeakAreasPage />
+        <AnalyticsPage />
       </MemoryRouter>
     )
 
-    expect(await screen.findByText('No weak areas identified')).toBeInTheDocument()
+    expect(await screen.findByText(/No topics currently fall below the 70% threshold/i)).toBeInTheDocument()
   })
 
-  it('identifies and displays weak areas with >= 2 attempts and < 70% score', async () => {
-    vi.spyOn(masteryApiModule.masteryApi, 'getMyMastery').mockResolvedValue([
+  it('identifies and displays weak focus areas under 70% score with Practice this button', async () => {
+    vi.spyOn(attemptsApiModule.attemptsApi, 'getHistory').mockResolvedValue([
       {
-        subject: 'DBMS',
+        attempt_id: 'att-1',
         topic: 'Transactions & ACID',
-        mastery_score: 0.52,
-        attempts_count: 3,
-        last_updated: '2026-11-24T01:00:00Z',
+        bloom_level: 'understand',
+        difficulty: 'easy',
+        score: 0.52,
+        submitted_at: '2026-11-24T08:00:00Z',
+      },
+      {
+        attempt_id: 'att-2',
+        topic: 'Transactions & ACID',
+        bloom_level: 'apply',
+        difficulty: 'medium',
+        score: 0.48,
+        submitted_at: '2026-11-24T08:05:00Z',
       },
     ])
 
     render(
       <MemoryRouter>
-        <WeakAreasPage />
+        <AnalyticsPage />
       </MemoryRouter>
     )
 
-    expect(await screen.findByText('Transactions & ACID')).toBeInTheDocument()
-    expect(screen.getByText('52%')).toBeInTheDocument()
-    expect(screen.getByText(/3 attempts evaluated/i)).toBeInTheDocument()
+    expect((await screen.findAllByText('Transactions & ACID')).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('50%').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByRole('button', { name: 'Practice this' })).toBeInTheDocument()
   })
 })

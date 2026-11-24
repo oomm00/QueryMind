@@ -187,9 +187,9 @@ export default function DashboardPage() {
                 variant="secondary"
                 size="sm"
                 icon={<IconWeakAreas size={14} />}
-                onClick={() => navigate('/weak-areas')}
+                onClick={() => navigate('/analytics')}
               >
-                Weak Areas ({weakAreaCount})
+                Focus Areas ({weakAreaCount})
               </Button>
             )}
             <Button
@@ -228,11 +228,13 @@ export default function DashboardPage() {
             tone="neutral"
           />
           <StatCard
-            label="Weak areas"
+            label="Focus areas"
             value={weakAreaCount}
-            hint="Topics below 70%"
+            hint="View in Analytics"
             icon={IconWeakAreas}
             tone={weakAreaCount > 0 ? 'danger' : 'success'}
+            className="cursor-pointer"
+            onClick={() => navigate('/analytics')}
           />
         </div>
 

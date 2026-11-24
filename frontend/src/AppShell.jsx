@@ -21,6 +21,7 @@ import { useRailStats } from './hooks/useRailStats'
 import { isAnyMockEnabled } from './api/mocks/config.js'
 import { NAV_ITEMS, MOBILE_TABS, MOBILE_MORE_ITEMS, WORKSPACE_LABEL, breadcrumbFor } from './navigation'
 import { BreadcrumbProvider, BreadcrumbContext } from './hooks/useBreadcrumbs'
+import { NotificationPopover } from './components/notifications/NotificationPopover'
 import { Tooltip } from './components/ui/Tooltip'
 import { ProgressLine } from './components/ui/ProgressLine'
 import { ProgressRing } from './components/ui/ProgressRing'
@@ -218,6 +219,8 @@ function AppShell({ children }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const notificationsRef = useRef(null)
 
   // Adopt the remembered rail choice for the group we land in: /learn and /map
   // collapse to icons unless the user has expanded the rail there before.
@@ -251,6 +254,18 @@ function AppShell({ children }) {
     document.addEventListener('mousedown', onPointerDown)
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [menuOpen])
+
+  // Dismiss notifications on outside click.
+  useEffect(() => {
+    if (!notificationsOpen) return undefined
+    const onPointerDown = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [notificationsOpen])
 
   // Close the mobile "More" sheet whenever the route changes.
   useEffect(() => {
@@ -401,10 +416,23 @@ function AppShell({ children }) {
               {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </button>
 
-            <button type="button" aria-label="Notifications" className={cx(ICON_BTN, 'relative')}>
-              <IconBell size={18} />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-danger" />
-            </button>
+            <div className="relative" ref={notificationsRef}>
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-expanded={notificationsOpen}
+                className={cx(ICON_BTN, 'relative')}
+              >
+                <IconBell size={18} />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary" />
+              </button>
+              <NotificationPopover
+                isOpen={notificationsOpen}
+                onClose={() => setNotificationsOpen(false)}
+              />
+            </div>
 
             <div className="relative" ref={menuRef}>
               <button

@@ -44,6 +44,7 @@ import { LevelControl } from '../components/practice/LevelControl.jsx'
 import { CountControl } from '../components/practice/CountControl.jsx'
 import { StartPracticeButton } from '../components/practice/StartPracticeButton.jsx'
 import { GeneratePanel } from '../components/practice/GeneratePanel.jsx'
+import { TargetedStudyPanel } from '../components/practice/TargetedStudyPanel.jsx'
 import { Tabs } from '../components/ui/Tabs'
 import { IconTarget, IconArrowRight } from '../components/ui/Icons'
 
@@ -57,6 +58,7 @@ const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
  */
 const TABS = [
   { value: 'topic', label: 'Pick a topic' },
+  { value: 'study', label: 'Targeted study' },
   { value: 'bank', label: 'Question bank' },
 ]
 
@@ -263,6 +265,12 @@ export default function PracticeHomePage() {
       {tab === 'topic' && (
         <div className="mt-5">
           <GeneratePanel />
+        </div>
+      )}
+
+      {tab === 'study' && (
+        <div className="mt-5">
+          <TargetedStudyPanel />
         </div>
       )}
 
