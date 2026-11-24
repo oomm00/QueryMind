@@ -39,6 +39,7 @@ from app.schemas.schemas import (
 from app.services.attempt_service import submit_attempt_core
 from app.services.generation_fallback import (
     canonical_subject_for_topic,
+    canonical_topic_key,
     generate_one,
     mark_served,
     persist_generated_question,
@@ -62,17 +63,14 @@ def resolve_served_topic(
     generated_served_topic: str | None,
     uploaded_topic: str | None = None,
 ) -> str:
-    """Return the topic the learner should be graded under.
+    """Return the single canonical topic the learner should be graded under.
 
-    A live LLM may paraphrase the requested title; that must not split mastery
-    records. A real fallback to a bank/cache question *does* move the record to
-    the topic actually served, as does an uploaded-only PDF lookup.
+    STRICT DEMO RULE: Attempts and mastery are always recorded under the
+    canonical requested topic, never a different fallback topic.
     """
     if uploaded_topic:
-        return uploaded_topic
-    if source in {"bank", "cache"} and (generated_served_topic or generated_topic):
-        return generated_served_topic or generated_topic or requested
-    return requested
+        return canonical_topic_key(uploaded_topic)
+    return canonical_topic_key(requested)
 
 
 @router.post(
@@ -96,7 +94,11 @@ def generate_questions(
 
     bloom_level = payload.bloom_level
     difficulty = payload.difficulty
-    generation_topic = (payload.topic or "").strip() or "Uploaded notes"
+    generation_topic = canonical_topic_key((payload.topic or "").strip() or "Uploaded notes")
+    retrieval_subject = (payload.subject or "").strip() or None
+    if retrieval_subject and retrieval_subject.lower() == "general":
+        retrieval_subject = None
+
     generation_subject = (payload.subject or "").strip() or "General"
     if (not generation_subject or generation_subject.lower() in ("general", generation_topic.lower())) and not payload.uploaded_only:
         canonical = canonical_subject_for_topic(generation_topic, db=db)
@@ -110,9 +112,6 @@ def generate_questions(
     context_chunks: list[dict] = []
     if payload.uploaded_only or not settings.offline_demo_mode:
         with stage("retrieve"):
-            retrieval_subject = (
-                None if generation_subject.lower() == "general" else generation_subject
-            )
             context_chunks = retrieve_context(
                 topic=generation_topic,
                 subject=retrieval_subject,
@@ -189,34 +188,20 @@ def generate_questions(
             generated.adaptive_reason = generated.adaptive_reason or adaptive_reason
         # A bank/cache fallback may answer a different topic than the one typed.
         # The student must see it, and the attempt must be filed where it belongs.
-        generated.requested_topic = generation_topic
-        served_topic = resolve_served_topic(
-            requested=generation_topic,
-            source=generated.source,
-            generated_topic=generated.topic,
-            generated_served_topic=generated.served_topic,
-            uploaded_topic=(
-                str(context_chunks[0].get("topic") or "")
-                if payload.uploaded_only and context_chunks else None
-            ),
-        )
-        generated.served_topic = served_topic
-        generated.topic = served_topic
+        canonical_topic = canonical_topic_key(generation_topic)
+        generated.requested_topic = canonical_topic
+        generated.served_topic = canonical_topic
+        generated.topic = canonical_topic
         if generated.question_id is None:
             persisted = persist_generated_question(
                 db=db,
                 generated=generated,
                 subject=generation_subject,
-                topic=served_topic,
+                topic=canonical_topic,
                 question_type=payload.question_type,
             )
             generated.question_id = persisted.id
-        # Track the id under BOTH names. Lookups for the next question use the
-        # typed topic, while an uploaded-only PDF is keyed by its stored topic;
-        # without the requested key a bank fallback repeats the same question.
-        mark_served(current_user.id, generation_topic, generated.question_id)
-        if served_topic != generation_topic:
-            mark_served(current_user.id, served_topic, generated.question_id)
+        mark_served(current_user.id, canonical_topic, generated.question_id)
         served.add(generated.question_id)
         results.append(generated)
         excluded_texts.add(generated.question)

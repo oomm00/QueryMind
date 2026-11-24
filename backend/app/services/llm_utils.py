@@ -51,7 +51,7 @@ logger = logging.getLogger("querymind.llm")
 # ── Retry configuration ───────────────────────────────────────────────────────
 # Retries are for *transport/availability* failures (503, 429, timeouts) and are
 # separate from the malformed-JSON retry performed by call_json_with_retry().
-LLM_MAX_RETRIES = 3               # retries after the initial attempt
+LLM_MAX_RETRIES = 4               # retries after the initial attempt
 LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s, 2s, 4s
 TRANSIENT_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
 
@@ -283,6 +283,7 @@ def generate_with_retry(
     model: Optional[str] = None,
     timeout: Optional[float] = None,
     deadline: Optional[float] = None,
+    max_retries: Optional[int] = None,
 ) -> Any:
     """Call ``client.generate_content(prompt)`` with exponential-backoff retries.
 
@@ -297,7 +298,8 @@ def generate_with_retry(
     rate-limit failures, ``503 / LLM_UNAVAILABLE`` otherwise. The raw SDK text
     is logged server-side only.
     """
-    attempts = LLM_MAX_RETRIES + 1
+    retries = max_retries if max_retries is not None else LLM_MAX_RETRIES
+    attempts = retries + 1
     last_exc: Optional[Exception] = None
 
     for attempt in range(attempts):
@@ -365,7 +367,12 @@ def request_text(
         )
     try:
         response = generate_with_retry(
-            client, prompt, sleep=sleep, timeout=timeout, deadline=deadline
+            client,
+            prompt,
+            sleep=sleep,
+            model=models[0] if models else None,
+            timeout=timeout,
+            deadline=deadline,
         )
     except QueryMindError:
         raise
@@ -398,11 +405,12 @@ def _request_text_with_fallback(
     saw_quota = False
     saw_other = False
 
+    retries = LLM_MAX_RETRIES
     for index, model in enumerate(models):
         try:
             response = generate_with_retry(
                 client, prompt, sleep=sleep, model=model, timeout=timeout,
-                deadline=deadline,
+                deadline=deadline, max_retries=retries,
             )
         except QueryMindError as exc:
             if not is_model_fallback_error(exc):

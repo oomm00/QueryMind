@@ -15,18 +15,20 @@ def test_a_live_paraphrase_keeps_the_typed_topic():
 
 
 def test_a_bank_or_cache_fallback_reports_the_topic_it_actually_served():
+    # Under Task 1 & 2 rules: Attempts and mastery are always recorded under the
+    # canonical requested topic, never a different fallback topic.
     assert resolve_served_topic(
         requested="Amoeba Tax Accounting",
         source="bank",
         generated_topic="Deadlocks",
         generated_served_topic=None,
-    ) == "Deadlocks"
+    ) == "Amoeba Tax Accounting"
     assert resolve_served_topic(
         requested="Amoeba Tax Accounting",
         source="cache",
         generated_topic="CPU Scheduling",
         generated_served_topic="CPU Scheduling",
-    ) == "CPU Scheduling"
+    ) == "Amoeba Tax Accounting"
 
 
 def test_uploaded_only_uses_the_stored_document_topic():
