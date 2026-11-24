@@ -127,7 +127,10 @@ class Settings(BaseSettings):
     # keeps the single-model behaviour exactly as before; the committed
     # ``.env.example`` ships a sensible lite-model fallback list. Raw value; use
     # ``settings.fallback_models`` for the parsed list (mirrors ALLOWED_ORIGINS).
-    llm_fallback_models: Union[List[str], str] = []
+    llm_fallback_models: Union[List[str], str] = [
+        "gemini-3.1-flash-lite",
+        "gemini-flash-latest",
+    ]
 
     # Retrieval cache (env: RETRIEVAL_CACHE_TTL_SECONDS / RETRIEVAL_CACHE_MAX_ENTRIES)
     retrieval_cache_ttl_seconds: float = 300.0   # 5 minutes
