@@ -235,6 +235,14 @@ RUNG_LADDER: tuple[tuple[str, str], ...] = (
     ("create", "hard"),
 )
 PROMOTE_SCORE = 0.75
+
+# ── Adaptive Pacing Constants (Task 4) ────────────────────────────────────────
+MIN_QUESTIONS_BEFORE_PROMOTION = 4
+PROMOTION_AVG_THRESHOLD = 0.70
+PROMOTION_MIN_INDIVIDUAL_SCORE = 0.40
+
+MIN_QUESTIONS_BEFORE_DEMOTION = 3
+DEMOTION_AVG_THRESHOLD = 0.40
 DEMOTE_SCORE = 0.40
 ADAPTIVE_HISTORY_LIMIT = 24
 _FIRST_RUNG_REASON = "No prior attempts for this topic — starting at Remember/Easy."
@@ -297,68 +305,89 @@ def next_rung(
 ) -> tuple[int, str]:
     """Pure decision: return ``(new_rung, human_readable_reason)``.
 
-    No database, network, LLM, clock or random calls. ``recent_scores`` are the
-    learner's real scores at the current rung, oldest first, with the newest
-    last. After a demotion, two consecutive scores >= 0.75 are required to
-    promote again.
+    Task 4 pacing:
+    - Learner must answer at least 4 questions at a level before moving up.
+    - Move UP one level when the last 4 answers at this level average >= 0.70 and none < 0.40.
+    - Move DOWN one level only when the last 3 answers at this level average < 0.40 (never below level 1 / rung 0).
+    - After a move down, history resets, requiring 4 fresh answers before moving up again.
+    - Between thresholds = stay.
+    - One level at a time, always.
     """
     current = clamp_rung(current_rung)
     scores = _clean_scores(recent_scores)
     here = _format_rung(current)
+    n = len(scores)
 
-    if not scores:
-        return current, f"No valid recent scores — staying at {here}."
+    if n == 0:
+        return current, f"No prior attempts for this topic — starting at {here}."
 
-    latest = scores[-1]
-    pct = f"{latest:.0%}"
-
-    if latest < DEMOTE_SCORE:
-        target = clamp_rung(current - 1)
-        if target == current:
-            return current, f"Scored {pct} on {here} — already at the lowest rung, staying."
-        return target, f"Scored {pct} on {here} -> moving down to {_format_rung(target)}."
-
-    if latest >= PROMOTE_SCORE:
-        if demotion_pending:
-            streak = 0
-            for value in reversed(scores):
-                if value >= PROMOTE_SCORE:
-                    streak += 1
-                else:
-                    break
-            if streak < 2:
-                return current, (
-                    f"Scored {pct} on {here} — {streak}/2 consecutive scores at or "
-                    "above 75% before moving up."
+    # 1. Demotion check: last 3 answers at this level average < 0.40
+    if n >= MIN_QUESTIONS_BEFORE_DEMOTION:
+        last_3 = scores[-3:]
+        avg_3 = sum(last_3) / 3.0
+        if avg_3 < DEMOTION_AVG_THRESHOLD:
+            if current > 0:
+                target = current - 1
+                return target, (
+                    f"Last 3 answers at {here} averaged {avg_3:.0%} (< 40%) -> "
+                    f"moving down to {_format_rung(target)}."
                 )
-        target = clamp_rung(current + 1)
-        if target == current:
-            return current, f"Scored {pct} on {here} — already at the highest rung, staying."
-        return target, f"Scored {pct} on {here} -> moving up to {_format_rung(target)}."
+            return current, (
+                f"Last 3 answers at {here} averaged {avg_3:.0%} (< 40%) — "
+                "already at the lowest level, staying."
+            )
 
-    return current, f"Scored {pct} on {here} — between 40% and 75%, staying."
+    # 2. Promotion check: last 4 answers at this level average >= 0.70 and none < 0.40
+    if n >= MIN_QUESTIONS_BEFORE_PROMOTION:
+        last_4 = scores[-4:]
+        avg_4 = sum(last_4) / 4.0
+        min_4 = min(last_4)
+        if avg_4 >= PROMOTION_AVG_THRESHOLD and min_4 >= PROMOTION_MIN_INDIVIDUAL_SCORE:
+            target = clamp_rung(current + 1)
+            if target == current:
+                return current, (
+                    f"Last 4 answers at {here} averaged {avg_4:.0%} — "
+                    "already at the highest level, staying."
+                )
+            return target, (
+                f"Last 4 answers at {here} averaged {avg_4:.0%} (none below 40%) -> "
+                f"moving up to {_format_rung(target)}."
+            )
+        elif min_4 < PROMOTION_MIN_INDIVIDUAL_SCORE:
+            return current, (
+                f"{n} questions answered at {here}, average {avg_4:.0%} "
+                f"(one score was {min_4:.0%} < 40%) — staying at {here}."
+            )
+        else:
+            return current, (
+                f"{n} questions answered at {here}, average {avg_4:.0%} "
+                f"(< 70%) — staying at {here}."
+            )
+
+    # 3. Accumulating attempts (< 4)
+    avg = sum(scores) / n
+    return current, (
+        f"{n}/{MIN_QUESTIONS_BEFORE_PROMOTION} questions answered at {here}, "
+        f"average {avg:.0%} — staying at {here}."
+    )
 
 
 def _adaptive_state(
     user_id: uuid.UUID, subject: str, topic: str, db: Session
 ) -> tuple[int, bool, list[float], str]:
-    """Replay the learner's real attempts to derive the current rung.
+    """Replay the learner's real attempts to derive the current rung."""
+    from app.services.generation_fallback import canonical_topic_key
+    canonical = canonical_topic_key(topic)
+    key_topic = canonical.lower()
+    raw_key = (topic or "").strip().lower()
+    keys = list({key_topic, raw_key})
 
-    The EMA in ``mastery_records`` stays for display only; this replay uses the
-    actual attempt scores so one good or bad answer changes the next question
-    immediately (with one-rung and hysteresis guards).
-
-    Matched by topic (case-insensitive) so that bank fallbacks (e.g. OS-tagged
-    bank questions for a student practicing Deadlocks) and uploaded notes advance
-    the same adaptive ladder seamlessly.
-    """
-    key_topic = (topic or "").strip().lower()
     rows = (
         db.query(Attempt.score)
         .join(Question, Attempt.question_id == Question.id)
         .filter(
             Attempt.user_id == user_id,
-            func.lower(Question.topic) == key_topic,
+            func.lower(Question.topic).in_(keys),
         )
         .order_by(Attempt.created_at.asc(), Attempt.id.asc())
         .limit(ADAPTIVE_HISTORY_LIMIT)
@@ -379,7 +408,6 @@ def _adaptive_state(
             rung = target
             history = []  # scores at the new rung start fresh
     return rung, demotion_pending, history, reason
-
 
 def adaptive_recommendation(
     user_id: uuid.UUID, subject: str, topic: str, db: Session

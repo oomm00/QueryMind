@@ -1,9 +1,8 @@
-"""Table-driven tests for the pure next-rung decision (no DB, no LLM)."""
+"""Table-driven tests for the pure next-rung decision under Task 4 pacing."""
 
 from __future__ import annotations
 
 import math
-
 import pytest
 
 from app.services.mastery_service import (
@@ -13,6 +12,11 @@ from app.services.mastery_service import (
     labels_from_rung,
     next_rung,
     rung_from_labels,
+    MIN_QUESTIONS_BEFORE_PROMOTION,
+    PROMOTION_AVG_THRESHOLD,
+    PROMOTION_MIN_INDIVIDUAL_SCORE,
+    MIN_QUESTIONS_BEFORE_DEMOTION,
+    DEMOTION_AVG_THRESHOLD,
 )
 
 MAX_RUNG = len(RUNG_LADDER) - 1
@@ -24,90 +28,95 @@ def _assert_safe(current: int, new_rung: int, reason: str) -> None:
     assert isinstance(reason, str) and reason
 
 
-def test_reason_names_current_and_next_rung() -> None:
-    rung, reason = next_rung(2, [0.82])
-    assert rung == 3
-    assert reason == "Scored 82% on Apply/Medium -> moving up to Analyze/Medium."
+def test_four_good_answers_promotes_exactly_one_rung() -> None:
+    """4 answers averaging >= 0.70 with none < 0.40 moves up one rung."""
+    scores = [0.80, 0.85, 0.75, 0.80]
+    target, reason = next_rung(2, scores)
+    _assert_safe(2, target, reason)
+    assert target == 3
+    assert "moving up to Analyze/Medium" in reason
+    assert "80%" in reason
 
 
-@pytest.mark.parametrize(
-    "scores, expected_rung",
-    [
-        ([0.9] * 20, MAX_RUNG),
-        ([0.1] * 20, 0),
-        ([0.9, 0.1] * 10, 0),  # alternating never climbs past the first rung
-    ],
-)
-def test_long_sequences_stay_in_range_and_move_at_most_one(scores, expected_rung) -> None:
-    current = 0
-    pending = False
-    for score in scores:
-        target, reason = next_rung(current, [score], demotion_pending=pending)
-        _assert_safe(current, target, reason)
-        if target != current:
-            pending = target < current
-        current = target
-    assert current == expected_rung
+def test_fewer_than_four_answers_stays_at_level() -> None:
+    """Must answer at least 4 questions before moving up."""
+    for count in range(1, 4):
+        scores = [0.95] * count
+        target, reason = next_rung(1, scores)
+        assert target == 1
+        assert f"{count}/4 questions answered" in reason
 
 
-def test_twenty_good_answers_climb_exactly_one_rung_at_a_time() -> None:
-    current = 0
-    for _ in range(20):
-        target, _ = next_rung(current, [0.95])
-        _assert_safe(current, target, "ok")
-        current = target
-    assert current == MAX_RUNG
+def test_four_answers_with_one_below_threshold_does_not_promote() -> None:
+    """Even if average >= 0.70, if any individual score is < 0.40, stay."""
+    scores = [1.0, 1.0, 0.9, 0.35]
+    assert sum(scores) / 4.0 >= 0.70
+    target, reason = next_rung(1, scores)
+    assert target == 1
+    assert "one score was 35% < 40%" in reason
 
 
-def test_twenty_bad_answers_never_fall_below_the_floor() -> None:
-    current = 0
-    for _ in range(20):
-        target, reason = next_rung(current, [0.0])
-        _assert_safe(current, target, reason)
-        assert current == 0
+def test_three_bad_answers_demotes_one_rung() -> None:
+    """Last 3 answers averaging < 0.40 moves down one rung."""
+    scores = [0.30, 0.35, 0.25]
+    target, reason = next_rung(2, scores)
+    _assert_safe(2, target, reason)
+    assert target == 1
+    assert "moving down to Understand/Easy" in reason
 
 
-def test_hysteresis_requires_two_consecutive_high_scores_after_demotion() -> None:
-    # Walk up to Apply/Medium one rung at a time, then fail it once (demote).
-    rung, _ = next_rung(0, [0.9])
-    assert rung == 1
-    rung, _ = next_rung(rung, [0.9])
-    assert rung == 2
-    demoted, reason = next_rung(2, [0.2])
-    assert demoted == 1
+def test_bad_answers_never_demote_below_the_floor() -> None:
+    """Never demote below level 1 (rung 0)."""
+    scores = [0.1, 0.1, 0.1]
+    target, reason = next_rung(0, scores)
+    assert target == 0
+    assert "already at the lowest level" in reason
+
+
+def test_demotion_requires_fresh_four_answers_before_promotion() -> None:
+    """After a demotion, the new level requires 4 fresh answers to promote."""
+    # Start at rung 1 (Understand)
+    # Demote with 3 bad answers
+    demoted, reason = next_rung(1, [0.2, 0.2, 0.2])
+    assert demoted == 0
     assert "moving down" in reason
 
-    first, reason = next_rung(demoted, [0.9], demotion_pending=True)
-    _assert_safe(demoted, first, reason)
-    assert first == 1
-    assert "1/2" in reason
+    # At rung 0: fresh history starts at []
+    # 1, 2, 3 good answers do not promote
+    for count in range(1, 4):
+        target, reason = next_rung(0, [0.9] * count)
+        assert target == 0
+        assert f"{count}/4" in reason
 
-    second, reason = next_rung(demoted, [0.9, 0.9], demotion_pending=True)
-    _assert_safe(demoted, second, reason)
-    assert second == 2
+    # 4th good answer promotes
+    target, reason = next_rung(0, [0.9, 0.9, 0.9, 0.9])
+    assert target == 1
     assert "moving up" in reason
 
 
 @pytest.mark.parametrize(
-    "score, expected_delta, expected_phrase",
+    "scores, expected_target, expected_phrase",
     [
-        (0.399, -1, "moving down"),
-        (0.4, 0, "staying"),
-        (0.749, 0, "staying"),
-        (0.75, 1, "moving up"),
+        # Promotion boundary: avg exactly 0.70 with all >= 0.40 -> promote
+        ([0.70, 0.70, 0.70, 0.70], 2, "moving up"),
+        # Stay boundary: avg 0.699 (< 0.70) -> stay
+        ([0.70, 0.70, 0.70, 0.69], 1, "staying"),
+        # Demotion boundary: 3 answers avg < 0.40 -> demote
+        ([0.39, 0.39, 0.39], 0, "moving down"),
+        # Demotion boundary: 3 answers avg exactly 0.40 -> stay
+        ([0.40, 0.40, 0.40], 1, "staying"),
     ],
 )
-def test_boundary_scores(score, expected_delta, expected_phrase) -> None:
-    target, reason = next_rung(2, [score])
-    _assert_safe(2, target, reason)
-    assert target - 2 == expected_delta
+def test_boundary_scores(scores, expected_target, expected_phrase) -> None:
+    target, reason = next_rung(1, scores)
+    assert target == expected_target
     assert expected_phrase in reason
 
 
 def test_first_question_starts_at_lowest_rung() -> None:
     target, reason = next_rung(0, [])
     assert target == 0
-    assert "No valid recent scores" in reason
+    assert "No prior attempts" in reason
 
 
 @pytest.mark.parametrize(
@@ -118,14 +127,14 @@ def test_invalid_scores_are_ignored_not_crashes(bad_score) -> None:
     target, reason = next_rung(3, [bad_score])
     _assert_safe(3, target, reason)
     assert target == 3
-    assert "No valid recent scores" in reason
     assert _clean_scores([bad_score]) == []
 
 
 def test_mixed_valid_and_invalid_scores_uses_only_valid_ones() -> None:
-    target, reason = next_rung(2, [None, float("nan"), -1, 0.82])
-    assert target == 3
-    assert "82%" in reason
+    # 4 valid scores averaging 85% + some garbage values
+    target, reason = next_rung(1, [None, 0.85, float("nan"), 0.90, -1, 0.80, 0.85])
+    assert target == 2
+    assert "moving up" in reason
 
 
 @pytest.mark.parametrize("rung", [-99, -1, 0, 5, 6, 999, "x", None, 2.7])
@@ -141,23 +150,3 @@ def test_unknown_labels_map_to_the_easiest_rung() -> None:
     assert rung_from_labels("APPLY", "MEDIUM") == 2
     assert rung_from_labels("apply", "nonsense") == 2
     assert rung_from_labels("nonsense", "hard") == 4
-
-
-def test_reason_never_flips_direction_on_every_answer() -> None:
-    # After a demotion a single good answer is held, so it cannot bounce.
-    sequence = [0.9, 0.9, 0.2, 0.9, 0.9, 0.2]
-    current, pending = 0, False
-    directions = []
-    for score in sequence:
-        target, _ = next_rung(current, [score] if not pending else [score], demotion_pending=pending)
-        if target != current:
-            directions.append(1 if target > current else -1)
-            pending = target < current
-        current = target
-    assert directions.count(1) >= 1
-    assert directions.count(-1) >= 1
-    assert not (len(directions) > 2 and all(a != b for a, b in zip(directions, directions[1:])))
-
-
-def test_math_isnan_is_filtered() -> None:
-    assert math.isnan(float("nan"))  # documents the guard used in _clean_scores

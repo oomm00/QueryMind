@@ -226,9 +226,20 @@ def test_ema_mastery_alone_does_not_drive_recommendation(db, user, mastery):
     }
 
 
-def test_one_good_attempt_promotes_exactly_one_rung(db, user):
+def test_fewer_than_four_attempts_stays_at_current_rung(db, user):
     now = datetime.now(timezone.utc)
-    _add_attempt(db, user, "DBMS", "Transactions", 0.9, now)
+    for offset, score in enumerate((0.9, 0.9, 0.9)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=3 - offset))
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "remember",
+        "difficulty": "easy",
+    }
+
+
+def test_four_good_attempts_promotes_exactly_one_rung(db, user):
+    now = datetime.now(timezone.utc)
+    for offset, score in enumerate((0.85, 0.90, 0.75, 0.80)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=4 - offset))
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
         "bloom_level": "understand",
         "difficulty": "easy",
@@ -247,20 +258,35 @@ def test_two_bad_attempts_at_the_floor_stay_at_the_floor(db, user):
 
 def test_failing_the_current_rung_demotes_one_rung(db, user):
     now = datetime.now(timezone.utc)
-    for offset, score in enumerate((0.9, 0.9, 0.1)):
-        _add_attempt(db, user, "DBMS", "Transactions", score,
-                     now - timedelta(minutes=3 - offset))
+    # 4 good attempts promote from Remember to Understand
+    for offset, score in enumerate((0.85, 0.90, 0.75, 0.80)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=8 - offset))
+    # 3 bad attempts at Understand average < 0.40 -> demote back to Remember
+    for offset, score in enumerate((0.20, 0.30, 0.25)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=3 - offset))
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
-        "bloom_level": "understand",
+        "bloom_level": "remember",
         "difficulty": "easy",
     }
 
 
-def test_hysteresis_blocks_immediate_re_promotion(db, user):
+def test_recovery_after_demotion_requires_four_fresh_answers(db, user):
     now = datetime.now(timezone.utc)
-    for offset, score in enumerate((0.9, 0.9, 0.1, 0.9)):
-        _add_attempt(db, user, "DBMS", "Transactions", score,
-                     now - timedelta(minutes=4 - offset))
+    # 4 good promote to Understand
+    for offset, score in enumerate((0.85, 0.90, 0.75, 0.80)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=12 - offset))
+    # 3 bad demote to Remember
+    for offset, score in enumerate((0.20, 0.30, 0.25)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=7 - offset))
+    # 3 fresh good answers at Remember: not enough (need 4!)
+    for offset, score in enumerate((0.90, 0.90, 0.90)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=4 - offset))
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "remember",
+        "difficulty": "easy",
+    }
+    # 4th fresh good answer completes recovery and promotes to Understand
+    _add_attempt(db, user, "DBMS", "Transactions", 0.90, now)
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
         "bloom_level": "understand",
         "difficulty": "easy",
