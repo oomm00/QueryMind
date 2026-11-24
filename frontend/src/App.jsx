@@ -10,7 +10,6 @@
  *          /map/:courseId/:topicId (topic knowledge graph)
  * Moved:   /generate and /upload redirected - the generate form is the
  *          "Pick a topic" tab on /practice, upload is the Documents tab on /notes.
- * Stubs:   everything else renders <ComingSoon/>.
  */
 
 import React from 'react'
@@ -25,7 +24,10 @@ import ExplorePage from './pages/ExplorePage'
 import HistoryPage from './pages/HistoryPage'
 import NotesPage from './pages/NotesPage'
 import NotFoundPage from './pages/NotFoundPage'
-import ComingSoon from './pages/ComingSoon'
+import MasteryPage from './pages/MasteryPage'
+import WeakAreasPage from './pages/WeakAreasPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import SettingsPage from './pages/SettingsPage'
 import LessonPage from './pages/LessonPage'
 import MapPage from './pages/MapPage'
 import CoursePage from './pages/course/CoursePage'
@@ -40,12 +42,6 @@ import AppShell from './AppShell'
 function Protected({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>
 }
-
-const soon = (title, description) => (
-  <Protected>
-    <ComingSoon title={title} description={description} />
-  </Protected>
-)
 
 export default function App() {
   return (
@@ -131,19 +127,39 @@ export default function App() {
           }
         />
         <Route
-          path="/interview"
-          element={soon('Interview Prep', 'Timed mock interviews tailored to your weak areas.')}
-        />
-        <Route
-          path="/analytics"
-          element={soon('Analytics', 'Deeper insight into your mastery over time.')}
+          path="/mastery"
+          element={
+            <Protected>
+              <MasteryPage />
+            </Protected>
+          }
         />
         <Route
           path="/weak-areas"
-          element={soon('Weak Areas', 'Topics that need attention, ranked by mastery.')}
+          element={
+            <Protected>
+              <WeakAreasPage />
+            </Protected>
+          }
         />
+        <Route
+          path="/analytics"
+          element={
+            <Protected>
+              <AnalyticsPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <Protected>
+              <SettingsPage />
+            </Protected>
+          }
+        />
+        <Route path="/interview" element={<Navigate to="/practice" replace />} />
         <Route path="/notes" element={<Protected><NotesPage /></Protected>} />
-        <Route path="/settings" element={soon('Settings', 'Account, theme and study preferences.')} />
         <Route
           path="/course/:id"
           element={
