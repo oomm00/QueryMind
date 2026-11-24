@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import OperationalError
 
-from app.api import auth, questions, attempts, profile, documents, mastery
+from app.api import auth, questions, attempts, profile, documents, mastery, learning
 from app.core.config import settings
 from app.core.exceptions import QueryMindError
 from app.core.health import startup_checks
@@ -159,6 +159,7 @@ def create_app() -> FastAPI:
     app.include_router(attempts.router,  prefix="/attempts",  tags=["Attempts"])
     app.include_router(profile.router,   prefix="/profile",   tags=["Profile"])
     app.include_router(mastery.router,   prefix="/mastery",   tags=["Mastery"])
+    app.include_router(learning.router)
 
     @app.get("/", tags=["Health"])
     async def root():

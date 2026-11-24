@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: str = "sk-placeholder"
     gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
-    llm_model: str = "gemini-flash-lite-latest"
+    llm_model: str = "gemini-3.5-flash-lite"
     # Judge model. Left empty by default so it inherits LLM_MODEL (env: LLM_EVAL_MODEL).
     # Set it explicitly to route generation and evaluation to different models
     # (e.g. a cheaper/less rate-limited model for scoring).
@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 2048  # evaluation hard cap; thinking tokens count toward it
 
     # LLM reliability (env: LLM_TIMEOUT_SECONDS / LLM_MAX_CONCURRENCY)
-    llm_timeout_seconds: float = 45.0   # hard per-call timeout; a slower call is
+    llm_timeout_seconds: float = 20.0   # hard per-call timeout; a slower call is
                                         # treated as transient and retried
     llm_max_concurrency: int = 3        # max simultaneous Gemini calls per process
 
@@ -144,11 +144,11 @@ class Settings(BaseSettings):
     offline_demo_mode: bool = False
     # Hard overall deadline for one /generate request (seconds). Per-call timeout
     # is shorter so at most two attempts + validation fit inside the budget.
-    generation_deadline_seconds: float = 35.0
+    generation_deadline_seconds: float = 60.0
     generation_call_timeout_seconds: float = 15.0
     generation_max_attempts: int = 2
     # Cap fallback models tried inside one generation call (quota containment).
-    generation_max_fallback_models: int = 1
+    generation_max_fallback_models: int = 3
 
     @field_validator("llm_thinking_budget", mode="before")
     @classmethod

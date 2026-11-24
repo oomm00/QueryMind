@@ -203,3 +203,29 @@ class MasteryRecord(Base):
     last_updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class LearningTopic(Base):
+    __tablename__ = "learning_topics"
+    __table_args__ = (
+        UniqueConstraint("user_id", "topic", name="uq_learning_topics_user_topic"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    topic: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    overview: Mapped[str | None] = mapped_column(Text, nullable=True)
+    outline_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User")

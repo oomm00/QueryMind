@@ -1,0 +1,741 @@
+{
+  "topics": {
+    "Race Conditions": {
+      "topic": "Race Conditions",
+      "subject": "OS",
+      "overview": "A race condition occurs in concurrent execution when multiple processes or threads access shared resources simultaneously without adequate synchronization, leading to unpredictable outcomes.",
+      "resources": [
+        {
+          "title": "Wikipedia: Race condition",
+          "url": "https://en.wikipedia.org/wiki/Race_condition",
+          "type": "documentation",
+          "description": "Comprehensive overview of race conditions, critical sections, and formal definitions."
+        },
+        {
+          "title": "Wikipedia: Mutual exclusion",
+          "url": "https://en.wikipedia.org/wiki/Mutual_exclusion",
+          "type": "documentation",
+          "description": "Explains mutual exclusion principles, algorithms, and hardware support."
+        },
+        {
+          "title": "Python Docs: Thread Synchronization Primitives",
+          "url": "https://docs.python.org/3/library/threading.html",
+          "type": "documentation",
+          "description": "Standard documentation for Locks, RLocks, and Semaphores."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "rc-01",
+          "title": "Critical Section Problem",
+          "summary": "The critical section is code accessing shared data. Synchronization must satisfy mutual exclusion, progress, and bounded waiting to prevent state corruption.",
+          "learning_goals": [
+            "Identify critical sections in concurrent code",
+            "Explain the three requirements for critical section solutions"
+          ]
+        },
+        {
+          "id": "rc-02",
+          "title": "Atomic Operations & Hardware Primitives",
+          "summary": "Hardware instructions like Test-and-Set and Compare-and-Swap execute atomically. These primitives form the bedrock of spinlocks and modern lock-free data structures.",
+          "learning_goals": [
+            "Understand Test-and-Set and CAS primitives",
+            "Analyze how atomic instructions eliminate race windows"
+          ]
+        },
+        {
+          "id": "rc-03",
+          "title": "Mutexes & Spinlocks",
+          "summary": "Mutex locks provide boolean locking where threads sleep if the lock is held. Spinlocks busy-wait, making them suitable only for very short waits on multiprocessors.",
+          "learning_goals": [
+            "Compare mutex sleeping versus spinlock busy-waiting",
+            "Evaluate lock contention and overhead in multi-threaded programs"
+          ]
+        },
+        {
+          "id": "rc-04",
+          "title": "Deadlock and Priority Inversion",
+          "summary": "Poor lock acquisition orders can induce deadlocks. Priority inversion occurs when a low-priority thread holding a lock blocks a high-priority thread, solved by priority inheritance.",
+          "learning_goals": [
+            "Diagnose priority inversion scenarios",
+            "Explain priority inheritance protocols"
+          ]
+        },
+        {
+          "id": "rc-05",
+          "title": "Lock-Free Programming & Memory Barriers",
+          "summary": "Lock-free algorithms use memory barriers and atomic instructions to coordinate without mutexes. Compilers and CPUs can reorder instructions unless fenced.",
+          "learning_goals": [
+            "Understand memory fences and happens-before relations",
+            "Distinguish lock-free versus wait-free progress guarantees"
+          ]
+        }
+      ]
+    },
+    "Deadlocks": {
+      "topic": "Deadlocks",
+      "subject": "OS",
+      "overview": "A deadlock is a state where each member of a set of processes is waiting for an event that only another member in the set can cause.",
+      "resources": [
+        {
+          "title": "Wikipedia: Deadlock (computer science)",
+          "url": "https://en.wikipedia.org/wiki/Deadlock_(computer_science)",
+          "type": "documentation",
+          "description": "Formal definitions of deadlocks, Coffman conditions, and mitigation strategies."
+        },
+        {
+          "title": "Wikipedia: Banker's algorithm",
+          "url": "https://en.wikipedia.org/wiki/Banker%27s_algorithm",
+          "type": "documentation",
+          "description": "Detailed explanation of Dijkstra's Banker's Algorithm for deadlock avoidance."
+        },
+        {
+          "title": "Wikipedia: Dining philosophers problem",
+          "url": "https://en.wikipedia.org/wiki/Dining_philosophers_problem",
+          "type": "documentation",
+          "description": "Classic synchronization problem illustrating deadlocks and resource allocation."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "dl-01",
+          "title": "The Four Coffman Conditions",
+          "summary": "Deadlocks require mutual exclusion, hold and wait, no preemption, and circular wait. Breaking any one condition guarantees that a deadlock cannot occur.",
+          "learning_goals": [
+            "State and explain the four Coffman conditions",
+            "Analyze systems to detect vulnerable resource allocations"
+          ]
+        },
+        {
+          "id": "dl-02",
+          "title": "Resource Allocation Graphs (RAG)",
+          "summary": "Directed graphs model resource requests and assignments. A cycle in a single-instance resource graph indicates a deadlock, whereas multi-instance graphs require matrix reduction.",
+          "learning_goals": [
+            "Construct and trace Resource Allocation Graphs",
+            "Identify cycles and knot conditions indicating deadlock"
+          ]
+        },
+        {
+          "id": "dl-03",
+          "title": "Deadlock Prevention vs Avoidance",
+          "summary": "Prevention structurally invalidates one of the Coffman conditions. Avoidance uses runtime knowledge of future resource demands (e.g. Banker's Algorithm) to stay in safe states.",
+          "learning_goals": [
+            "Distinguish static prevention from dynamic avoidance",
+            "Evaluate trade-offs in resource utilization and concurrency"
+          ]
+        },
+        {
+          "id": "dl-04",
+          "title": "Banker's Algorithm & Safe States",
+          "summary": "A state is safe if there exists an execution sequence allowing all processes to complete. The Banker's Algorithm checks if granting a request leaves the system in a safe state.",
+          "learning_goals": [
+            "Execute the Safety Algorithm on allocation matrices",
+            "Determine whether resource requests should be granted or delayed"
+          ]
+        },
+        {
+          "id": "dl-05",
+          "title": "Deadlock Detection & Recovery",
+          "summary": "Detection algorithms periodically search for cycles or deadlocked states. Recovery strategies include process termination (aborting all or one by one) and resource preemption.",
+          "learning_goals": [
+            "Implement wait-for graph cycle detection",
+            "Choose optimal victim processes for termination or rollback"
+          ]
+        }
+      ]
+    },
+    "Semaphores": {
+      "topic": "Semaphores",
+      "subject": "OS",
+      "overview": "A semaphore is a synchronization variable initialized to an integer that coordinates access to shared resources via atomic wait (P) and signal (V) operations.",
+      "resources": [
+        {
+          "title": "Wikipedia: Semaphore (programming)",
+          "url": "https://en.wikipedia.org/wiki/Semaphore_(programming)",
+          "type": "documentation",
+          "description": "Historical context, Dijkstra's formulation, and counting vs binary semaphores."
+        },
+        {
+          "title": "Wikipedia: Producer-consumer problem",
+          "url": "https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem",
+          "type": "documentation",
+          "description": "Standard bounded buffer coordination using counting and binary semaphores."
+        },
+        {
+          "title": "Wikipedia: Readers-writers problem",
+          "url": "https://en.wikipedia.org/wiki/Readers%E2%80%93writers_problem",
+          "type": "documentation",
+          "description": "Concurrent read and exclusive write synchronization patterns."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "sem-01",
+          "title": "Counting vs Binary Semaphores",
+          "summary": "Binary semaphores take values 0 or 1 to provide mutual exclusion. Counting semaphores track a pool of available resources, decrementing on wait and incrementing on signal.",
+          "learning_goals": [
+            "Understand atomic wait() and signal() mechanics",
+            "Choose between binary and counting semaphores"
+          ]
+        },
+        {
+          "id": "sem-02",
+          "title": "Producer-Consumer (Bounded Buffer)",
+          "summary": "Coordinating producers and consumers requires three semaphores: a mutex for buffer access, 'empty' slots, and 'full' slots to prevent underflow and overflow.",
+          "learning_goals": [
+            "Implement bounded-buffer synchronization",
+            "Trace producer and consumer interleavings without race conditions"
+          ]
+        },
+        {
+          "id": "sem-03",
+          "title": "Readers-Writers Problem",
+          "summary": "Multiple readers can access data simultaneously, but writers require exclusive access. Priority policies balance reader throughput against writer starvation.",
+          "learning_goals": [
+            "Model reader-preference and writer-preference solutions",
+            "Prevent thread starvation in high-throughput data stores"
+          ]
+        },
+        {
+          "id": "sem-04",
+          "title": "Dining Philosophers Synchronization",
+          "summary": "Philosophers alternating between eating and thinking demonstrate deadlock and starvation. Solutions include asymmetric pickup, resource hierarchy, and monitors.",
+          "learning_goals": [
+            "Formulate deadlock-free chopstick acquisition",
+            "Analyze fairness and progress guarantees"
+          ]
+        },
+        {
+          "id": "sem-05",
+          "title": "Monitors & Condition Variables",
+          "summary": "Monitors encapsulate shared data and synchronization in high-level language constructs. Condition variables provide explicit wait and signal signaling within monitors.",
+          "learning_goals": [
+            "Compare low-level semaphores with high-level monitors",
+            "Understand Hoare versus Mesa monitor signaling semantics"
+          ]
+        }
+      ]
+    },
+    "Paging and Virtual Memory": {
+      "topic": "Paging and Virtual Memory",
+      "subject": "OS",
+      "overview": "Virtual memory decouples logical process address spaces from physical RAM using paging, translation lookaside buffers (TLBs), and page fault handling.",
+      "resources": [
+        {
+          "title": "Wikipedia: Virtual memory",
+          "url": "https://en.wikipedia.org/wiki/Virtual_memory",
+          "type": "documentation",
+          "description": "Comprehensive reference on virtual address spaces, page tables, and memory hierarchy."
+        },
+        {
+          "title": "Wikipedia: Page table",
+          "url": "https://en.wikipedia.org/wiki/Page_table",
+          "type": "documentation",
+          "description": "Structure of multi-level, inverted, and hashed page tables."
+        },
+        {
+          "title": "Wikipedia: Page replacement algorithm",
+          "url": "https://en.wikipedia.org/wiki/Page_replacement_algorithm",
+          "type": "documentation",
+          "description": "Evaluation of FIFO, LRU, LFU, and optimal Belady algorithms."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "pvm-01",
+          "title": "Paging & Address Translation",
+          "summary": "Logical addresses are split into page numbers and offsets. The Memory Management Unit (MMU) translates page numbers into frame numbers using page tables.",
+          "learning_goals": [
+            "Calculate page and offset bits from address widths",
+            "Translate logical addresses to physical addresses"
+          ]
+        },
+        {
+          "id": "pvm-02",
+          "title": "Translation Lookaside Buffer (TLB)",
+          "summary": "The TLB is a high-speed hardware cache for page table translations. High TLB hit ratios are essential to avoid multi-memory-access penalties per instruction.",
+          "learning_goals": [
+            "Calculate effective memory access times (EMAT)",
+            "Explain TLB misses, flushes, and ASID tagging"
+          ]
+        },
+        {
+          "id": "pvm-03",
+          "title": "Multi-Level & Inverted Page Tables",
+          "summary": "64-bit address spaces require hierarchical page tables to avoid storing gigantic linear tables in RAM. Inverted page tables map physical frames back to processes.",
+          "learning_goals": [
+            "Design multi-level page table tree structures",
+            "Evaluate memory overhead of hierarchical versus inverted tables"
+          ]
+        },
+        {
+          "id": "pvm-04",
+          "title": "Page Faults & Demand Paging",
+          "summary": "When an access touches a non-present page, the MMU triggers a page fault exception. The OS fetches the required page from swap and updates the page table.",
+          "learning_goals": [
+            "Trace the complete step-by-step page fault lifecycle",
+            "Analyze disk I/O latency impact on instruction restart"
+          ]
+        },
+        {
+          "id": "pvm-05",
+          "title": "Page Replacement Algorithms & Thrashing",
+          "summary": "When frames are full, replacement policies (FIFO, LRU, Clock, Belady's Optimal) select victim pages. Thrashing occurs when processes spend more time paging than executing.",
+          "learning_goals": [
+            "Simulate LRU, FIFO, and Clock replacement algorithms",
+            "Identify Belady's anomaly and calculate working sets"
+          ]
+        }
+      ]
+    },
+    "CPU Scheduling": {
+      "topic": "CPU Scheduling",
+      "subject": "OS",
+      "overview": "CPU scheduling determines which ready process is allocated the CPU, balancing throughput, turnaround time, waiting time, and responsiveness.",
+      "resources": [
+        {
+          "title": "Wikipedia: Scheduling (computing)",
+          "url": "https://en.wikipedia.org/wiki/Scheduling_(computing)",
+          "type": "documentation",
+          "description": "Overview of scheduling algorithms, preemptive vs non-preemptive paradigms, and metrics."
+        },
+        {
+          "title": "Wikipedia: Round-robin scheduling",
+          "url": "https://en.wikipedia.org/wiki/Round-robin_scheduling",
+          "type": "documentation",
+          "description": "Detailed look at round-robin time-slicing and responsiveness tradeoffs."
+        },
+        {
+          "title": "Wikipedia: Multilevel feedback queue",
+          "url": "https://en.wikipedia.org/wiki/Multilevel_feedback_queue",
+          "type": "documentation",
+          "description": "Adaptive scheduling with priority queues and dynamic aging."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "cpu-01",
+          "title": "Scheduling Criteria & Metrics",
+          "summary": "Schedulers optimize turnaround time, waiting time, response time, and CPU utilization. Preemptive algorithms interrupt executing processes; non-preemptive algorithms run until burst completion.",
+          "learning_goals": [
+            "Define core scheduling performance metrics",
+            "Differentiate preemptive versus cooperative scheduling"
+          ]
+        },
+        {
+          "id": "cpu-02",
+          "title": "First-Come, First-Served & Convoy Effect",
+          "summary": "FCFS executes processes in arrival order. A long CPU-bound process blocks short I/O-bound processes, causing low device utilization known as the convoy effect.",
+          "learning_goals": [
+            "Draw Gantt charts for FCFS schedules",
+            "Explain and mitigate the convoy effect"
+          ]
+        },
+        {
+          "id": "cpu-03",
+          "title": "Shortest Job First & Shortest Remaining Time",
+          "summary": "SJF minimizes average waiting time by selecting the smallest CPU burst. Preemptive SJF (SRTF) immediately switches to newly arriving shorter jobs.",
+          "learning_goals": [
+            "Prove SJF optimality for average waiting time",
+            "Estimate next burst duration using exponential smoothing"
+          ]
+        },
+        {
+          "id": "cpu-04",
+          "title": "Round Robin & Quantum Tuning",
+          "summary": "Round Robin allocates each process a fixed time slice (quantum). A large quantum degenerates into FCFS, while a very small quantum causes excessive context-switch overhead.",
+          "learning_goals": [
+            "Select optimal time quantum values based on context switch costs",
+            "Calculate turnaround time under round-robin scheduling"
+          ]
+        },
+        {
+          "id": "cpu-05",
+          "title": "Multi-Level Feedback Queues (MLFQ)",
+          "summary": "MLFQ uses multiple priority queues with decreasing time quanta. Processes that consume their full quantum drop to lower queues; aging elevates starving processes.",
+          "learning_goals": [
+            "Understand MLFQ heuristic priority adjustment",
+            "Implement aging to prevent process starvation"
+          ]
+        }
+      ]
+    },
+    "Transactions": {
+      "topic": "Transactions",
+      "subject": "DBMS",
+      "overview": "A transaction is an atomic unit of database processing that transitions data from one consistent state to another, governed by ACID properties.",
+      "resources": [
+        {
+          "title": "Wikipedia: Database transaction",
+          "url": "https://en.wikipedia.org/wiki/Database_transaction",
+          "type": "documentation",
+          "description": "Comprehensive reference for transaction semantics, ACID, and concurrency control."
+        },
+        {
+          "title": "Wikipedia: Two-phase locking",
+          "url": "https://en.wikipedia.org/wiki/Two-phase_locking",
+          "type": "documentation",
+          "description": "Formal proof and details of 2PL ensuring serializability."
+        },
+        {
+          "title": "PostgreSQL Docs: Concurrency Control & Isolation",
+          "url": "https://www.postgresql.org/docs/current/mvcc.html",
+          "type": "documentation",
+          "description": "Production PostgreSQL guide to Multi-Version Concurrency Control (MVCC) and transaction isolation."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "tx-01",
+          "title": "ACID Properties",
+          "summary": "Atomicity guarantees all-or-nothing execution. Consistency preserves integrity constraints, Isolation prevents concurrent interference, and Durability guarantees committed changes persist.",
+          "learning_goals": [
+            "Define each ACID property in detail",
+            "Explain the database mechanisms that enforce each property"
+          ]
+        },
+        {
+          "id": "tx-02",
+          "title": "Schedules & Serializability",
+          "summary": "Concurrent transactions produce interleaved schedules. A schedule is conflict serializable if it can be transformed into a serial schedule by swapping non-conflicting operations.",
+          "learning_goals": [
+            "Construct precedence graphs to test conflict serializability",
+            "Distinguish view serializability from conflict serializability"
+          ]
+        },
+        {
+          "id": "tx-03",
+          "title": "Two-Phase Locking (2PL)",
+          "summary": "2PL requires a growing phase where locks are acquired and a shrinking phase where locks are released. Strict 2PL holds all exclusive locks until commit, preventing cascading rollbacks.",
+          "learning_goals": [
+            "Apply 2PL rules to transaction schedules",
+            "Explain why Strict and Rigorous 2PL prevent cascading aborts"
+          ]
+        },
+        {
+          "id": "tx-04",
+          "title": "Isolation Levels & Anomalies",
+          "summary": "SQL isolation levels trade isolation for performance: Read Uncommitted, Read Committed, Repeatable Read, and Serializable, preventing dirty reads, non-repeatable reads, and phantoms.",
+          "learning_goals": [
+            "Identify dirty reads, unrepeatable reads, and phantom phenomena",
+            "Map SQL standard isolation levels to concurrency phenomena"
+          ]
+        },
+        {
+          "id": "tx-05",
+          "title": "Write-Ahead Logging (WAL) & Recovery",
+          "summary": "WAL mandates that log records must be flushed to disk before corresponding database pages. ARIES recovery applies analysis, redo, and undo passes to recover state after crashes.",
+          "learning_goals": [
+            "Understand the Write-Ahead Logging protocol",
+            "Trace ARIES checkpoint analysis, redo, and undo passes"
+          ]
+        }
+      ]
+    },
+    "Normalization": {
+      "topic": "Normalization",
+      "subject": "DBMS",
+      "overview": "Database normalization organizes relational schema to minimize data redundancy and eliminate insert, update, and delete anomalies using functional dependencies.",
+      "resources": [
+        {
+          "title": "Wikipedia: Database normalization",
+          "url": "https://en.wikipedia.org/wiki/Database_normalization",
+          "type": "documentation",
+          "description": "Formal definitions of 1NF, 2NF, 3NF, BCNF, and dependency preservation."
+        },
+        {
+          "title": "Wikipedia: Boyce\u2013Codd normal form",
+          "url": "https://en.wikipedia.org/wiki/Boyce%E2%80%93Codd_normal_form",
+          "type": "documentation",
+          "description": "Detailed mathematical criteria and decomposition algorithms for BCNF."
+        },
+        {
+          "title": "Wikipedia: Third normal form",
+          "url": "https://en.wikipedia.org/wiki/Third_normal_form",
+          "type": "documentation",
+          "description": "Codd's definition of 3NF eliminating transitive dependencies."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "norm-01",
+          "title": "Functional Dependencies & Armstrong's Axioms",
+          "summary": "A functional dependency X -> Y means X uniquely determines Y. Armstrong's Axioms (reflexivity, augmentation, transitivity) allow computing attribute closures and candidate keys.",
+          "learning_goals": [
+            "Compute the attribute closure of an attribute set",
+            "Derive all candidate keys for a given relation"
+          ]
+        },
+        {
+          "id": "norm-02",
+          "title": "First, Second, and Third Normal Forms",
+          "summary": "1NF requires atomic attribute values. 2NF removes partial key dependencies. 3NF removes transitive dependencies, ensuring non-prime attributes depend only on the primary key.",
+          "learning_goals": [
+            "Identify modification anomalies in unnormalized schemas",
+            "Decompose relations into 1NF, 2NF, and 3NF"
+          ]
+        },
+        {
+          "id": "norm-03",
+          "title": "Boyce-Codd Normal Form (BCNF)",
+          "summary": "BCNF requires that for every non-trivial functional dependency X -> Y, X must be a superkey. BCNF strictly eliminates all functional redundancy, though it may sacrifice dependency preservation.",
+          "learning_goals": [
+            "Verify whether a relation is in BCNF",
+            "Decompose relations into BCNF using closure analysis"
+          ]
+        },
+        {
+          "id": "norm-04",
+          "title": "Lossless Join & Dependency Preservation",
+          "summary": "Decomposition must be lossless so that the natural join of decomposed relations reproduces the original relation exactly. Preserving dependencies avoids costly multi-table constraint checks.",
+          "learning_goals": [
+            "Test decompositions for lossless-join property",
+            "Evaluate whether functional dependencies are preserved after decomposition"
+          ]
+        },
+        {
+          "id": "norm-05",
+          "title": "Denormalization & Query Optimization",
+          "summary": "High normal forms introduce joins that can slow down read-heavy workloads. Pragmatic database design selectively denormalizes tables to optimize read performance while managing write overhead.",
+          "learning_goals": [
+            "Identify when denormalization is justified in production databases",
+            "Analyze tradeoffs between storage redundancy and query response time"
+          ]
+        }
+      ]
+    },
+    "Indexing": {
+      "topic": "Indexing",
+      "subject": "DBMS",
+      "overview": "Database indexing creates auxiliary data structures (B-trees, B+ trees, hash indexes) that accelerate data retrieval at the cost of storage and write overhead.",
+      "resources": [
+        {
+          "title": "Wikipedia: Database index",
+          "url": "https://en.wikipedia.org/wiki/Database_index",
+          "type": "documentation",
+          "description": "Comprehensive reference covering primary, secondary, clustered, and dense indexes."
+        },
+        {
+          "title": "Wikipedia: B+ tree",
+          "url": "https://en.wikipedia.org/wiki/B%2B_tree",
+          "type": "documentation",
+          "description": "Details the leaf-linked tree structure ideal for disk blocks and range queries."
+        },
+        {
+          "title": "PostgreSQL Docs: Indexes",
+          "url": "https://www.postgresql.org/docs/current/indexes.html",
+          "type": "documentation",
+          "description": "Official guide to B-tree, Hash, GiST, SP-GiST, GIN, and BRIN index implementations."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "idx-01",
+          "title": "Index Structures: Clustered vs Non-Clustered",
+          "summary": "A clustered index dictates the physical storage order of data rows on disk, meaning a table can have only one. Non-clustered indexes store pointers back to table rows.",
+          "learning_goals": [
+            "Differentiate clustered and non-clustered index layouts",
+            "Evaluate query performance for range versus point lookups"
+          ]
+        },
+        {
+          "id": "idx-02",
+          "title": "B-Trees and B+ Trees",
+          "summary": "B+ trees store data pointers exclusively in leaf nodes and link leaves sequentially. This provides logarithmic lookups, predictable tree depth, and optimal range scans on disk.",
+          "learning_goals": [
+            "Trace search, insert, and node splitting in B+ trees",
+            "Calculate tree height and fanout based on disk page size"
+          ]
+        },
+        {
+          "id": "idx-03",
+          "title": "Hash Indexes vs Tree Indexes",
+          "summary": "Hash indexes offer O(1) point lookups using bucket arrays but cannot support range queries or sorting. Tree indexes provide O(log N) operations and efficiently support range scans.",
+          "learning_goals": [
+            "Compare hash indexing against B+ tree indexing",
+            "Select the appropriate index type based on workload access patterns"
+          ]
+        },
+        {
+          "id": "idx-04",
+          "title": "Composite & Covering Indexes",
+          "summary": "Composite indexes index multiple columns in order; queries must match the leftmost prefix. A covering index contains all columns requested by a query, avoiding table lookups entirely.",
+          "learning_goals": [
+            "Apply the leftmost prefix rule in multi-column indexes",
+            "Design covering indexes to eliminate disk page fetches"
+          ]
+        },
+        {
+          "id": "idx-05",
+          "title": "Index Maintenance & Write Amplification",
+          "summary": "Every INSERT, UPDATE, or DELETE requires updating corresponding indexes, causing write amplification and page splits. Unused indexes degrade write throughput without providing read benefit.",
+          "learning_goals": [
+            "Measure index overhead on write operations",
+            "Analyze database query plans using EXPLAIN to spot index usage"
+          ]
+        }
+      ]
+    },
+    "SQL Joins": {
+      "topic": "SQL Joins",
+      "subject": "DBMS",
+      "overview": "SQL joins combine columns from one or more tables based on related keys, using algorithms like nested loops, hash joins, and sort-merge joins.",
+      "resources": [
+        {
+          "title": "Wikipedia: Join (SQL)",
+          "url": "https://en.wikipedia.org/wiki/Join_(SQL)",
+          "type": "documentation",
+          "description": "Comprehensive reference covering inner, outer, cross, and self joins."
+        },
+        {
+          "title": "PostgreSQL Documentation: Table Expressions & Joins",
+          "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html",
+          "type": "documentation",
+          "description": "Official PostgreSQL reference on join syntax, execution semantics, and lateral joins."
+        },
+        {
+          "title": "Wikipedia: Relational algebra",
+          "url": "https://en.wikipedia.org/wiki/Relational_algebra",
+          "type": "documentation",
+          "description": "Mathematical foundations of natural joins, theta joins, and Cartesian products."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "join-01",
+          "title": "Inner vs Outer Joins",
+          "summary": "Inner joins return only rows with matches in both tables. Outer joins (LEFT, RIGHT, FULL) preserve unmatched rows from one or both tables, populating missing columns with NULL.",
+          "learning_goals": [
+            "Write queries using INNER, LEFT, RIGHT, and FULL OUTER joins",
+            "Predict NULL handling in outer join filtering conditions"
+          ]
+        },
+        {
+          "id": "join-02",
+          "title": "Cross Joins & Self Joins",
+          "summary": "Cross joins produce the Cartesian product of two tables. Self joins join a table to itself using table aliases to model hierarchical data such as organizational charts.",
+          "learning_goals": [
+            "Construct self-joins to query hierarchical data",
+            "Estimate result set cardinality of Cartesian cross joins"
+          ]
+        },
+        {
+          "id": "join-03",
+          "title": "Nested Loop Join Algorithm",
+          "summary": "Nested loop joins iterate over the outer table and probe the inner table for matching rows. Index nested loop joins achieve high efficiency when the inner table has an index.",
+          "learning_goals": [
+            "Trace simple and index-assisted nested loop joins",
+            "Calculate disk block access costs for nested loop variants"
+          ]
+        },
+        {
+          "id": "join-04",
+          "title": "Hash Joins",
+          "summary": "Hash joins build an in-memory hash table on the smaller build input and scan the larger probe input. They excel at handling large, unsorted equijoins without index requirements.",
+          "learning_goals": [
+            "Explain build and probe phases in hash joins",
+            "Analyze memory constraints and hybrid hash join partitioning"
+          ]
+        },
+        {
+          "id": "join-05",
+          "title": "Sort-Merge Joins & Join Order Optimization",
+          "summary": "Sort-merge joins sort both inputs on join keys and scan them simultaneously. Query optimizers use cost-based models to choose the most efficient join order and algorithm.",
+          "learning_goals": [
+            "Trace sort-merge join execution on pre-sorted inputs",
+            "Interpret query plans to verify optimizer join selection"
+          ]
+        }
+      ]
+    },
+    "Dynamic Programming": {
+      "topic": "Dynamic Programming",
+      "subject": "DSA",
+      "overview": "Dynamic programming solves complex problems by breaking them into overlapping subproblems and optimal substructure, caching results via memoization or tabulation.",
+      "resources": [
+        {
+          "title": "Wikipedia: Dynamic programming",
+          "url": "https://en.wikipedia.org/wiki/Dynamic_programming",
+          "type": "documentation",
+          "description": "Bellman's principle of optimality, overlapping subproblems, and formal mathematical foundation."
+        },
+        {
+          "title": "Wikipedia: Memoization",
+          "url": "https://en.wikipedia.org/wiki/Memoization",
+          "type": "documentation",
+          "description": "Technique of storing function call results to avoid redundant subproblem calculations."
+        },
+        {
+          "title": "Wikipedia: Bellman equation",
+          "url": "https://en.wikipedia.org/wiki/Bellman_equation",
+          "type": "documentation",
+          "description": "Mathematical formulation of optimality conditions in dynamic programming."
+        }
+      ],
+      "subparts": [
+        {
+          "id": "dp-01",
+          "title": "Optimal Substructure & Overlapping Subproblems",
+          "summary": "Dynamic programming applies when the optimal solution contains optimal solutions to subproblems, and subproblems recur repeatedly rather than generating new subproblems.",
+          "learning_goals": [
+            "Identify optimal substructure in algorithmic problems",
+            "Differentiate divide-and-conquer from dynamic programming"
+          ]
+        },
+        {
+          "id": "dp-02",
+          "title": "Top-Down Memoization vs Bottom-Up Tabulation",
+          "summary": "Top-down memoization adds a cache to recursive calls, evaluating only reachable states. Bottom-up tabulation iteratively fills an array in topological dependency order.",
+          "learning_goals": [
+            "Convert recursive solutions to memoized top-down code",
+            "Construct iterative bottom-up DP tables with correct base cases"
+          ]
+        },
+        {
+          "id": "dp-03",
+          "title": "Classic 1D DP: Fibonacci, Climbing Stairs & LIS",
+          "summary": "1D DP problems depend on a small constant number of previous states. Longest Increasing Subsequence (LIS) uses DP in O(N^2) or binary search patience sorting in O(N log N).",
+          "learning_goals": [
+            "Formulate 1D state transitions and recurrence relations",
+            "Optimize 1D DP space complexity to O(1) auxiliary memory"
+          ]
+        },
+        {
+          "id": "dp-04",
+          "title": "Classic 2D DP: Knapsack & Longest Common Subsequence",
+          "summary": "0/1 Knapsack decisions (include or exclude item) depend on remaining capacity and available items. LCS matches character suffixes to find maximal common sequence lengths.",
+          "learning_goals": [
+            "Construct 2D state transition matrices for bounded knapsacks",
+            "Trace and reconstruct solutions from DP tables"
+          ]
+        },
+        {
+          "id": "dp-05",
+          "title": "State Compression & Space Optimization",
+          "summary": "When recurrence relations only access the previous row or column, space complexity can be reduced from O(N*M) to O(min(N, M)) using rolling arrays or bitmasks.",
+          "learning_goals": [
+            "Apply rolling array techniques to optimize 2D DP space",
+            "Design bitmask representations for subset state tracking"
+          ]
+        }
+      ]
+    }
+  },
+  "search_templates": [
+    {
+      "name": "Wikipedia",
+      "url_template": "https://en.wikipedia.org/wiki/Special:Search?search={query}",
+      "description": "Search Wikipedia for broad theoretical definitions and academic references."
+    },
+    {
+      "name": "GeeksforGeeks",
+      "url_template": "https://www.google.com/search?q=site%3Ageeksforgeeks.org+{query}",
+      "description": "Search GeeksforGeeks for step-by-step programming tutorials and code examples."
+    },
+    {
+      "name": "YouTube Tutorials",
+      "url_template": "https://www.youtube.com/results?search_query={query}+computer+science",
+      "description": "Search YouTube for video lectures and visual animations."
+    }
+  ]
+}
