@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: str = "sk-placeholder"
     gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
-    llm_model: str = "gemini-3.5-flash-lite"
+    llm_model: str = "gemini-3.1-flash-lite"
     # Judge model. Left empty by default so it inherits LLM_MODEL (env: LLM_EVAL_MODEL).
     # Set it explicitly to route generation and evaluation to different models
     # (e.g. a cheaper/less rate-limited model for scoring).
@@ -127,10 +127,7 @@ class Settings(BaseSettings):
     # keeps the single-model behaviour exactly as before; the committed
     # ``.env.example`` ships a sensible lite-model fallback list. Raw value; use
     # ``settings.fallback_models`` for the parsed list (mirrors ALLOWED_ORIGINS).
-    llm_fallback_models: Union[List[str], str] = [
-        "gemini-3.1-flash-lite",
-        "gemini-flash-latest",
-    ]
+    llm_fallback_models: Union[List[str], str] = ""
 
     # Retrieval cache (env: RETRIEVAL_CACHE_TTL_SECONDS / RETRIEVAL_CACHE_MAX_ENTRIES)
     retrieval_cache_ttl_seconds: float = 300.0   # 5 minutes

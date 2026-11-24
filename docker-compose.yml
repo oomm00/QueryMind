@@ -79,9 +79,9 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # Demo-day switch: skip all LLM calls and use the deterministic evaluator.
       OFFLINE_DEMO_MODE: ${OFFLINE_DEMO_MODE:-false}
-      LLM_MODEL: ${LLM_MODEL:-gemini-3.5-flash-lite}
-      LLM_EVAL_MODEL: ${LLM_EVAL_MODEL:-gemini-3.5-flash-lite}
-      LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-gemini-flash-lite-latest}
+      LLM_MODEL: ${LLM_MODEL:-gemini-3.1-flash-lite}
+      LLM_EVAL_MODEL: ${LLM_EVAL_MODEL:-gemini-3.1-flash-lite}
+      LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-gemini-flash-latest,gemini-3.5-flash-lite,gemini-3.1-flash-lite-preview}
       GENERATION_DEADLINE_SECONDS: ${GENERATION_DEADLINE_SECONDS:-60}
       GENERATION_CALL_TIMEOUT_SECONDS: ${GENERATION_CALL_TIMEOUT_SECONDS:-20}
     depends_on:
