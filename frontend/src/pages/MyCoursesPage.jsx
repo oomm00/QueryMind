@@ -30,8 +30,9 @@ import { Tabs } from '../components/ui/Tabs'
 import { Panel } from '../components/ui/Panel'
 import { ProgressLine } from '../components/ui/ProgressLine'
 import { EmptyState } from '../components/ui/EmptyState'
+import { Button } from '../components/ui/Button'
 import { StartPracticeButton } from '../components/practice/StartPracticeButton.jsx'
-import { IconLearning } from '../components/ui/Icons'
+import { IconLearning, IconExplore } from '../components/ui/Icons'
 
 const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
 
@@ -164,13 +165,25 @@ export default function MyCoursesPage() {
 
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Study material</p>
-      <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">
-        Study Material & Lessons
-      </h1>
-      <p className="mt-1 max-w-2xl text-sm text-muted">
-        Authored courses and reference lessons to support your technical practice.
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Study material</p>
+          <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">
+            Study Material & Lessons
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Authored courses and reference lessons to support your technical practice.
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={() => navigate('/explore')}
+          icon={<IconExplore size={16} />}
+          className="self-start sm:self-center"
+        >
+          Browse course catalog
+        </Button>
+      </div>
 
       {rows.length > 0 && (
         <>

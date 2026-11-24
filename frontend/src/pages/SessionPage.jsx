@@ -340,6 +340,44 @@ export default function SessionPage() {
       } else if (nextHistory.length === 10) {
         setAutoSummaryOffer(true)
       }
+
+      // Predictive prefetching for adaptive learning: while the learner reads the evaluation,
+      // prefetch the next adaptive question in the background so "Next question" is instantaneous.
+      const isTestEnv = import.meta.env?.MODE === 'test'
+      if (!isTestEnv && !isTargetedStudy && nextHistory.length < 10 && prefetchedQueueRef.current.length === 0 && !prefetchingRef.current) {
+        prefetchingRef.current = true
+        questionsApi
+          .generate(
+            {
+              topic: session.topic,
+              subject: session.subject,
+              count: 1,
+              num_questions: 1,
+              adaptive: true,
+              uploaded_only: Boolean(session.uploadedOnly),
+            },
+            userId
+          )
+          .then((res) => {
+            const raw = res.questions?.[0]
+            if (raw) {
+              const cId = customConceptId(raw.served_topic || session.topic)
+              prefetchedQueueRef.current.push(
+                generatedToSessionQuestion(raw, {
+                  topic: session.topic,
+                  conceptId: cId,
+                  fallbackId: `gen-${Date.now()}-${Math.random()}`,
+                  bloom: raw.bloom_level,
+                  difficulty: raw.difficulty,
+                })
+              )
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            prefetchingRef.current = false
+          })
+      }
     } catch (err) {
       setSubmitError(err)
     } finally {

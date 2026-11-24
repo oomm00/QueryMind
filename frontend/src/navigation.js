@@ -25,6 +25,7 @@ export const NAV_ITEMS = [
   { to: '/history', label: 'History', icon: IconClock },
   { to: '/notes', label: 'My Notes', icon: IconNotes },
   { to: '/courses', label: 'Study material', icon: IconLearning },
+  { to: '/explore', label: 'Course catalog', icon: IconExplore },
   { to: '/settings', label: 'Settings', icon: IconSettings },
 ]
 
