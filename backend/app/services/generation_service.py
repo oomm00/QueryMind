@@ -68,11 +68,12 @@ THIN_CONTEXT_MIN_CHARS = 250
 BLOOM_LEVEL_SPECS: dict[str, dict[str, str]] = {
     "remember": {
         "definition": (
-            "Recall or recognize facts, terminology, or definitions exactly as "
-            "learned - retrieval without transformation."
+            "Recall or recognize technical computer science definitions, algorithm invariants, "
+            "asymptotic complexities, data structure properties, or system mechanisms. "
+            "STRICTLY technical CSE concepts — never historical, biographical, or publication-year trivia."
         ),
-        "good": "'State the three ACID properties of a transaction.' (asks for the known list verbatim)",
-        "bad": "'Explain why atomicity matters in a banking workload.' (that demands understanding, not recall)",
+        "good": "'State the time complexity of Dijkstra algorithm when implemented with a binary min-heap.' (technical recall)",
+        "bad": "'In what year was Dijkstra algorithm published?' (historical/biographical trivia is strictly forbidden in CSE)",
     },
     "understand": {
         "definition": (
@@ -547,7 +548,12 @@ def _build_prompt(
         else "require deep analysis, synthesis, or critique"
     )
 
-    prompt = f"""You are an expert academic question designer. Your task is to generate a {difficulty.upper()} difficulty exam question on the topic of "{topic}" (subject: {subject}).
+    prompt = f"""You are an expert academic Computer Science and Engineering examination designer. Your task is to generate a {difficulty.upper()} difficulty technical exam question on the topic of "{topic}" (subject: {subject}).
+
+CRITICAL CSE TECHNICAL FOCUS (STRICT RULE):
+- This question is strictly for Computer Science & Engineering students and technical examinations.
+- Questions MUST test technical concepts: algorithms, data structures, asymptotic time/space complexities, edge relaxation, pointer mechanics, race conditions, memory layouts, invariants, protocol headers, state transitions, or execution traces.
+- FORBIDDEN TRIVIA: NEVER ask biographical, historical, chronological, or non-technical trivia. NEVER ask in what year an algorithm or concept was invented, what university a scientist attended, where someone was born, what prize they won, or historical dates. Even for REMEMBER level, test technical facts (e.g. time complexity, edge weights, relaxation formulas), NEVER historical trivia.
 
 COGNITIVE LEVEL: Bloom's Taxonomy — {bloom_level.upper()}
 Cognitive operation: {spec.get("definition", "")}
@@ -562,11 +568,12 @@ SOURCE MATERIAL (base your question on this content):
 {context_section}
 
 INSTRUCTIONS:
-1. The question MUST be directly answerable from the source material above.
+1. The question MUST test technical engineering concepts and be directly answerable from the source material above (or canonical computer science theory if general knowledge).
 2. Start the question with one of the required stems/verbs above — a deterministic stem check rejects any question that opens with a forbidden lower-level verb.
 3. The difficulty level is {difficulty}: {difficulty_hint}.
-4. The explanation must cite the source material reasoning.
-5. source_chunks / source_chunk_ids must list the [Source N: filename] doc names you used.
+4. Absolutely no biographical or historical trivia.
+5. The explanation must cite the technical reasoning.
+6. source_chunks / source_chunk_ids must list the [Source N: filename] doc names you used.
 
 {JSON_SCHEMA_DESCRIPTION}
 
