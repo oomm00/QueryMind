@@ -581,6 +581,7 @@ def generate_one(
                     timeout=settings.generation_call_timeout_seconds,
                     max_models=settings.generation_max_fallback_models,
                     deadline=deadline,
+                    uploaded_only=uploaded_only,
                 )
                 existing_candidates: list[Question] = []
                 if served_ids:
