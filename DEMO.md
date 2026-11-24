@@ -40,51 +40,58 @@ You land in the workspace. Say: “Nothing is seeded for this learner — regist
 ## 2. Generate a custom topic (45 seconds)
 
 1. Go to **Practice**.
-2. Topic: `Paging and Virtual Memory`.
-3. Keep **Adaptive (recommended)** on.
-4. Click **Generate questions**.
+2. Type or pick a topic (e.g. `Deadlocks` or `Paging`).
+3. Note: Adaptive is strictly enforced with zero manual toggle clutter.
+4. Click **Start practice**.
 
-Talking point: “The topic is typed live. The server decides `num_questions`, so the browser
-cannot inflate marks. The request carries `uploaded_only` when the box is checked.”
+Talking point: “Questions are served ONE at a time. The server decides the next question based on the learner’s previous performance using the real adaptive engine. The browser cannot skip levels or manipulate marks.”
 
-If LLM quota is gone, the UI still shows progress and then a usable cached/bank question.
-That is intentional degradation, not a mock.
+If LLM quota is gone, the UI still shows progress and then a usable cached/bank question with transparent provenance badges (`live`, `cache`, or `bank`).
 
 ## 3. Real uploaded PDF (60 seconds)
 
-1. Go to **My notes → Documents**.
+1. Go to **Notes & Uploads → Uploaded documents**.
 2. Subject `OS`, Topic `Paging and Virtual Memory`.
 3. Upload the bundled real PDF used in rehearsals (926 bytes; text about pages/frames):
    `C:\Users\omsat\AppData\Local\Temp\opencode\qm_demo_upload.pdf`.
-4. Back to **Practice**, type the same topic, tick **Use only my uploaded material**, generate.
+4. Back to **Practice**: notice the switch **Use only my uploaded notes** is now enabled (previously hidden/disabled when 0 uploads exist).
+5. Switch it on and click **Start practice**.
 
-In **live** mode the generated question cites the uploaded PDF (`source: live`, `source_chunks`
-contains the PDF). The browser proof prints this. In **offline** mode retrieval/LLM are skipped;
-the API returns a cached/bank question with an offline warning, and the UI stays usable.
+In **live** mode the generated question is grounded in the uploaded PDF (`source: live`, `source_chunks` contains the PDF). In **offline** mode retrieval/LLM are skipped; the API returns a cached/bank question with an offline warning, and the UI stays completely usable.
 
-Badge to show: **Generated 1 mark** — generated questions count but are labelled.
+Badge to show: **Source: Live / Bank / Cache** with **Provisional evaluation** badge when offline.
 
 ## 4. Middle band and mastery ladder (90 seconds)
 
-Use topic `Deadlocks` for a clean adaptive walk. Submit these answers in order:
+Use topic `Deadlocks` for a clean adaptive walk. Notice the level ladder on the right:
+`Remember (Easy)` -> `Understand (Easy)` -> `Apply (Medium)` -> `Analyze (Medium)` -> `Evaluate (Hard)` -> `Create (Hard)`.
 
-| answer | expected |
-|---|---|
-| `deadlock commonly refers mid 0.54` | ~0.5, stays at Remember |
-| `A deadlock is a state where each process holds a resource and waits for one held by another.` | ~1.0, Remember → Understand |
-| `asdf` | 0.0, Understand → Remember |
-| correct twice in a row from Remember | 1st keeps, 2nd promotes (2/2 rule) |
+Submit these answers in order:
 
-Talking point: “A paraphrase is not a keyword match. Wrong answers score below 40%, the middle
-band 40–75% does not move the rung, and promotion needs two consecutive high scores.”
+| question | answer | score | rung transition |
+|---|---|---|---|
+| Q1 (Remember) | `A deadlock is a state where processes wait mutually for held resources.` | 1.0 (100%) | Remember → Understand |
+| Q2 (Understand) | `Deadlock occurs when four conditions hold simultaneously: mutual exclusion, hold and wait, no preemption, and circular wait.` | 1.0 (100%) | Understand → Apply |
+| Q3 (Apply) | `asdf` (or wrong answer) | 0.0 (0%) | Apply → Understand (Demoted) |
+| Q4 (Understand) | Middle band paraphrase (~50-70%) | ~0.72 | Stays at Understand (middle band hysteresis) |
 
-## 5. Submit, results and idempotency (45 seconds)
+Talking point: “A paraphrase is evaluated on concepts, not raw string matches. Wrong answers score below 40%, the middle band 40–75% maintains the current rung, and demotion introduces hysteresis requiring two consecutive good scores to promote.”
 
-1. Answer all questions, click **Review and submit → Submit**.
-2. Open **Results**: per-question marks, explanation and mastery delta.
-3. Double-click Retry or refresh before the network settles: the UI reuses one
-   `crypto.randomUUID()` submission key from `sessionStorage`; the server key is
-   `(user_id, question_id, submission_id)`. No double marks.
+## 5. Session summary and mastery telemetry (45 seconds)
+
+1. Click **Finish session** (or complete 10 questions for auto-summary prompt).
+2. The Session Summary modal displays: Questions answered, Average score, Highest rung reached, and Topic.
+3. Click **View mastery** or navigate to **Mastery**:
+   - Exactly ONE row for `Deadlocks OS` with 4 attempts and exact EMA mastery %.
+   - No split records between subjects.
+4. Navigate to **Weak areas**:
+   - Any topic practiced with low scores (e.g. CPU Scheduling < 70%) appears with a **Practice this** one-click button.
+5. Navigate to **History**:
+   - Session attempts are strictly ordered chronologically: `Q1, Q2, Q3, Q4`.
+6. Navigate to **Dashboard**:
+   - All statistics (Overall mastery %, Total questions, Weak areas) are unified from the real `mastery_records` table.
+7. Attempt submission idempotency:
+   - Double-submitting or refreshing reuses `crypto.randomUUID()` submission keys, preventing mark inflation.
 
 ## 6. Failure modes worth showing (45 seconds)
 
