@@ -104,4 +104,5 @@ scripts/bloom_audit_*.json
 # Database backups — never commit (demo-day safety nets)
 *.sql
 /backup_before_migration.sql
+scratch/
 

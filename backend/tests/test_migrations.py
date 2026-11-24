@@ -93,7 +93,17 @@ def test_upgrade_head_creates_attempt_history_index(migrated_db):
 
 
 def test_downgrade_is_reversible(migrated_db):
-    # Newest step removes questions.source; the next removes attempts.submission_id.
+    # Newest step removes learning_topics table
+    result = _run_alembic("downgrade", "-1", database_url=_sqlite_url(migrated_db))
+    assert result.returncode == 0, result.stderr
+    con = sqlite3.connect(migrated_db)
+    try:
+        tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    finally:
+        con.close()
+    assert "learning_topics" not in tables
+
+    # Next step removes questions.source; the next removes attempts.submission_id.
     result = _run_alembic("downgrade", "-1", database_url=_sqlite_url(migrated_db))
     assert result.returncode == 0, result.stderr
     con = sqlite3.connect(migrated_db)
