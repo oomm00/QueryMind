@@ -86,7 +86,7 @@ export function AdaptiveLadder({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-ink">
+          <span className="text-xs font-medium text-ink" data-testid="adaptive-active-rung">
             Current rung: <strong className="font-semibold text-primary">{activeRungObj.bloomLabel} ({activeRungObj.diffLabel})</strong>
           </span>
           <span className="text-[11px] text-muted tabular-nums">

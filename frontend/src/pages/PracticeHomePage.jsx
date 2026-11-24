@@ -31,10 +31,8 @@ import { useCatalog } from '../hooks/useCatalog'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
 import { usePracticeData } from '../hooks/usePracticeData.js'
 import { useMastery } from '../lib/masteryStore.js'
-import { useSessions } from '../lib/sessions.js'
 import { useEnrollments } from '../lib/enrollment.js'
-import { scoreSession } from '../lib/marks.js'
-import { resolveQuestions, contentCourseIds } from '../content/practiceBank.js'
+import { contentCourseIds } from '../content/practiceBank.js'
 import { BOARD_DEFAULT_COUNT, DEFAULT_SESSION_COUNT } from '../lib/buildSession.js'
 import { createRegistry, subjectLabel } from '../content/registry.js'
 import { formatWhen, sentenceCase } from '../lib/text.js'
@@ -86,79 +84,6 @@ function percent(value) {
 
 function questionCountOf(count) {
   return `${count} question${count === 1 ? '' : 's'}`
-}
-
-function SessionRow({ session, title, onResume }) {
-  // A generated session carries its own questions, so its row is read from them
-  // as well; a session drawn from the bank keeps resolving against the content.
-  const questions = useMemo(
-    () => resolveQuestions(session.questionIds ?? [], session.questions ?? []),
-    [session.questionIds, session.questions]
-  )
-  const score = useMemo(() => {
-    if (session.history && session.history.length > 0) {
-      const earned = session.history.reduce((sum, h) => sum + (Number(h.score) || 0), 0)
-      const available = session.history.length
-      return {
-        earned: Math.round(earned * 10) / 10,
-        available,
-        percent: available > 0 ? earned / available : null,
-      }
-    }
-    return scoreSession(questions, session.answers ?? {}, session.selfMarks ?? {})
-  }, [questions, session.answers, session.selfMarks, session.history])
-
-  const unfinished = session.status !== 'submitted'
-  const when = formatWhen(session.createdAt)
-  const answered = session.history?.length ?? Object.keys(session.answers ?? {}).length
-
-  return (
-    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[13px] font-medium text-ink">{title}</p>
-          <Badge tone="neutral" label={SCOPE_LABELS[session.scope] ?? sentenceCase(session.scope ?? '')} />
-          {unfinished && <Badge tone="warning" label="In progress" />}
-        </div>
-        <p className="mt-0.5 text-xs text-muted">
-          {session.scope === 'adaptive' ? 'Adaptive' : (LEVEL_LABELS[session.level] ?? sentenceCase(session.level ?? ''))} level ·{' '}
-          {answered} answered
-          {when ? ` · ${when}` : ''}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className="text-[13px] tabular-nums text-ink">
-          {score.available > 0 ? (
-            <>
-              {score.earned} of {score.available} {score.available === 1 ? 'mark' : 'marks'}{' '}
-              <span className="text-muted">· {percent(score.percent)}</span>
-            </>
-          ) : (
-            <span className="text-muted">No score yet</span>
-          )}
-        </span>
-        {unfinished ? (
-          <button
-            type="button"
-            onClick={() => onResume(session.id)}
-            className="inline-flex items-center gap-1 text-[13px] font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
-            Resume
-            <IconArrowRight size={13} aria-hidden="true" />
-          </button>
-        ) : (
-          <Link
-            to={`/practice/${session.id}/results`}
-            className="inline-flex items-center gap-1 text-[13px] font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
-            Results
-            <IconArrowRight size={13} aria-hidden="true" />
-          </Link>
-        )}
-      </div>
-    </li>
-  )
 }
 
 /** One subject, with what it holds and what the student can do in it so far. */
@@ -242,7 +167,6 @@ export default function PracticeHomePage() {
   const navigate = useNavigate()
   const { userId } = useAuth()
   const { data: catalog } = useCatalog()
-  const sessions = useSessions(userId)
   const enrollments = useEnrollments(userId)
   const estimates = useMastery(userId)
 
@@ -443,36 +367,6 @@ export default function PracticeHomePage() {
 
         </>
       )}
-
-      <div className="mt-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-ink">Recent sessions</h2>
-          <span className="text-xs text-muted">The last twenty you start are kept.</span>
-        </div>
-
-        {sessions.length === 0 ? (
-          <Panel className="mt-3">
-            <EmptyState
-              icon={IconTarget}
-              title="No practice sessions yet"
-              description="Start a session above, or open a course and practice a topic or a concept."
-            />
-          </Panel>
-        ) : (
-          <Panel className="mt-3 px-5">
-            <ul className="divide-y divide-line">
-              {sessions.map((session) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  title={session.label || titleFor(session.courseId)}
-                  onResume={(id) => navigate(`/practice/${id}`)}
-                />
-              ))}
-            </ul>
-          </Panel>
-        )}
-      </div>
     </div>
   )
 }

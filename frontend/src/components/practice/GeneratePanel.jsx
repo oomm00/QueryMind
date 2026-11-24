@@ -55,9 +55,8 @@ export function GeneratePanel() {
 
   const rows = topicsQuery.data ?? []
   const docs = documentsQuery.data ?? []
-  const hasDocuments =
-    (topicsQuery.isSuccess && rows.length > 0) ||
-    (documentsQuery.isSuccess && docs.length > 0)
+  // Only show the switch if the user has actually uploaded at least one document
+  const hasDocuments = documentsQuery.isSuccess && docs.length > 0
 
   // Suggestions: uploaded topics first, then library concept titles.
   const documentTopics = useMemo(() => rows.flatMap((row) => row.topics ?? []), [rows])
