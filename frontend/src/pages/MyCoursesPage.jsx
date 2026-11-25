@@ -30,23 +30,21 @@ import { Tabs } from '../components/ui/Tabs'
 import { Panel } from '../components/ui/Panel'
 import { ProgressLine } from '../components/ui/ProgressLine'
 import { EmptyState } from '../components/ui/EmptyState'
+import { Button } from '../components/ui/Button'
 import { StartPracticeButton } from '../components/practice/StartPracticeButton.jsx'
-import { IconLearning } from '../components/ui/Icons'
+import { IconLearning, IconExplore } from '../components/ui/Icons'
 
 const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
 
 const TABS = [
   { value: 'all', label: 'All' },
   { value: 'in_progress', label: 'In progress' },
-  { value: 'not_started', label: 'Not started yet' },
   { value: 'completed', label: 'Completed' },
 ]
 
-/** Which of the four tabs a course belongs to, from its real figures. */
+/** Which of the tabs a course belongs to, from its real figures. */
 function bucketOf(stats) {
-  if (!stats || stats.concepts === 0) return 'not_started'
-  if (stats.answers === 0) return 'not_started'
-  if (stats.practised >= stats.concepts) return 'completed'
+  if (stats && stats.concepts > 0 && stats.practised >= stats.concepts) return 'completed'
   return 'in_progress'
 }
 
@@ -156,7 +154,6 @@ export default function MyCoursesPage() {
     () => ({
       all: rows.length,
       in_progress: rows.filter((row) => row.bucket === 'in_progress').length,
-      not_started: rows.filter((row) => row.bucket === 'not_started').length,
       completed: rows.filter((row) => row.bucket === 'completed').length,
     }),
     [rows]
@@ -168,13 +165,25 @@ export default function MyCoursesPage() {
 
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">My courses</p>
-      <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">
-        Your courses and what they know
-      </h1>
-      <p className="mt-1 max-w-2xl text-sm text-muted">
-        The subjects you have added, with the progress your answers have produced.
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Study material</p>
+          <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">
+            Study Material & Lessons
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Authored courses and reference lessons to support your technical practice.
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={() => navigate('/explore')}
+          icon={<IconExplore size={16} />}
+          className="self-start sm:self-center"
+        >
+          Browse course catalog
+        </Button>
+      </div>
 
       {rows.length > 0 && (
         <>

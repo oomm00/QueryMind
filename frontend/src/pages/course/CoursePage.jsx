@@ -32,7 +32,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { CourseTabs } from '../../components/practice/CourseTabs.jsx'
 import { StartPracticeButton } from '../../components/practice/StartPracticeButton.jsx'
 import { flashState } from '../../components/routing/FlashHost.jsx'
-import { IconLearning, IconSearch } from '../../components/ui/Icons'
+import { IconLearning, IconSearch, IconChevronLeft, IconExplore } from '../../components/ui/Icons'
 
 const WORKSPACE_CRUMB = { label: 'Workspace', to: '/dashboard' }
 const EXPLORE_CRUMB = { label: 'Explore', to: '/explore' }
@@ -87,6 +87,25 @@ export default function CoursePage() {
 
   return (
     <div>
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/courses')}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors"
+        >
+          <IconChevronLeft size={15} />
+          <span>Back to My courses</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/explore')}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-primary transition-colors"
+        >
+          <IconExplore size={15} />
+          <span>Browse all courses</span>
+        </button>
+      </div>
+
       <PageHeader
         title={title}
         description={summary || 'This course has no summary yet.'}

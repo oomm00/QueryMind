@@ -22,8 +22,14 @@ export async function loadPracticeCourses(courseIds = []) {
   if (isMocked('content')) {
     return ids.map((id) => practiceCourse(id)).filter(Boolean)
   }
-  const courses = await Promise.all(ids.map((id) => apiFetch(`/courses/${id}`)))
-  return courses.filter(Boolean)
+  try {
+    const courses = await Promise.all(ids.map((id) => apiFetch(`/courses/${id}`)))
+    const valid = courses.filter(Boolean)
+    if (valid.length > 0) return valid
+  } catch {
+    // Backend endpoint not ready; fall back to local authored coursework
+  }
+  return ids.map((id) => practiceCourse(id)).filter(Boolean)
 }
 
 export function usePracticeData(courseIds = []) {

@@ -9,7 +9,7 @@ import { cx } from '../../lib/cx'
 export function Panel({ className, children, ...rest }) {
   return (
     <div
-      className={cx('rounded-panel border border-line bg-surface', className)}
+      className={cx('rounded-xl md:rounded-2xl border border-line bg-surface/95 backdrop-blur-sm shadow-sm', className)}
       {...rest}
     >
       {children}
@@ -20,7 +20,7 @@ export function Panel({ className, children, ...rest }) {
 export function PanelLarge({ className, children, ...rest }) {
   return (
     <div
-      className={cx('rounded-panel border border-line bg-surface p-6', className)}
+      className={cx('rounded-xl md:rounded-2xl border border-line bg-surface/95 backdrop-blur-sm shadow-sm p-5 md:p-6', className)}
       {...rest}
     >
       {children}
@@ -31,7 +31,7 @@ export function PanelLarge({ className, children, ...rest }) {
 export function PanelSmall({ className, children, ...rest }) {
   return (
     <div
-      className={cx('rounded-panel border border-line bg-surface p-3.5', className)}
+      className={cx('rounded-lg md:rounded-xl border border-line bg-surface/95 backdrop-blur-sm p-3.5', className)}
       {...rest}
     >
       {children}

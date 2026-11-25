@@ -109,11 +109,16 @@ export function newSession({
   scope = 'course',
   scopeId = null,
   subject = null,
+  topic = null,
   level = 'mixed',
   questionIds = [],
   questions = [],
   note = '',
   label = '',
+  uploadedOnly = false,
+  adaptive = true,
+  history = [],
+  currentQuestion = null,
 } = {}) {
   return {
     id,
@@ -121,8 +126,13 @@ export function newSession({
     scope,
     scopeId,
     subject,
+    topic,
     level,
     label,
+    uploadedOnly,
+    adaptive,
+    history: [...history],
+    currentQuestion,
     createdAt: new Date().toISOString(),
     status: SESSION_STATUS.inProgress,
     questionIds: [...questionIds],
@@ -134,7 +144,6 @@ export function newSession({
     answers: {},
     flagged: [],
     selfMarks: {},
-    evaluationStatus: 'complete',
     note,
   }
 }

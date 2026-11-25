@@ -8,13 +8,13 @@ import React from 'react'
 import { cx } from '../../lib/cx'
 
 const VARIANTS = {
-  primary: 'bg-primary text-primary-fg border border-transparent hover:brightness-105',
-  secondary: 'bg-surface text-ink border border-line hover:bg-surface-raised',
-  ghost: 'bg-transparent text-ink border border-transparent hover:bg-surface-raised',
-  danger: 'bg-danger text-primary-fg border border-transparent hover:brightness-105',
+  primary: 'bg-primary text-primary-fg font-semibold border border-transparent shadow-sm hover:brightness-110 hover:shadow-[0_0_20px_rgba(255,92,0,0.25)] active:scale-[0.98]',
+  secondary: 'bg-surface text-ink border border-line hover:bg-surface-raised hover:border-line-strong active:scale-[0.98]',
+  ghost: 'bg-transparent text-ink border border-transparent hover:bg-surface-raised active:scale-[0.98]',
+  danger: 'bg-danger text-primary-fg font-semibold border border-transparent hover:brightness-110 active:scale-[0.98]',
   // Back-compat aliases
-  quiet: 'bg-surface text-ink border border-line hover:bg-surface-raised',
-  accent: 'bg-primary text-primary-fg border border-transparent hover:brightness-105',
+  quiet: 'bg-surface text-ink border border-line hover:bg-surface-raised active:scale-[0.98]',
+  accent: 'bg-primary text-primary-fg font-semibold border border-transparent hover:brightness-110 hover:shadow-[0_0_20px_rgba(255,92,0,0.25)] active:scale-[0.98]',
 }
 
 const SIZES = {

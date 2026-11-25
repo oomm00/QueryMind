@@ -20,6 +20,7 @@
 
 import { attemptsApi } from '../api/endpoints/attempts.js'
 import { normaliseScore } from './generateRun.js'
+import { getSubmissionId } from './submissionId.js'
 
 /**
  * Ask the backend to mark one written answer.
@@ -42,13 +43,28 @@ export async function gradeGeneratedAnswer(question, answerText, userId) {
 
   try {
     const result = await attemptsApi.submit(
-      { question_id: question.question_id, answer_text: text },
+      {
+        question_id: question.question_id,
+        answer_text: text,
+        // One answer gets one id, reused by retries and double submits.
+        submission_id: getSubmissionId(question.question_id, text),
+      },
       userId
     )
     const score = normaliseScore(result?.score)
     if (score == null) return null
-    return { score, feedback: String(result?.feedback_text ?? '').trim() }
-  } catch {
+    return {
+      score,
+      overall_score: result?.overall_score,
+      feedback: String(result?.feedback_text ?? '').trim(),
+      evaluation_mode: result?.evaluation_mode,
+      correct_answer: result?.correct_answer,
+    }
+  } catch (error) {
+    // A database outage is temporary and the answer is still in the browser.
+    // Let the session show a friendly Retry instead of silently marking the
+    // answer as unscored. Other grading failures stay non-fatal as before.
+    if (error?.data?.code === 'DB_UNAVAILABLE' || error?.status === 503) throw error
     return null
   }
 }

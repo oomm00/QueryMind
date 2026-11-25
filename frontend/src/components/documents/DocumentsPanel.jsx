@@ -138,6 +138,8 @@ export function DocumentsPanel() {
     event.preventDefault()
 
     const errors = {}
+    if (!subject.trim()) errors.subject = 'Subject is required.'
+    if (!topic.trim()) errors.topic = 'Topic is required.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
@@ -158,8 +160,8 @@ export function DocumentsPanel() {
         try {
           const body = new FormData()
           body.append('file', item.file)
-          if (subject.trim()) body.append('subject', subject.trim())
-          if (topic.trim()) body.append('topic', topic.trim())
+          body.append('subject', subject.trim())
+          body.append('topic', topic.trim())
           body.append('source_type', sourceType)
 
           const result = await documentsApi.upload(body)
@@ -196,7 +198,7 @@ export function DocumentsPanel() {
         setToast({
           variant: 'success',
           title: `${succeeded} file${succeeded === 1 ? '' : 's'} uploaded`,
-          description: 'Your notes are ready for question generation. You can generate from all uploaded notes without naming a topic.',
+          description: `Filed under ${subject.trim()} / ${topic.trim()} — ready for question generation.`,
         })
       }
     } finally {
@@ -312,14 +314,14 @@ export function DocumentsPanel() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Input
-                label="Subject (optional)"
+                label="Subject"
                 value={subject}
                 onChange={(event) => {
                   setSubject(event.target.value)
                   setFieldErrors((prev) => ({ ...prev, subject: undefined }))
                 }}
                 list="qm-upload-subjects"
-                placeholder="Optional"
+                placeholder="e.g. OS"
                 autoComplete="off"
                 error={fieldErrors.subject}
               />
@@ -331,14 +333,14 @@ export function DocumentsPanel() {
             </div>
             <div>
               <Input
-                label="Topic (optional)"
+                label="Topic"
                 value={topic}
                 onChange={(event) => {
                   setTopic(event.target.value)
                   setFieldErrors((prev) => ({ ...prev, topic: undefined }))
                 }}
                 list="qm-upload-topics"
-                placeholder="Optional — notes can be used without one"
+                placeholder="e.g. Deadlocks"
                 autoComplete="off"
                 error={fieldErrors.topic}
               />

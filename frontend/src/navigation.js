@@ -8,7 +8,7 @@ import {
   IconExplore,
   IconLearning,
   IconTarget,
-  IconInterview,
+  IconClock,
   IconAnalytics,
   IconWeakAreas,
   IconNotes,
@@ -19,31 +19,31 @@ export const WORKSPACE_LABEL = 'Your workspace'
 
 export const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: IconDashboard },
-  { to: '/explore', label: 'Explore', icon: IconExplore },
-  { to: '/courses', label: 'My courses', icon: IconLearning },
+  { to: '/mastery', label: 'Mastery', icon: IconTarget },
   { to: '/practice', label: 'Practice', icon: IconTarget },
-  { to: '/interview', label: 'Interview Prep', icon: IconInterview },
   { to: '/analytics', label: 'Analytics', icon: IconAnalytics },
-  { to: '/weak-areas', label: 'Weak Areas', icon: IconWeakAreas, badgeKey: 'weakAreas' },
+  { to: '/history', label: 'History', icon: IconClock },
   { to: '/notes', label: 'My Notes', icon: IconNotes },
+  { to: '/courses', label: 'Study material', icon: IconLearning },
+  { to: '/explore', label: 'Course catalog', icon: IconExplore },
   { to: '/settings', label: 'Settings', icon: IconSettings },
 ]
 
 // Bottom tab bar shows the first five primary destinations; the rest live
 // behind "More".
-export const MOBILE_TAB_PATHS = ['/dashboard', '/explore', '/courses', '/practice', '/interview']
+export const MOBILE_TAB_PATHS = ['/dashboard', '/mastery', '/practice', '/analytics', '/history']
 
 export const MOBILE_TABS = NAV_ITEMS.filter((item) => MOBILE_TAB_PATHS.includes(item.to))
 export const MOBILE_MORE_ITEMS = NAV_ITEMS.filter((item) => !MOBILE_TAB_PATHS.includes(item.to))
 
 const SEGMENT_LABELS = {
   dashboard: 'Dashboard',
+  mastery: 'Mastery',
   explore: 'Explore',
-  courses: 'My courses',
-  learning: 'My courses',
-  interview: 'Interview Prep',
+  courses: 'Study material',
+  learning: 'Study material',
   analytics: 'Analytics',
-  'weak-areas': 'Weak Areas',
+  'weak-areas': 'Analytics',
   notes: 'My Notes',
   settings: 'Settings',
   course: 'Course',
