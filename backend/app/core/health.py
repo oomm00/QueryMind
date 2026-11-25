@@ -61,13 +61,13 @@ def check_chroma() -> dict[str, Any]:
 
 
 def check_llm() -> dict[str, Any]:
-    configured = bool(settings.gemini_api_key.strip())
+    configured = bool(settings.gemini_api_keys)
     if settings.offline_demo_mode:
         return {"status": "offline", "configured": configured, "detail": "OFFLINE_DEMO_MODE=true"}
     return {
         "status": "healthy" if configured else "unavailable",
         "configured": configured,
-        "detail": "API key configured" if configured else "GEMINI_API_KEY is empty",
+        "detail": f"{len(settings.gemini_api_keys)} API key(s) configured" if configured else "GEMINI_API_KEY is empty",
     }
 
 

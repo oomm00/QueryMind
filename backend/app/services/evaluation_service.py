@@ -181,12 +181,12 @@ def _evaluation_schema() -> Any:
 
 def _configure_judge_client(response_schema: Any = None) -> GeminiAdapter:
     """Return a GeminiAdapter configured with a near-zero temperature for consistent scoring."""
-    api_key = settings.gemini_api_key
-    if not api_key:
+    api_keys = settings.gemini_api_keys
+    if not api_keys:
         raise LLMNotConfiguredError()
     import google.genai as genai  # local import keeps module import side-effect free
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_keys[0])
     return GeminiAdapter(
         client,
         settings.llm_eval_model,
@@ -195,6 +195,7 @@ def _configure_judge_client(response_schema: Any = None) -> GeminiAdapter:
         thinking_level=settings.llm_thinking_level,
         thinking_budget=settings.llm_thinking_budget,
         max_output_tokens=settings.llm_max_output_tokens,
+        api_keys=api_keys,
     )
 
 
