@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: str = "sk-placeholder"
     gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
+    gemini_backup_api_key: str = ""    # Set GEMINI_BACKUP_API_KEY in .env (secondary key for failover)
     llm_model: str = "gemini-3.1-flash-lite"
     # Judge model. Left empty by default so it inherits LLM_MODEL (env: LLM_EVAL_MODEL).
     # Set it explicitly to route generation and evaluation to different models
@@ -248,6 +249,19 @@ class Settings(BaseSettings):
                     pass  # fall through to comma splitting
             return [part.strip() for part in text.split(",") if part.strip()]
         return [str(item).strip() for item in value if str(item).strip()]
+
+    @property
+    def gemini_api_keys(self) -> List[str]:
+        """Ordered list of valid Gemini API keys (primary + backup, supporting comma separation)."""
+        keys: List[str] = []
+        for raw in [self.gemini_api_key, self.gemini_backup_api_key]:
+            if not raw:
+                continue
+            for part in str(raw).split(","):
+                k = part.strip()
+                if k and k not in keys:
+                    keys.append(k)
+        return keys
 
     @model_validator(mode="after")
     def _default_eval_model(self) -> "Settings":

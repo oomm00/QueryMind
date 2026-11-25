@@ -270,6 +270,7 @@ class GeminiAdapter:
         thinking_level: Any = None,
         thinking_budget: Any = None,
         max_output_tokens: Any = None,
+        api_keys: Optional[list[str]] = None,
     ) -> None:
         self._client = client
         self._model = model
@@ -278,6 +279,8 @@ class GeminiAdapter:
         self._thinking_level = thinking_level
         self._thinking_budget = thinking_budget
         self._max_output_tokens = max_output_tokens
+        self._api_keys = list(api_keys) if api_keys else []
+        self._current_key_idx = 0
 
     def generate_content(self, prompt: str, model: Optional[str] = None) -> Any:
         """Call the Gemini API and return a response object with a ``.text`` attribute.
@@ -295,6 +298,7 @@ class GeminiAdapter:
         existing JSON-retry path takes over as the last resort.
         """
         from google.genai import types as genai_types  # local import keeps module-level clean
+        import google.genai as genai
 
         config_kwargs = {
             "temperature": self._temperature,
@@ -310,37 +314,66 @@ class GeminiAdapter:
         if thinking is not None:
             config_kwargs["thinking_config"] = thinking
 
-        response = self._client.models.generate_content(
-            model=model or self._model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(**config_kwargs),
-        )
-        reason = _finish_reason(response)
-        if reason == "MAX_TOKENS" and config_kwargs.get("max_output_tokens"):
-            retry_cap = min(int(config_kwargs["max_output_tokens"]) * 2, 65536)
-            logger.warning(
-                "Gemini finish_reason=MAX_TOKENS model=%s cap=%s usage=%s — "
-                "retrying once with max_output_tokens=%d",
-                model or self._model,
-                config_kwargs["max_output_tokens"],
-                _usage_metadata(response),
-                retry_cap,
-            )
-            config_kwargs["max_output_tokens"] = retry_cap
-            response = self._client.models.generate_content(
-                model=model or self._model,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(**config_kwargs),
-            )
-            reason = _finish_reason(response)
-        logger.info(
-            "Gemini call model=%s finish_reason=%s usage=%s thinking=%s",
-            model or self._model,
-            reason,
-            _usage_metadata(response),
-            self._thinking_level,
-        )
-        return response
+        keys_count = max(1, len(self._api_keys))
+        last_error = None
+
+        for attempt_key in range(keys_count):
+            try:
+                response = self._client.models.generate_content(
+                    model=model or self._model,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(**config_kwargs),
+                )
+                reason = _finish_reason(response)
+                if reason == "MAX_TOKENS" and config_kwargs.get("max_output_tokens"):
+                    retry_cap = min(int(config_kwargs["max_output_tokens"]) * 2, 65536)
+                    logger.warning(
+                        "Gemini finish_reason=MAX_TOKENS model=%s cap=%s usage=%s — "
+                        "retrying once with max_output_tokens=%d",
+                        model or self._model,
+                        config_kwargs["max_output_tokens"],
+                        _usage_metadata(response),
+                        retry_cap,
+                    )
+                    config_kwargs["max_output_tokens"] = retry_cap
+                    response = self._client.models.generate_content(
+                        model=model or self._model,
+                        contents=prompt,
+                        config=genai_types.GenerateContentConfig(**config_kwargs),
+                    )
+                    reason = _finish_reason(response)
+                logger.info(
+                    "Gemini call model=%s finish_reason=%s usage=%s thinking=%s (key_index=%d)",
+                    model or self._model,
+                    reason,
+                    _usage_metadata(response),
+                    self._thinking_level,
+                    self._current_key_idx,
+                )
+                return response
+            except Exception as exc:
+                last_error = exc
+                err_str = str(exc)
+                is_quota = (
+                    "429" in err_str
+                    or "RESOURCE_EXHAUSTED" in err_str
+                    or "quota" in err_str.lower()
+                    or "rate limit" in err_str.lower()
+                    or "403" in err_str
+                    or "API_KEY_INVALID" in err_str
+                )
+                if is_quota and len(self._api_keys) > 1 and attempt_key < len(self._api_keys) - 1:
+                    self._current_key_idx = (self._current_key_idx + 1) % len(self._api_keys)
+                    next_key = self._api_keys[self._current_key_idx]
+                    logger.warning(
+                        "Gemini API key failed with quota/auth error (%s). Automatically switching to backup key (%d of %d)...",
+                        err_str[:120],
+                        self._current_key_idx + 1,
+                        len(self._api_keys),
+                    )
+                    self._client = genai.Client(api_key=next_key)
+                    continue
+                raise last_error
 
 
 def _finish_reason(response: Any) -> Optional[str]:
@@ -453,12 +486,12 @@ def _configure_genai(
     pass the lower evaluation level and cap to keep latency (and blast radius)
     down.
     """
-    api_key = settings.gemini_api_key
-    if not api_key:
+    api_keys = settings.gemini_api_keys
+    if not api_keys:
         raise LLMNotConfiguredError()
     import google.genai as genai  # local import to avoid top-level side-effects during tests
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_keys[0])
     if thinking_level is None:
         thinking_level = settings.gen_thinking_level_for(bloom_level)
     return GeminiAdapter(
@@ -473,6 +506,7 @@ def _configure_genai(
             if max_output_tokens is not None
             else settings.llm_gen_max_output_tokens
         ),
+        api_keys=api_keys,
     )
 
 
