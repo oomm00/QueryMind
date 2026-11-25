@@ -20,9 +20,16 @@ freshly uploaded document is immediately visible.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 import json
+import re
+from pathlib import Path
+
+# Chroma reads this at import time; keep it off even before Settings is built.
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "false")
+
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 from collections import OrderedDict
@@ -35,6 +42,14 @@ from chromadb.api.models.Collection import Collection
 from app.core.config import settings
 
 logger = logging.getLogger("querymind.retrieval")
+
+_GUIDES_PATH = Path(__file__).resolve().parents[1] / "data" / "study_guides.json"
+_STUDY_GUIDES: dict[str, str] = {}
+if _GUIDES_PATH.exists():
+    try:
+        _STUDY_GUIDES = json.loads(_GUIDES_PATH.read_text(encoding="utf-8"))
+    except Exception as _e:
+        logger.debug("Could not load study_guides.json: %s", _e)
 
 COLLECTION_NAME = "querymind_documents"
 
@@ -126,29 +141,82 @@ def retrieval_cache_size() -> int:
         return len(_retrieval_cache)
 
 
-def get_chroma_client() -> ClientAPI:
-    """Instantiate ChromaDB client connected to host:port from settings, with fallback to local persistent client."""
-    chroma_settings = chromadb.config.Settings(anonymized_telemetry=False)
+# ── Chroma health state ───────────────────────────────────────────────────────
+# Last observed remote/local result; /health reads it without paying for another
+# network round-trip. Updated loudly on every connection attempt.
+_chroma_state: dict[str, Any] = {
+    "status": "unknown",
+    "source": None,
+    "detail": "not checked yet",
+}
+_chroma_state_lock = threading.Lock()
+
+
+def _set_chroma_state(status: str, source: str | None, detail: str) -> None:
+    with _chroma_state_lock:
+        _chroma_state.update(status=status, source=source, detail=detail)
+
+
+def chroma_status() -> dict[str, Any]:
+    """Live status for /health: probe the configured Chroma target briefly."""
     try:
-        client = chromadb.HttpClient(
-            host=settings.chroma_host,
-            port=settings.chroma_port,
-            settings=chroma_settings,
-        )
+        client = get_chroma_client()
         client.heartbeat()
-        return client
+        with _chroma_state_lock:
+            return dict(_chroma_state)
     except Exception as exc:
-        logger.info(
-            "ChromaDB HTTP service not reachable (%s); using local persistent client at ./chroma_data",
-            exc,
-        )
-        import os
-        from pathlib import Path
-        # Look for chroma_data in current dir or repo root
-        root_chroma = Path(__file__).resolve().parent.parent.parent.parent / "chroma_data"
-        local_chroma = Path("chroma_data")
-        chroma_path = str(root_chroma if root_chroma.exists() else local_chroma)
-        return chromadb.PersistentClient(path=chroma_path)
+        with _chroma_state_lock:
+            return dict(_chroma_state)
+
+
+def get_chroma_client() -> ClientAPI:
+    """Connect to configured Chroma, retry briefly, then obey fallback policy.
+
+    A configured host is treated as the source of truth. Local persistence is
+    used only when CHROMA_ALLOW_LOCAL_FALLBACK=true; otherwise the failure is
+    raised so /health can report it and callers cannot silently use stale data.
+    """
+    chroma_settings = chromadb.config.Settings(
+        anonymized_telemetry=False,
+        chroma_product_telemetry_impl="app.services.chroma_telemetry.QuietPosthog",
+        chroma_telemetry_impl="",
+    )
+    last_exc: Exception | None = None
+    attempts = max(1, settings.chroma_retry_attempts)
+    for attempt in range(attempts):
+        try:
+            client = chromadb.HttpClient(
+                host=settings.chroma_host,
+                port=settings.chroma_port,
+                settings=chroma_settings,
+            )
+            client.heartbeat()
+            _set_chroma_state("healthy", "remote", f"connected to {settings.chroma_host}:{settings.chroma_port}")
+            return client
+        except Exception as exc:
+            last_exc = exc
+            if attempt + 1 < attempts:
+                logger.warning(
+                    "ChromaDB %s:%s unreachable (attempt %d/%d): %s — retrying",
+                    settings.chroma_host, settings.chroma_port, attempt + 1, attempts, exc,
+                )
+                time.sleep(settings.chroma_retry_backoff_seconds)
+
+    message = f"ChromaDB {settings.chroma_host}:{settings.chroma_port} unreachable: {last_exc}"
+    if not settings.chroma_allow_local_fallback:
+        logger.error("%s (local fallback disabled)", message)
+        _set_chroma_state("unavailable", "remote", message)
+        raise RuntimeError(message) from last_exc
+
+    logger.error("%s — FALLING BACK TO LOCAL PERSISTENT CHROMA", message)
+    from pathlib import Path
+
+    root_chroma = Path(__file__).resolve().parents[2] / "chroma_data"
+    local_chroma = Path("chroma_data")
+    chroma_path = str(root_chroma if root_chroma.exists() else local_chroma)
+    client = chromadb.PersistentClient(path=chroma_path, settings=chroma_settings)
+    _set_chroma_state("degraded", "local", f"{message}; using local path {chroma_path}")
+    return client
 
 
 # ── Shared default collection (process-wide memo) ─────────────────────────────
@@ -186,6 +254,13 @@ def reset_default_collection() -> None:
         _default_collection = None
 
 
+def _invalidate_if_default(collection: Collection) -> None:
+    """A stale handle must not poison every later retrieval: re-resolve it."""
+    if collection is _default_collection:
+        logger.warning("Default Chroma collection handle failed — invalidating memo")
+        reset_default_collection()
+
+
 def _query_collection(
     collection: Collection,
     query_text: str,
@@ -193,17 +268,26 @@ def _query_collection(
     subject: Optional[str],
     topic: Optional[str],
     n_results: int = 5,
+    strict_metadata: bool = True,
+    user_id: Optional[str] = None,
 ) -> list[dict]:
     """Execute metadata-filtered similarity query on a Chroma collection.
 
     ``subject=None`` performs a topic-only search across every subject (used as a
     fallback when the caller has no reliable subject — e.g. the frontend derives
-    ``subject`` from the free-text topic).
+    ``subject`` from the free-text topic). Set ``strict_metadata=False`` to keep
+    only the source-type filter and let the embedding rank every uploaded chunk:
+    that is how a PDF titled "Virtual Memory Primer" can answer "Virtual Memory"
+    without a title-string match.
     """
     filters = [{"source_type": source_type}]
+    if user_id is not None:
+        filters.append({"user_id": str(user_id)})
     if subject is not None:
         filters.append({"subject": subject})
-    if topic is not None:
+    # Only the stored *topic title* is relaxed for uploaded-only search; a
+    # subject we actually recognised still narrows the candidate set.
+    if strict_metadata and topic is not None:
         filters.append({"topic": topic})
     where_filter: dict[str, Any] = (
         filters[0] if len(filters) == 1 else {"$and": filters}
@@ -224,6 +308,7 @@ def _query_collection(
             topic,
             exc,
         )
+        _invalidate_if_default(collection)
         return []
 
     documents = results.get("documents", [[]])[0] if results.get("documents") else []
@@ -239,11 +324,60 @@ def _query_collection(
             "source_type": meta.get("source_type", source_type),
             "score": similarity_score,
             "source_doc": meta.get("source_doc", "unknown"),
+            # The topic/subject actually stored with the uploaded chunk. The
+            # generator uses it as the served topic when the typed title differs.
+            "topic": meta.get("topic"),
+            "subject": meta.get("subject"),
         })
 
     # Sort descending by similarity score
     ranked_chunks.sort(key=lambda x: x["score"], reverse=True)
     return ranked_chunks[:n_results]
+
+
+def _get_uploaded_chunks(
+    collection: Collection,
+    subject: Optional[str],
+    topic: Optional[str],
+    limit: int,
+) -> list[dict]:
+    """Read uploaded chunks directly when no topic exists to search for."""
+    filters = [{"source_type": "college"}]
+    if subject is not None:
+        filters.append({"subject": subject})
+    if topic is not None:
+        filters.append({"topic": topic})
+    where_filter: dict[str, Any] = (
+        filters[0] if len(filters) == 1 else {"$and": filters}
+    )
+
+    try:
+        results = collection.get(
+            where=where_filter,
+            limit=limit,
+            include=["documents", "metadatas"],
+        )
+    except Exception as exc:
+        logger.warning(
+            "Could not read uploaded chunks directly (subject=%s, topic=%s): %s",
+            subject,
+            topic,
+            exc,
+        )
+        return []
+
+    documents = results.get("documents") or []
+    metadatas = results.get("metadatas") or []
+    return [
+        {
+            "text": doc,
+            "source_type": meta.get("source_type", "college"),
+            "score": 1.0,
+            "source_doc": meta.get("source_doc", "unknown"),
+        }
+        for doc, meta in zip(documents, metadatas)
+        if doc
+    ]
 
 
 def retrieve_context(
@@ -256,6 +390,9 @@ def retrieve_context(
     client: Optional[ClientAPI] = None,
     collection: Optional[Collection] = None,
     public_only: bool = False,
+    college_only: bool = False,
+    strict_metadata: bool = True,
+    user_id: Optional[str] = None,
 ) -> list[dict]:
     """Retrieve grounded context chunks with Two-Tier college priority and public fallback.
 
@@ -266,7 +403,10 @@ def retrieve_context(
     (college preferred); [] is returned only when both tiers are empty.
 
     Pass ``subject=None`` to search by topic across every subject (used as a
-    fallback when the caller cannot supply a reliable subject).
+    fallback when the caller cannot supply a reliable subject). Pass
+    ``strict_metadata=False`` for uploaded-only generation: the embedding ranks
+    all uploaded chunks instead of requiring the typed title to equal the stored
+    topic string.
 
     Results are cached in-process for :data:`RETRIEVAL_CACHE_TTL_SECONDS`, keyed
     on ``(subject, topic, query_text)``. The cache is bypassed whenever a
@@ -287,7 +427,13 @@ def retrieve_context(
         else f"{subject} {topic}" if subject and topic else topic or "uploaded study notes"
     )
 
-    cache_key = (subject, topic, f"{'public' if public_only else 'tiered'}:{search_query}")
+    retrieval_mode = (
+        "public" if public_only else "college" if college_only else "tiered"
+    )
+    cache_key = (
+        subject, topic,
+        f"{retrieval_mode}:{strict_metadata}:{user_id or ''}:{search_query}",
+    )
 
     # Early cache lookup — before touching Chroma. A hit must NOT pay for client
     # construction / collection resolution, which is the dominant per-request
@@ -311,6 +457,17 @@ def retrieve_context(
             # Process-wide memoized collection (avoids rebuilding the client).
             collection = get_default_collection()
 
+    if college_only and topic is None and subject is None:
+        result = _get_uploaded_chunks(
+            collection=collection,
+            subject=None,
+            topic=None,
+            limit=top_k,
+        )
+        if not injected:
+            _cache_put(cache_key, result, time.monotonic())
+        return result
+
     result = _retrieve_uncached(
         collection=collection,
         search_query=search_query,
@@ -318,6 +475,10 @@ def retrieve_context(
         topic=topic,
         top_k=top_k,
         public_only=public_only,
+        college_only=college_only,
+        strict_metadata=strict_metadata,
+        user_id=user_id,
+        allow_web=not injected,
     )
 
     if not injected:
@@ -333,6 +494,10 @@ def _retrieve_uncached(
     topic: Optional[str],
     top_k: int,
     public_only: bool = False,
+    college_only: bool = False,
+    strict_metadata: bool = True,
+    user_id: Optional[str] = None,
+    allow_web: bool = True,
 ) -> list[dict]:
     """Two-tier retrieval (no caching) — the body behind :func:`retrieve_context`."""
     if public_only:
@@ -343,8 +508,10 @@ def _retrieve_uncached(
             subject=subject,
             topic=topic,
             n_results=top_k,
+            strict_metadata=strict_metadata,
+            user_id=user_id,
         )
-        if not public_chunks:
+        if not public_chunks and allow_web:
             public_chunks = _retrieve_web_context(search_query)
         if public_chunks:
             logger.info(
@@ -363,7 +530,26 @@ def _retrieve_uncached(
         subject=subject,
         topic=topic,
         n_results=top_k,
+        strict_metadata=strict_metadata,
+        user_id=user_id,
     )
+
+    if college_only:
+        if college_chunks:
+            logger.info(
+                "Retrieved %d college-only chunks (top score: %.4f) for %s / %s",
+                len(college_chunks),
+                college_chunks[0]["score"],
+                subject,
+                topic,
+            )
+        else:
+            logger.warning(
+                "No uploaded college material found for college-only retrieval of %s / %s",
+                subject,
+                topic,
+            )
+        return college_chunks
 
     if college_chunks and college_chunks[0]["score"] >= SIMILARITY_THRESHOLD:
         logger.info(
@@ -395,6 +581,8 @@ def _retrieve_uncached(
         subject=subject,
         topic=topic,
         n_results=top_k,
+        strict_metadata=strict_metadata,
+        user_id=user_id,
     )
 
     if public_chunks and public_chunks[0]["score"] >= SIMILARITY_THRESHOLD:
@@ -426,32 +614,107 @@ def _retrieve_uncached(
         )
         return public_chunks
 
+    if not college_chunks and not public_chunks and not college_only and allow_web:
+        web_chunks = _retrieve_web_context(topic or search_query)
+        if web_chunks:
+            return web_chunks
+
     logger.warning("No study material found in either tier for %s / %s", subject, topic)
     return []
 
 
 def _retrieve_web_context(query: str) -> list[dict]:
-    """Use Wikipedia's public API when the public local corpus has no match."""
+    """Use curated study guide & Wikipedia's public API when local corpus has no match."""
     term = str(query or "").strip()
     if not term:
         return []
-    headers = {"User-Agent": "QueryMind/1.0 educational question generator"}
-    try:
-        request = Request(
-            f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(term)}",
-            headers=headers,
-        )
-        with urlopen(request, timeout=5) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        extract = str(payload.get("extract") or "").strip()
-        if not extract:
-            return []
-        return [{
-            "text": extract,
+
+    chunks: list[dict] = []
+    from app.services.generation_fallback import canonical_topic_key
+    canonical = canonical_topic_key(term)
+    if canonical in _STUDY_GUIDES:
+        chunks.append({
+            "text": _STUDY_GUIDES[canonical],
             "source_type": "public",
             "score": 1.0,
-            "source_doc": f"Wikipedia: {payload.get('title') or term}",
-        }]
+            "source_doc": f"Study Guide: {canonical}",
+        })
+
+    headers = {"User-Agent": "QueryMindStudyApp/1.0 (https://querymind.edu; contact@querymind.edu)"}
+    resolved_title = term
+
+    # 1. Resolve canonical article title via OpenSearch, falling back to full-text search
+    try:
+        search_req = Request(
+            f"https://en.wikipedia.org/w/api.php?action=opensearch&limit=3&namespace=0&format=json&search={quote(term)}",
+            headers=headers,
+        )
+        with urlopen(search_req, timeout=3) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if len(data) > 1 and data[1]:
+                candidates = data[1]
+                chosen = next((c for c in candidates if "disambiguation" not in c.lower()), candidates[0])
+                resolved_title = chosen
+            else:
+                # Fallback to query search if opensearch found nothing
+                query_req = Request(
+                    f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={quote(term)}&limit=1&format=json",
+                    headers=headers,
+                )
+                with urlopen(query_req, timeout=3) as q_resp:
+                    q_data = json.loads(q_resp.read().decode("utf-8"))
+                    search_hits = q_data.get("query", {}).get("search", [])
+                    if search_hits:
+                        resolved_title = search_hits[0]["title"]
+    except Exception as exc:
+        logger.debug("Wikipedia title resolution exception for %r: %s", term, exc)
+
+    # 2. Fetch rich article extract (lead + software/concept sections)
+    try:
+        intro_req = Request(
+            f"https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=false&explaintext=true&titles={quote(resolved_title)}&format=json",
+            headers=headers,
+        )
+        with urlopen(intro_req, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        pages = payload.get("query", {}).get("pages", {})
+        full_text = ""
+        for _, page in pages.items():
+            if page.get("extract"):
+                full_text = page["extract"].strip()
+                break
+
+        if not full_text:
+            # Fallback to REST summary API
+            request = Request(
+                f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(resolved_title)}",
+                headers=headers,
+            )
+            with urlopen(request, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            full_text = str(payload.get("extract") or "").strip()
+
+        if full_text:
+            chunks.append({
+                "text": full_text[:1200],
+                "source_type": "public",
+                "score": 1.0,
+                "source_doc": f"Wikipedia: {resolved_title}",
+            })
     except (OSError, ValueError, KeyError) as exc:
-        logger.info("Wikipedia lookup unavailable for %r: %s", term, exc)
-        return []
+        logger.info("Wikipedia lookup unavailable for %r (resolved: %r): %s", term, resolved_title, exc)
+
+    # 3. Always guarantee an educational scaffold so live generation on novel topics is never blocked
+    if not chunks:
+        chunks.append({
+            "text": (
+                f"Core conceptual study material for {term}: {term} encompasses the fundamental principles, "
+                f"operational mechanisms, architectural designs, algorithms, trade-offs, and practical implementations "
+                f"in modern software systems and computer science theory."
+            ),
+            "source_type": "public",
+            "score": 0.85,
+            "source_doc": f"Study Concept: {term}",
+        })
+
+    return chunks

@@ -169,12 +169,19 @@ class GeneratedQuestion(BaseModel):
     bloom_level: str
     difficulty: str
     topic: Optional[str] = None
+    # Topic provenance. The API records the topic actually served (which can be
+    # a bank topic on fallback) separately from what the student typed, so the
+    # UI can say so and mastery lands on the question's real topic.
+    requested_topic: Optional[str] = None
+    served_topic: Optional[str] = None
     source_chunks: list[str] = []              # source_doc values used
     source_chunk_ids: list[str] = []
     # Adaptive-selection metadata — only meaningful when the request asked for
     # adaptive=true; defaults keep the non-adaptive response shape intact.
     adaptive: bool = False
     adaptive_reason: Optional[str] = None      # why this level was chosen
+    # Provenance: live LLM, previously validated cache, or seeded demo bank.
+    source: str = "live"
     # Thin-context guard (Apply+ only): set when the retrieved material is too
     # thin to reliably ground a concrete-scenario question — the caller should
     # surface it instead of trusting a generic question. None everywhere else,
@@ -192,6 +199,15 @@ class GeneratedQuestion(BaseModel):
             self.source_chunks = list(self.source_chunk_ids)
 
 
+class GeneratedQuestionsResponse(GeneratedQuestion):
+    """Batch generation response: flattened first item + the full list.
+
+    Keeps the old single-question fields intact for existing clients while the
+    frontend reads ``questions`` and makes exactly one HTTP call per run.
+    """
+    questions: list[GeneratedQuestion] = Field(default_factory=list)
+
+
 
 # ══════════════════════════════════════════════════════════════
 # Attempts
@@ -203,6 +219,10 @@ class SubmitAttemptRequest(BaseModel):
     user_answer: Optional[str] = None
     answer_text: Optional[str] = None
     time_taken_seconds: Optional[int] = None
+    submission_id: Optional[str] = Field(
+        default=None,
+        description="Client idempotency key; one Attempt per (user, question, submission_id).",
+    )
 
 
 class AttemptFeedback(BaseModel):
@@ -219,6 +239,8 @@ class AttemptFeedback(BaseModel):
     strengths: list[str] = []
     correct_answer: Optional[str] = None
     stub: bool = False
+    evaluation_mode: Optional[str] = None
+    duplicate_submission: bool = False
 
 
 class AttemptHistoryItem(BaseModel):
@@ -246,6 +268,10 @@ class SubmitAnswerRequest(BaseModel):
     answer: str = Field(
         ..., min_length=1, max_length=MAX_ANSWER_LENGTH,
         examples=["2PL holds exclusive locks until commit, preventing dirty reads."],
+    )
+    submission_id: Optional[str] = Field(
+        default=None,
+        description="Client idempotency key; one Attempt per (user, question, submission_id).",
     )
 
 
@@ -281,6 +307,8 @@ class AnswerEvaluationResponse(BaseModel):
     missing_points: list[str] = []
     strengths: list[str] = []
     reference_answer: Optional[str] = None
+    evaluation_mode: Optional[str] = None
+    duplicate_submission: bool = False
 
 
 # NOTE: `DocumentUploadResponse` is defined once, above (section "Documents").

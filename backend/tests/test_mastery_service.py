@@ -10,8 +10,8 @@ Unit (no network):
  3. Hard questions move mastery more than easy ones; the weighted score and the
     resulting mastery are clamped to 0..1.
  4. The per-Bloom breakdown tracks each level with the same EMA.
- 5. ``recommend_next`` picks the right level at every band / boundary.
- 6. The "struggling" rule steps the recommendation down one level.
+ 5. ``recommend_next`` moves at most one rung per real attempt.
+ 6. A failed rung demotes once; two good scores are needed to promote again.
 
 Endpoint (real in-memory DB unless noted):
  7. GET /mastery/me -> 401 when unauthenticated.
@@ -43,7 +43,8 @@ from app.main import create_app
 from app.models.base import Base
 from app.models.models import Attempt, MasteryRecord, Question, User
 from app.schemas.schemas import GeneratedQuestion
-from app.services import mastery_service
+from app.services import attempt_service, mastery_service
+from app.services import generation_service, validation_service
 from app.services.mastery_service import (
     EMA_ALPHA,
     get_mastery,
@@ -206,7 +207,7 @@ def test_bloom_breakdown_tracks_each_level(db, user):
     assert breakdown["analyze"] == pytest.approx(1.0)
 
 
-# ── Stage 11: recommend_next ──────────────────────────────────────────────────
+# ── Stage 11: recommend_next (pure rung decision over real attempts) ─────────
 
 def test_recommend_no_history_is_recall_easy(db, user):
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
@@ -215,64 +216,80 @@ def test_recommend_no_history_is_recall_easy(db, user):
     }
 
 
-@pytest.mark.parametrize(
-    "mastery, expected",
-    [
-        (0.10, {"bloom_level": "remember", "difficulty": "easy"}),
-        (0.39, {"bloom_level": "remember", "difficulty": "easy"}),
-        (0.40, {"bloom_level": "apply", "difficulty": "medium"}),   # low boundary
-        (0.55, {"bloom_level": "apply", "difficulty": "medium"}),
-        (0.70, {"bloom_level": "apply", "difficulty": "medium"}),   # high boundary
-        (0.71, {"bloom_level": "analyze", "difficulty": "hard"}),
-        (0.95, {"bloom_level": "analyze", "difficulty": "hard"}),
-    ],
-)
-def test_recommend_by_mastery_band(db, user, mastery, expected):
+@pytest.mark.parametrize("mastery", [0.10, 0.39, 0.40, 0.55, 0.70, 0.71, 0.95])
+def test_ema_mastery_alone_does_not_drive_recommendation(db, user, mastery):
+    """The EMA number is display-only; without attempts the first rung is used."""
     _seed_mastery(db, user, "DBMS", "Transactions", mastery)
-    assert recommend_next(user.id, "DBMS", "Transactions", db) == expected
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "remember",
+        "difficulty": "easy",
+    }
 
 
-def test_struggle_steps_down_one_level_from_mid(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.5)  # base: apply/medium
+def test_fewer_than_four_attempts_stays_at_current_rung(db, user):
     now = datetime.now(timezone.utc)
-    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=2))
-    _add_attempt(db, user, "DBMS", "Transactions", 0.2, now - timedelta(minutes=1))
+    for offset, score in enumerate((0.9, 0.9, 0.9)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=3 - offset))
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "remember",
+        "difficulty": "easy",
+    }
 
+
+def test_four_good_attempts_promotes_exactly_one_rung(db, user):
+    now = datetime.now(timezone.utc)
+    for offset, score in enumerate((0.85, 0.90, 0.75, 0.80)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=4 - offset))
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
         "bloom_level": "understand",
         "difficulty": "easy",
     }
 
 
-def test_struggle_steps_down_one_level_from_high(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.9)  # base: analyze/hard
+def test_two_bad_attempts_at_the_floor_stay_at_the_floor(db, user):
     now = datetime.now(timezone.utc)
-    _add_attempt(db, user, "DBMS", "Transactions", 0.0, now - timedelta(minutes=2))
-    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=1))
-
+    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=2))
+    _add_attempt(db, user, "DBMS", "Transactions", 0.2, now - timedelta(minutes=1))
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
-        "bloom_level": "apply",
-        "difficulty": "medium",
+        "bloom_level": "remember",
+        "difficulty": "easy",
     }
 
 
-def test_no_step_down_with_only_one_bad_attempt(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.5)
-    _add_attempt(
-        db, user, "DBMS", "Transactions", 0.1,
-        datetime.now(timezone.utc) - timedelta(minutes=1),
-    )
-    assert recommend_next(user.id, "DBMS", "Transactions", db)["bloom_level"] == "apply"
-
-
-def test_no_step_down_when_recent_attempts_are_mixed(db, user):
-    _seed_mastery(db, user, "DBMS", "Transactions", 0.5)
+def test_failing_the_current_rung_demotes_one_rung(db, user):
     now = datetime.now(timezone.utc)
-    _add_attempt(db, user, "DBMS", "Transactions", 0.1, now - timedelta(minutes=2))
-    _add_attempt(db, user, "DBMS", "Transactions", 0.8, now - timedelta(minutes=1))
+    # 4 good attempts promote from Remember to Understand
+    for offset, score in enumerate((0.85, 0.90, 0.75, 0.80)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=8 - offset))
+    # 3 bad attempts at Understand average < 0.40 -> demote back to Remember
+    for offset, score in enumerate((0.20, 0.30, 0.25)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=3 - offset))
     assert recommend_next(user.id, "DBMS", "Transactions", db) == {
-        "bloom_level": "apply",
-        "difficulty": "medium",
+        "bloom_level": "remember",
+        "difficulty": "easy",
+    }
+
+
+def test_recovery_after_demotion_requires_four_fresh_answers(db, user):
+    now = datetime.now(timezone.utc)
+    # 4 good promote to Understand
+    for offset, score in enumerate((0.85, 0.90, 0.75, 0.80)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=12 - offset))
+    # 3 bad demote to Remember
+    for offset, score in enumerate((0.20, 0.30, 0.25)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=7 - offset))
+    # 3 fresh good answers at Remember: not enough (need 4!)
+    for offset, score in enumerate((0.90, 0.90, 0.90)):
+        _add_attempt(db, user, "DBMS", "Transactions", score, now - timedelta(minutes=4 - offset))
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "remember",
+        "difficulty": "easy",
+    }
+    # 4th fresh good answer completes recovery and promotes to Understand
+    _add_attempt(db, user, "DBMS", "Transactions", 0.90, now)
+    assert recommend_next(user.id, "DBMS", "Transactions", db) == {
+        "bloom_level": "understand",
+        "difficulty": "easy",
     }
 
 
@@ -360,7 +377,7 @@ def test_mastery_me_subject_filter(db):
     assert len(body) == 1 and body[0]["subject"] == "OS"
 
 
-# ── submit-answer -> mastery, and the failure-isolation guarantee ─────────────
+# ── submit-answer -> mastery, and the atomic-rollback guarantee ───────────────
 
 def test_submit_answer_updates_mastery(db, monkeypatch):
     user = _add_user(db)
@@ -369,8 +386,9 @@ def test_submit_answer_updates_mastery(db, monkeypatch):
     db.commit()
     db.refresh(question)
 
+    # Evaluator moved into the shared attempt core in item 2.
     monkeypatch.setattr(
-        questions_module, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
+        attempt_service, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
     )
     resp = _authed_client(db, user).post(
         f"/questions/{question.id}/submit-answer",
@@ -386,7 +404,7 @@ def test_submit_answer_updates_mastery(db, monkeypatch):
     assert records[0].attempts_count == 1
 
 
-def test_mastery_failure_does_not_lose_the_attempt(db, monkeypatch):
+def test_mastery_failure_rolls_back_the_whole_request(db, monkeypatch):
     user = _add_user(db)
     question = _question()
     db.add(question)
@@ -394,24 +412,27 @@ def test_mastery_failure_does_not_lose_the_attempt(db, monkeypatch):
     db.refresh(question)
 
     monkeypatch.setattr(
-        questions_module, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
+        attempt_service, "evaluate_answer", MagicMock(return_value=_CANNED_EVAL)
     )
-    # Make the mastery update blow up AFTER the attempt has been added.
     monkeypatch.setattr(
-        questions_module,
+        attempt_service,
         "update_mastery",
         MagicMock(side_effect=RuntimeError("mastery store unavailable")),
     )
 
-    resp = _authed_client(db, user).post(
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: user
+    resp = TestClient(app, raise_server_exceptions=False).post(
         f"/questions/{question.id}/submit-answer",
         json={"answer": "2PL holds exclusive locks until commit."},
     )
 
-    assert resp.status_code == 200                       # request still succeeds
+    assert resp.status_code == 500
+    assert resp.json()["code"] == "INTERNAL_ERROR"   # explicit, never silent success
     db.expire_all()
-    assert db.query(Attempt).count() == 1                # the answer survived
-    assert db.query(MasteryRecord).count() == 0          # mastery write rolled back
+    assert db.query(Attempt).count() == 0             # attempt rolled back too
+    assert db.query(MasteryRecord).count() == 0
 
 
 # ── POST /questions/generate adaptive flag ────────────────────────────────────
@@ -451,9 +472,9 @@ def _patch_generation(monkeypatch):
         )
 
     mock_gen = MagicMock(side_effect=_fake_generate)
-    monkeypatch.setattr(questions_module, "generate_question", mock_gen)
+    monkeypatch.setattr(generation_service, "generate_question", mock_gen)
     monkeypatch.setattr(
-        questions_module, "validate_question", MagicMock(return_value=_PASS)
+        validation_service, "validate_question", MagicMock(return_value=_PASS)
     )
     return mock_gen
 
@@ -470,13 +491,12 @@ def _generate_client(monkeypatch):
 def test_generate_adaptive_true_uses_recommendation(monkeypatch):
     client, fake_db, user = _generate_client(monkeypatch)
     mock_gen = _patch_generation(monkeypatch)
-    mock_rec = MagicMock(return_value={"bloom_level": "analyze", "difficulty": "hard"})
-    monkeypatch.setattr(questions_module, "recommend_next", mock_rec)
-    monkeypatch.setattr(
-        questions_module,
-        "explain_recommendation",
-        MagicMock(return_value="Mastery 0.90 is above 0.7 — moving to analyze/hard."),
-    )
+    mock_rec = MagicMock(return_value={
+        "bloom_level": "analyze",
+        "difficulty": "hard",
+        "reason": "Scored 90% on Evaluate/Hard -> moving up.",
+    })
+    monkeypatch.setattr(questions_module, "adaptive_recommendation", mock_rec)
 
     resp = client.post(
         "/questions/generate",
@@ -491,7 +511,7 @@ def test_generate_adaptive_true_uses_recommendation(monkeypatch):
 
     body = resp.json()
     assert body["adaptive"] is True
-    assert "analyze" in body["adaptive_reason"]
+    assert "moving up" in body["adaptive_reason"]
     assert body["bloom_level"] == "analyze"
     assert body["difficulty"] == "hard"
 
@@ -500,7 +520,7 @@ def test_generate_without_adaptive_is_unchanged(monkeypatch):
     client, _, _ = _generate_client(monkeypatch)
     mock_gen = _patch_generation(monkeypatch)
     mock_rec = MagicMock()
-    monkeypatch.setattr(questions_module, "recommend_next", mock_rec)
+    monkeypatch.setattr(questions_module, "adaptive_recommendation", mock_rec)
 
     resp = client.post("/questions/generate", json=_GEN_PAYLOAD)
 
@@ -521,3 +541,77 @@ def test_generate_non_adaptive_missing_level_is_422(monkeypatch):
         json={"topic": "Transactions", "subject": "DBMS", "question_type": "open"},
     )
     assert resp.status_code == 422
+
+
+def test_mastery_four_answers_exact_ema_single_record(db):
+    """4 sequential answers on Deadlocks produce 1 mastery record with exact EMA.
+
+    Scores: 1.0 (easy), 1.0 (easy), 0.0 (medium), 0.6185 (easy).
+    Difficulty weights: easy=0.8, medium=1.0.
+    1. Seed: 1.0 * 0.8 = 0.8
+    2. EMA: 0.3 * (1.0 * 0.8) + 0.7 * 0.8 = 0.8
+    3. EMA: 0.3 * (0.0 * 1.0) + 0.7 * 0.8 = 0.56
+    4. EMA: 0.3 * (0.6185 * 0.8) + 0.7 * 0.56 = 0.14844 + 0.392 = 0.54044
+    """
+    user = _add_user(db)
+    q1 = Question(
+        subject="OS",
+        topic="Deadlocks",
+        bloom_level="remember",
+        difficulty="easy",
+        question_text="Q1 text",
+        reference_answer="A1",
+        source="live",
+    )
+    q2 = Question(
+        subject="General",
+        topic="Deadlocks",
+        bloom_level="understand",
+        difficulty="easy",
+        question_text="Q2 text",
+        reference_answer="A2",
+        source="live",
+    )
+    q3 = Question(
+        subject="OS",
+        topic="Deadlocks",
+        bloom_level="apply",
+        difficulty="medium",
+        question_text="Q3 text",
+        reference_answer="A3",
+        source="bank",
+    )
+    q4 = Question(
+        subject="OS",
+        topic="Deadlocks",
+        bloom_level="understand",
+        difficulty="easy",
+        question_text="Q4 text",
+        reference_answer="A4",
+        source="live",
+    )
+    db.add_all([q1, q2, q3, q4])
+    db.commit()
+
+    eval_scores = [100.0, 100.0, 0.0, 61.85]
+    for i, (q, score_pct) in enumerate(zip([q1, q2, q3, q4], eval_scores)):
+        attempt_service.submit_attempt_core(
+            db=db,
+            user_id=user.id,
+            question=q,
+            answer_text=f"Student answer {i}",
+            submission_id=f"sub-{i}",
+            evaluator=lambda question, student_answer, pct=score_pct: {
+                "overall_score": pct,
+                "scores": {"correctness": 10},
+                "feedback": "test feedback",
+            },
+        )
+
+    records = get_mastery(user_id=user.id, db=db)
+    assert len(records) == 1
+    rec = records[0]
+    assert rec.topic == "Deadlocks"
+    assert rec.subject == "OS"
+    assert rec.attempts_count == 4
+    assert pytest.approx(rec.mastery_score, abs=0.001) == 0.54044

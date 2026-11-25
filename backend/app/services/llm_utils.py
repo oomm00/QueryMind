@@ -51,8 +51,8 @@ logger = logging.getLogger("querymind.llm")
 # ── Retry configuration ───────────────────────────────────────────────────────
 # Retries are for *transport/availability* failures (503, 429, timeouts) and are
 # separate from the malformed-JSON retry performed by call_json_with_retry().
-LLM_MAX_RETRIES = 3               # retries after the initial attempt
-LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s, 2s, 4s
+LLM_MAX_RETRIES = 1               # 1 retry (2 attempts total) prevents 50s timeouts during transient spikes
+LLM_BACKOFF_BASE_SECONDS = 1.0    # exponential: 1s
 TRANSIENT_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
 
 # Status codes that mean "this particular model is not usable right now" (rate
@@ -281,6 +281,9 @@ def generate_with_retry(
     *,
     sleep: Callable[[float], None] = time.sleep,
     model: Optional[str] = None,
+    timeout: Optional[float] = None,
+    deadline: Optional[float] = None,
+    max_retries: Optional[int] = None,
 ) -> Any:
     """Call ``client.generate_content(prompt)`` with exponential-backoff retries.
 
@@ -295,17 +298,28 @@ def generate_with_retry(
     rate-limit failures, ``503 / LLM_UNAVAILABLE`` otherwise. The raw SDK text
     is logged server-side only.
     """
-    attempts = LLM_MAX_RETRIES + 1
+    retries = max_retries if max_retries is not None else LLM_MAX_RETRIES
+    attempts = retries + 1
     last_exc: Optional[Exception] = None
 
     for attempt in range(attempts):
+        # A caller-supplied deadline bounds the WHOLE retry loop, not each
+        # attempt: four 503 retries at 15s each used to overrun generation's
+        # 35s budget (and the 60s browser timeout) before the fallback ran.
+        attempt_timeout = timeout if timeout is not None else LLM_CALL_TIMEOUT_SECONDS
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0.5:
+                last_exc = TimeoutError("LLM deadline exhausted before an attempt")
+                break
+            attempt_timeout = min(attempt_timeout, remaining)
         try:
             # Acquire a concurrency slot for the duration of this attempt so at
             # most LLM_MAX_CONCURRENCY Gemini calls are in flight at once.
             with _LLM_SEMAPHORE:
                 return _call_with_timeout(
                     lambda: _invoke_generate(client, prompt, model),
-                    LLM_CALL_TIMEOUT_SECONDS,
+                    attempt_timeout,
                 )
         except Exception as exc:  # noqa: BLE001 — re-raised below if not transient
             if not is_transient_error(exc):
@@ -332,6 +346,8 @@ def request_text(
     *,
     sleep: Callable[[float], None] = time.sleep,
     models: Optional[list[str]] = None,
+    timeout: Optional[float] = None,
+    deadline: Optional[float] = None,
 ) -> str:
     """One round-trip: retry transient errors, unwrap the response, and return raw text.
 
@@ -346,9 +362,18 @@ def request_text(
     ``models`` ``None``/single the historical single-model path runs unchanged.
     """
     if models and len(models) > 1:
-        return _request_text_with_fallback(client, prompt, list(models), sleep=sleep)
+        return _request_text_with_fallback(
+            client, prompt, list(models), sleep=sleep, timeout=timeout, deadline=deadline
+        )
     try:
-        response = generate_with_retry(client, prompt, sleep=sleep)
+        response = generate_with_retry(
+            client,
+            prompt,
+            sleep=sleep,
+            model=models[0] if models else None,
+            timeout=timeout,
+            deadline=deadline,
+        )
     except QueryMindError:
         raise
     except Exception as exc:
@@ -364,6 +389,8 @@ def _request_text_with_fallback(
     models: list[str],
     *,
     sleep: Callable[[float], None] = time.sleep,
+    timeout: Optional[float] = None,
+    deadline: Optional[float] = None,
 ) -> str:
     """Try each model in *models* in order until one answers.
 
@@ -378,9 +405,13 @@ def _request_text_with_fallback(
     saw_quota = False
     saw_other = False
 
+    retries = LLM_MAX_RETRIES
     for index, model in enumerate(models):
         try:
-            response = generate_with_retry(client, prompt, sleep=sleep, model=model)
+            response = generate_with_retry(
+                client, prompt, sleep=sleep, model=model, timeout=timeout,
+                deadline=deadline, max_retries=retries,
+            )
         except QueryMindError as exc:
             if not is_model_fallback_error(exc):
                 raise

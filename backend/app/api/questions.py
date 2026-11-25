@@ -8,8 +8,8 @@ routes.
 
 from __future__ import annotations
 
-import json
 import logging
+import time
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -21,8 +21,10 @@ from app.core.exceptions import (
     BloomAlignmentError,
     DuplicateQuestionError,
     LLMNotConfiguredError,
+    NoContextError,
     NotFoundError,
     ValidationError,
+    QueryMindError,
 )
 from app.core.timing import stage
 from app.db.session import get_db
@@ -31,15 +33,20 @@ from app.schemas.schemas import (
     AnswerEvaluationResponse,
     GenerateQuestionRequest,
     GeneratedQuestion,
+    GeneratedQuestionsResponse,
     SubmitAnswerRequest,
 )
-from app.services.evaluation_service import evaluate_answer
-from app.services.generation_service import _configure_genai, generate_question
-from app.services.mastery_service import (
-    explain_recommendation,
-    recommend_next,
-    update_mastery,
+from app.services.attempt_service import submit_attempt_core
+from app.services.generation_fallback import (
+    canonical_subject_for_topic,
+    canonical_topic_key,
+    generate_one,
+    mark_served,
+    persist_generated_question,
+    served_question_ids,
 )
+from app.services.generation_service import _configure_genai
+from app.services.mastery_service import adaptive_recommendation
 from app.services.retrieval import retrieve_context
 from app.services.validation_service import validate_question
 
@@ -48,246 +55,169 @@ logger = logging.getLogger("querymind.questions")
 router = APIRouter()
 
 
-def _correction_note(validation: dict) -> str:
-    """Build the corrective prompt note for the one regeneration retry.
+def resolve_served_topic(
+    *,
+    requested: str,
+    source: str | None,
+    generated_topic: str | None,
+    generated_served_topic: str | None,
+    uploaded_topic: str | None = None,
+) -> str:
+    """Return the single canonical topic the learner should be graded under.
 
-    Each branch feeds the SPECIFIC violation back (stem, Bloom-level mismatch,
-    duplicate, grounding) so the regeneration has a concrete fix target.
+    STRICT DEMO RULE: Attempts and mastery are always recorded under the
+    canonical requested topic, never a different fallback topic.
     """
-    if validation.get("duplicate_check", {}).get("is_duplicate"):
-        return (
-            "Your previous question was too similar to a question that already "
-            "exists for this topic. Generate a genuinely DIFFERENT question that "
-            "tests a different aspect, definition, mechanism, or scenario."
-        )
-    if validation.get("reason_code") == "stem":
-        stem = validation.get("stem_check") or {}
-        violations = "; ".join(stem.get("violations") or []) or "invalid opening stem"
-        return (
-            "Your previous question's OPENING STEM violated the Bloom spec for the "
-            f"requested level: {violations}. Rewrite the question so it STARTS with "
-            "one of the required stems/verbs for this level and contains none of "
-            "the forbidden lower-level verbs."
-        )
-    if validation.get("reason_code") == "cognitive":
-        cog = validation.get("cognitive_alignment_check") or {}
-        return (
-            f"Your previous question was classified as a '{cog.get('detected_level')}' "
-            f"level question, but '{cog.get('requested_level')}' was requested "
-            f"(distance {cog.get('distance')} > tolerance {cog.get('tolerance')}). "
-            "Rewrite it so the cognitive demand matches the requested level: keep "
-            "the concrete depth of the level spec and remove any lower-level "
-            "phrasing."
-        )
-    return (
-        "Your previous question's answer was not clearly supported by the SOURCE "
-        "MATERIAL. Base both the question and the correct answer strictly on facts "
-        "stated in the source material above."
-    )
-
-
-def _persist_question(
-    db: Session,
-    generated: GeneratedQuestion,
-    subject: str,
-    topic: str,
-    question_type: str = "descriptive",
-) -> Question:
-    """Store a validated question so future generations can be de-duplicated."""
-    question = Question(
-        subject=subject,
-        topic=topic,
-        bloom_level=generated.bloom_level,
-        difficulty=generated.difficulty,
-        question_type=question_type,
-        question_text=generated.question,
-        options=generated.options,
-        starter_code=generated.starter_code,
-        test_cases=generated.test_cases,
-        reference_answer=generated.correct_answer,
-        source_chunk_ids=generated.source_chunk_ids or generated.source_chunks,
-    )
-    db.add(question)
-    db.commit()
-    db.refresh(question)
-    return question
+    if uploaded_topic:
+        return canonical_topic_key(uploaded_topic)
+    return canonical_topic_key(requested)
 
 
 @router.post(
     "/generate",
-    response_model=GeneratedQuestion,
-    summary="Generate an AI question grounded in retrieved course material",
+    response_model=GeneratedQuestionsResponse,
+    summary="Generate a valid question (live LLM, cache, or seeded demo bank)",
 )
 def generate_questions(
     payload: GenerateQuestionRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> GeneratedQuestion:
-    """Generate a single Bloom-taxonomy-aligned question using RAG + LLM.
+) -> GeneratedQuestionsResponse:
+    """Always return ``num_questions`` usable questions in ONE request.
 
-    - Retrieves relevant context from ChromaDB (college material priority, public fallback).
-    - Constructs a structured prompt with Bloom's cognitive verb anchoring.
-    - Calls Gemini to generate the question in validated JSON format.
-    - Runs pre-delivery validation (duplicate detection + answerability +
-      deterministic Bloom stem check + LLM cognitive-alignment gate). If the
-      question fails, generation is retried ONCE with the specific violation as
-      a corrective note; if it still fails, the request is rejected with HTTP 422
-      (BLOOM_ALIGNMENT_MISMATCH for an alignment mismatch) rather than returning
-      a bad question.
-    - Persists the validated question so later generations can be de-duplicated.
-    - With ``adaptive=true``, the learner's mastery profile (Stage 11) chooses the
-      Bloom level and difficulty instead of the supplied values.
-    - Requires a valid JWT Bearer token.
+    Retrieval and the adaptive rung choice happen once. Each question is produced
+    by :func:`generate_one`, which tries the LLM within a hard deadline, handles
+    duplicates/Bloom mismatches server-side, then degrades to cached questions and
+    finally the seeded bank. A question is never thrown away after two LLM calls.
     """
-    # ── Adaptive selection (Stage 11) ─────────────────────────────────────────
-    # When adaptive, ignore the supplied bloom_level/difficulty and let the
-    # learner's mastery profile pick the target level.
+    deadline = time.monotonic() + settings.generation_deadline_seconds
+
     bloom_level = payload.bloom_level
     difficulty = payload.difficulty
-    generation_topic = (payload.topic or "").strip() or "Uploaded notes"
+    generation_topic = canonical_topic_key((payload.topic or "").strip() or "Uploaded notes")
+    retrieval_subject = (payload.subject or "").strip() or None
+    if retrieval_subject and retrieval_subject.lower() == "general":
+        retrieval_subject = None
+
     generation_subject = (payload.subject or "").strip() or "General"
+    if (not generation_subject or generation_subject.lower() in ("general", generation_topic.lower())) and not payload.uploaded_only:
+        canonical = canonical_subject_for_topic(generation_topic, db=db)
+        if canonical:
+            generation_subject = canonical
     adaptive_reason: str | None = None
+
+    # Uploaded-only retrieval must run even offline: the PDF is real material and
+    # the deterministic offline question is grounded in it. Normal offline runs
+    # keep skipping retrieval and use the seeded bank.
+    context_chunks: list[dict] = []
+    if payload.uploaded_only or not settings.offline_demo_mode:
+        with stage("retrieve"):
+            context_chunks = retrieve_context(
+                topic=generation_topic,
+                subject=retrieval_subject,
+                bloom_level=bloom_level,
+                difficulty=difficulty,
+                public_only=not payload.uploaded_only,
+                college_only=payload.uploaded_only,
+                # A typed title need not equal the stored PDF topic: rank all
+                # uploaded chunks by meaning rather than exact metadata strings.
+                strict_metadata=not payload.uploaded_only,
+                user_id=str(current_user.id) if payload.uploaded_only else None,
+            )
+            if not context_chunks and not payload.uploaded_only:
+                context_chunks = retrieve_context(
+                    topic=generation_topic, subject=None, bloom_level=bloom_level,
+                    difficulty=difficulty, public_only=True,
+                )
+            if not context_chunks and not payload.uploaded_only:
+                context_chunks = [
+                    {
+                        "source_doc": f"Canonical Computer Science: {generation_subject} - {generation_topic}",
+                        "text": (
+                            f"Core theoretical principles, algorithms, data structures, invariants, "
+                            f"protocols, and standard engineering mechanics for {generation_topic} within {generation_subject}."
+                        ),
+                        "chunk_id": "canonical-cse-curriculum",
+                    }
+                ]
+            if payload.uploaded_only and not context_chunks:
+                raise NoContextError(
+                    f"No uploaded material covers '{generation_topic}'. "
+                    "Upload a document first."
+                )
+
+    # ── Adaptive selection (one ordered ladder, from mastery_records) ─────────
+    # For uploaded-only questions the ladder belongs to the stored PDF topic,
+    # not the title the student happened to type: an answer moves the same rung
+    # whichever wording led to the question.
+    adaptive_topic = generation_topic
+    adaptive_subject = generation_subject
+    if payload.uploaded_only and context_chunks:
+        adaptive_topic = str(context_chunks[0].get("topic") or generation_topic)
+        adaptive_subject = str(context_chunks[0].get("subject") or generation_subject)
+        generation_subject = adaptive_subject
     if payload.adaptive:
-        recommendation = recommend_next(
-            current_user.id, generation_subject, generation_topic, db
+        recommendation = adaptive_recommendation(
+            current_user.id, adaptive_subject, adaptive_topic, db
         )
         bloom_level = recommendation["bloom_level"]
         difficulty = recommendation["difficulty"]
-        adaptive_reason = explain_recommendation(
-            current_user.id, generation_subject, generation_topic, db
-        )
-        logger.info(
-            "Adaptive selection for user=%s %s/%s -> %s/%s",
-            current_user.id, generation_subject, generation_topic, bloom_level, difficulty,
-        )
+        adaptive_reason = recommendation["reason"]
 
-    # Retrieve context once and reuse it for both generation and the
-    # answerability check (so the check sees the exact material used).
-    with stage("retrieve"):
-        context_chunks = retrieve_context(
-            topic=None if payload.uploaded_only and not payload.topic else generation_topic,
-            subject=None if payload.uploaded_only and not payload.topic else generation_subject,
-            bloom_level=bloom_level,
-            difficulty=difficulty,
-            public_only=not payload.uploaded_only,
-        )
-        # The frontend derives `subject` from the free-text topic (subject == topic),
-        # so an exact (subject, topic) filter can miss material filed under a
-        # different subject. Fall back to a topic-only search before giving up.
-        if not context_chunks and not (payload.uploaded_only and not payload.topic):
-            logger.info(
-                "No exact (subject, topic) material for %s / %s; retrying topic-only",
-                generation_subject, generation_topic,
+    alignment_client = None
+    if not settings.offline_demo_mode:
+        try:
+            alignment_client = _configure_genai(
+                thinking_level=settings.llm_thinking_level,
+                max_output_tokens=settings.llm_max_output_tokens,
             )
-            context_chunks = retrieve_context(
-                topic=generation_topic,
-                subject=None,
-                bloom_level=bloom_level,
-                difficulty=difficulty,
-                public_only=True,
-            )
-    chunk_texts = [chunk["text"] for chunk in context_chunks]
+        except LLMNotConfiguredError:
+            alignment_client = None
 
-    with stage("generate"):
-        generated = generate_question(
-            topic=generation_topic,
-            subject=generation_subject,
-            bloom_level=bloom_level,
-            difficulty=difficulty,
-            question_type=payload.question_type,
-            context_chunks=context_chunks,
-        )
-
-    # Cognitive-alignment judge for the validation gate (Step 3c). Built once
-    # per request after generation succeeded; if the key is missing the gate is
-    # skipped rather than failing a working generation pipeline.
-    try:
-        alignment_client = _configure_genai(
-            thinking_level=settings.llm_thinking_level,  # judge = evaluation-class task
-            max_output_tokens=settings.llm_max_output_tokens,
-        )
-    except LLMNotConfiguredError:
-        alignment_client = None
-
-    with stage("validate"):
-        validation = validate_question(
-            generated=generated.model_dump(),
-            subject=generation_subject,
-            topic=generation_topic,
-            source_chunks=chunk_texts,
-            db=db,
-            requested_bloom=bloom_level,
-            llm_client=alignment_client,
-        )
-
-    if not validation["passed"]:
-        # ── Single regeneration attempt with a corrective note ────────────────
+    results: list[GeneratedQuestion] = []
+    excluded_texts: set[str] = set()
+    served = served_question_ids(current_user.id, generation_topic)
+    for _ in range(payload.num_questions):
         with stage("generate"):
-            generated = generate_question(
-                topic=generation_topic,
+            generated = generate_one(
+                db=db,
                 subject=generation_subject,
+                topic=generation_topic,
                 bloom_level=bloom_level,
                 difficulty=difficulty,
                 question_type=payload.question_type,
                 context_chunks=context_chunks,
-                extra_instruction=_correction_note(validation),
+                alignment_client=alignment_client,
+                excluded_texts=excluded_texts,
+                served_ids=served,
+                deadline=deadline,
+                adaptive_reason=adaptive_reason,
+                uploaded_only=payload.uploaded_only,
             )
-        with stage("validate"):
-            validation = validate_question(
-                generated=generated.model_dump(),
-                subject=generation_subject,
-                topic=generation_topic,
-                source_chunks=chunk_texts,
+        if payload.adaptive:
+            generated.adaptive = True
+            generated.adaptive_reason = generated.adaptive_reason or adaptive_reason
+        # A bank/cache fallback may answer a different topic than the one typed.
+        # The student must see it, and the attempt must be filed where it belongs.
+        canonical_topic = canonical_topic_key(generation_topic)
+        generated.requested_topic = canonical_topic
+        generated.served_topic = canonical_topic
+        generated.topic = canonical_topic
+        if generated.question_id is None:
+            persisted = persist_generated_question(
                 db=db,
-                requested_bloom=bloom_level,
-                llm_client=alignment_client,
+                generated=generated,
+                subject=generation_subject,
+                topic=canonical_topic,
+                question_type=payload.question_type,
             )
-        if not validation["passed"]:
-            # A near-duplicate is a recoverable *user* situation, not a server
-            # fault: surface a stable DUPLICATE_QUESTION code + an actionable hint
-            # so the client can suggest a different topic / Bloom level. A
-            # Bloom-level mismatch after the corrective regeneration gets its own
-            # BLOOM_ALIGNMENT_MISMATCH code (Step 3c). Other validation failures
-            # stay a generic 422 VALIDATION_ERROR.
-            if validation.get("reason_code") == "duplicate":
-                similarity = validation.get("duplicate_check", {}).get("similarity")
-                raise DuplicateQuestionError(
-                    "The generated question was too similar to one that already "
-                    f"exists for this topic (similarity {similarity}). "
-                    "Try a different topic or Bloom level."
-                )
-            if validation.get("reason_code") == "cognitive":
-                cog = validation.get("cognitive_alignment_check") or {}
-                raise BloomAlignmentError(
-                    "The generated question was classified as Bloom level "
-                    f"'{cog.get('detected_level')}' instead of the requested "
-                    f"'{cog.get('requested_level')}' (distance "
-                    f"{cog.get('distance')} > tolerance {cog.get('tolerance')}). "
-                    "Try a different Bloom level."
-                )
-            raise ValidationError(
-                "Generated question failed pre-delivery validation after "
-                f"regeneration: {validation['reason']}"
-            )
+            generated.question_id = persisted.id
+        mark_served(current_user.id, canonical_topic, generated.question_id)
+        served.add(generated.question_id)
+        results.append(generated)
+        excluded_texts.add(generated.question)
 
-    persisted = _persist_question(
-        db=db,
-        generated=generated,
-        subject=generation_subject,
-        topic=generation_topic,
-        question_type=payload.question_type,
-    )
-
-    # Give the client a stable id to submit the answer against. `_persist_question`
-    # refreshes the row, so `persisted.id` is populated by the database.
-    generated.question_id = persisted.id
-
-    # Surface which level the profile chose (and why) on the response.
-    if payload.adaptive:
-        generated.adaptive = True
-        generated.adaptive_reason = adaptive_reason
-
-    return generated
+    return GeneratedQuestionsResponse(**results[0].model_dump(), questions=results)
 
 
 @router.post(
@@ -301,79 +231,29 @@ def submit_answer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AnswerEvaluationResponse:
-    """Grade a student's answer to an existing question and persist the attempt.
-
-    - Looks up the question (404 if unknown).
-    - Runs the rubric-based LLM judge (correctness / completeness /
-      depth_of_reasoning / clarity) and computes the weighted overall score (0-100).
-    - Persists an :class:`Attempt` (score stored as 0-1, full rubric JSON in
-      ``evaluation_data``).
-    - Requires a valid JWT Bearer token.
-    """
+    """Grade an answer through the shared attempt core (one transaction)."""
     question = db.query(Question).filter(Question.id == question_id).first()
     if question is None:
         raise NotFoundError(f"Question {question_id} not found")
 
     with stage("evaluate"):
-        evaluation = evaluate_answer(question=question, student_answer=payload.answer)
-
-    attempt = Attempt(
-        user_id=current_user.id,
-        question_id=question.id,
-        user_answer=payload.answer,
-        score=round(evaluation["overall_score"] / 100.0, 4),  # store 0-1 per model convention
-        feedback=evaluation["feedback"],
-        criteria_scores=evaluation["scores"],
-        evaluation_data=json.dumps(evaluation),
-    )
-    db.add(attempt)
-    db.flush()  # assign attempt.id inside the open transaction
-
-    # ── Stage 10: fold this attempt into the learner's mastery profile ────────
-    # Runs in the SAME transaction as the attempt, but inside a SAVEPOINT so a
-    # failure in the mastery update rolls back only the mastery write — the
-    # student's answer is never lost.
-    try:
-        with db.begin_nested():
-            update_mastery(
-                user_id=current_user.id,
-                subject=question.subject,
-                topic=question.topic,
-                score=attempt.score,
-                bloom_level=question.bloom_level,
-                difficulty=question.difficulty,
-                db=db,
-            )
-    except Exception:  # defensive: the answer must survive a mastery failure
-        logger.exception(
-            "Mastery update failed for user=%s subject=%s topic=%s; "
-            "attempt=%s was still saved",
-            current_user.id, question.subject, question.topic, attempt.id,
-        )
-
-    db.commit()
-    db.refresh(attempt)
-
-    try:
-        from app.services.adaptive_service import update_mastery_profile
-
-        update_mastery_profile(
-            user_id=current_user.id,
-            topic=question.topic,
-            bloom_level=question.bloom_level,
-            score=attempt.score,
+        result = submit_attempt_core(
             db=db,
+            user_id=current_user.id,
+            question=question,
+            answer_text=payload.answer,
+            submission_id=payload.submission_id,
         )
-    except Exception:
-        pass
 
     return AnswerEvaluationResponse(
-        attempt_id=attempt.id,
-        question_id=question.id,
-        scores=evaluation["scores"],
-        overall_score=evaluation["overall_score"],
-        feedback=evaluation["feedback"],
-        missing_points=evaluation["missing_points"],
-        strengths=evaluation["strengths"],
-        reference_answer=question.reference_answer,
+        attempt_id=result["attempt_id"],
+        question_id=result["question_id"],
+        scores=result["scores"],
+        overall_score=result["overall_score"],
+        feedback=result["feedback"],
+        missing_points=result["missing_points"],
+        strengths=result["strengths"],
+        reference_answer=result["reference_answer"],
+        evaluation_mode=result["evaluation_mode"],
+        duplicate_submission=result.get("duplicate_submission", False),
     )

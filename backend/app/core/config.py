@@ -31,8 +31,12 @@ class Settings(BaseSettings):
 
     # CORS
     allowed_origins: Union[List[str], str] = [
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ]
 
     @property
@@ -47,11 +51,25 @@ class Settings(BaseSettings):
     # Chroma
     chroma_host: str = "localhost"
     chroma_port: int = 8001
+    # Remote-first: a configured CHROMA_HOST is retried briefly and reported in
+    # /health. Local persistence is an explicit opt-in, never a silent surprise.
+    chroma_allow_local_fallback: bool = False
+    chroma_connect_timeout_seconds: float = 2.0
+    chroma_retry_attempts: int = 2
+    chroma_retry_backoff_seconds: float = 0.25
+
+    # Database connection / health behaviour
+    db_connect_timeout_seconds: float = 5.0
+    db_statement_timeout_seconds: int = 5
+    db_pool_recycle_seconds: int = 1800
+    sql_echo: bool = False
+    health_db_timeout_seconds: float = 5.0
 
     # LLM
     openai_api_key: str = "sk-placeholder"
     gemini_api_key: str = ""           # Set GEMINI_API_KEY in .env
-    llm_model: str = "gemini-flash-lite-latest"
+    gemini_backup_api_key: str = ""    # Set GEMINI_BACKUP_API_KEY in .env (secondary key for failover)
+    llm_model: str = "gemini-3.1-flash-lite"
     # Judge model. Left empty by default so it inherits LLM_MODEL (env: LLM_EVAL_MODEL).
     # Set it explicitly to route generation and evaluation to different models
     # (e.g. a cheaper/less rate-limited model for scoring).
@@ -99,7 +117,7 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 2048  # evaluation hard cap; thinking tokens count toward it
 
     # LLM reliability (env: LLM_TIMEOUT_SECONDS / LLM_MAX_CONCURRENCY)
-    llm_timeout_seconds: float = 45.0   # hard per-call timeout; a slower call is
+    llm_timeout_seconds: float = 20.0   # hard per-call timeout; a slower call is
                                         # treated as transient and retried
     llm_max_concurrency: int = 3        # max simultaneous Gemini calls per process
 
@@ -110,7 +128,7 @@ class Settings(BaseSettings):
     # keeps the single-model behaviour exactly as before; the committed
     # ``.env.example`` ships a sensible lite-model fallback list. Raw value; use
     # ``settings.fallback_models`` for the parsed list (mirrors ALLOWED_ORIGINS).
-    llm_fallback_models: Union[List[str], str] = []
+    llm_fallback_models: Union[List[str], str] = ""
 
     # Retrieval cache (env: RETRIEVAL_CACHE_TTL_SECONDS / RETRIEVAL_CACHE_MAX_ENTRIES)
     retrieval_cache_ttl_seconds: float = 300.0   # 5 minutes
@@ -120,6 +138,18 @@ class Settings(BaseSettings):
     # pre-loads the embedding model, Chroma collection and structured-output
     # schemas so the first request does not pay that one-time cost.
     warmup_on_startup: bool = True
+
+    # ── Demo-day generation safety (item 3) ─────────────────────────────────
+    # OFFLINE_DEMO_MODE: never call the LLM for generation or evaluation; use the
+    # seeded bank / cache and a deterministic provisional evaluator instead.
+    offline_demo_mode: bool = False
+    # Hard overall deadline for one /generate request (seconds). Per-call timeout
+    # is shorter so at most two attempts + validation fit inside the budget.
+    generation_deadline_seconds: float = 60.0
+    generation_call_timeout_seconds: float = 15.0
+    generation_max_attempts: int = 2
+    # Cap fallback models tried inside one generation call (quota containment).
+    generation_max_fallback_models: int = 3
 
     @field_validator("llm_thinking_budget", mode="before")
     @classmethod
@@ -219,6 +249,19 @@ class Settings(BaseSettings):
                     pass  # fall through to comma splitting
             return [part.strip() for part in text.split(",") if part.strip()]
         return [str(item).strip() for item in value if str(item).strip()]
+
+    @property
+    def gemini_api_keys(self) -> List[str]:
+        """Ordered list of valid Gemini API keys (primary + backup, supporting comma separation)."""
+        keys: List[str] = []
+        for raw in [self.gemini_api_key, self.gemini_backup_api_key]:
+            if not raw:
+                continue
+            for part in str(raw).split(","):
+                k = part.strip()
+                if k and k not in keys:
+                    keys.append(k)
+        return keys
 
     @model_validator(mode="after")
     def _default_eval_model(self) -> "Settings":

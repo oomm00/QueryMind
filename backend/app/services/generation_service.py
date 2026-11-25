@@ -68,11 +68,12 @@ THIN_CONTEXT_MIN_CHARS = 250
 BLOOM_LEVEL_SPECS: dict[str, dict[str, str]] = {
     "remember": {
         "definition": (
-            "Recall or recognize facts, terminology, or definitions exactly as "
-            "learned - retrieval without transformation."
+            "Recall or recognize technical computer science definitions, algorithm invariants, "
+            "asymptotic complexities, data structure properties, or system mechanisms. "
+            "STRICTLY technical CSE concepts — never historical, biographical, or publication-year trivia."
         ),
-        "good": "'State the three ACID properties of a transaction.' (asks for the known list verbatim)",
-        "bad": "'Explain why atomicity matters in a banking workload.' (that demands understanding, not recall)",
+        "good": "'State the time complexity of Dijkstra algorithm when implemented with a binary min-heap.' (technical recall)",
+        "bad": "'In what year was Dijkstra algorithm published?' (historical/biographical trivia is strictly forbidden in CSE)",
     },
     "understand": {
         "definition": (
@@ -269,6 +270,7 @@ class GeminiAdapter:
         thinking_level: Any = None,
         thinking_budget: Any = None,
         max_output_tokens: Any = None,
+        api_keys: Optional[list[str]] = None,
     ) -> None:
         self._client = client
         self._model = model
@@ -277,6 +279,8 @@ class GeminiAdapter:
         self._thinking_level = thinking_level
         self._thinking_budget = thinking_budget
         self._max_output_tokens = max_output_tokens
+        self._api_keys = list(api_keys) if api_keys else []
+        self._current_key_idx = 0
 
     def generate_content(self, prompt: str, model: Optional[str] = None) -> Any:
         """Call the Gemini API and return a response object with a ``.text`` attribute.
@@ -294,6 +298,7 @@ class GeminiAdapter:
         existing JSON-retry path takes over as the last resort.
         """
         from google.genai import types as genai_types  # local import keeps module-level clean
+        import google.genai as genai
 
         config_kwargs = {
             "temperature": self._temperature,
@@ -309,37 +314,66 @@ class GeminiAdapter:
         if thinking is not None:
             config_kwargs["thinking_config"] = thinking
 
-        response = self._client.models.generate_content(
-            model=model or self._model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(**config_kwargs),
-        )
-        reason = _finish_reason(response)
-        if reason == "MAX_TOKENS" and config_kwargs.get("max_output_tokens"):
-            retry_cap = min(int(config_kwargs["max_output_tokens"]) * 2, 65536)
-            logger.warning(
-                "Gemini finish_reason=MAX_TOKENS model=%s cap=%s usage=%s — "
-                "retrying once with max_output_tokens=%d",
-                model or self._model,
-                config_kwargs["max_output_tokens"],
-                _usage_metadata(response),
-                retry_cap,
-            )
-            config_kwargs["max_output_tokens"] = retry_cap
-            response = self._client.models.generate_content(
-                model=model or self._model,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(**config_kwargs),
-            )
-            reason = _finish_reason(response)
-        logger.info(
-            "Gemini call model=%s finish_reason=%s usage=%s thinking=%s",
-            model or self._model,
-            reason,
-            _usage_metadata(response),
-            self._thinking_level,
-        )
-        return response
+        keys_count = max(1, len(self._api_keys))
+        last_error = None
+
+        for attempt_key in range(keys_count):
+            try:
+                response = self._client.models.generate_content(
+                    model=model or self._model,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(**config_kwargs),
+                )
+                reason = _finish_reason(response)
+                if reason == "MAX_TOKENS" and config_kwargs.get("max_output_tokens"):
+                    retry_cap = min(int(config_kwargs["max_output_tokens"]) * 2, 65536)
+                    logger.warning(
+                        "Gemini finish_reason=MAX_TOKENS model=%s cap=%s usage=%s — "
+                        "retrying once with max_output_tokens=%d",
+                        model or self._model,
+                        config_kwargs["max_output_tokens"],
+                        _usage_metadata(response),
+                        retry_cap,
+                    )
+                    config_kwargs["max_output_tokens"] = retry_cap
+                    response = self._client.models.generate_content(
+                        model=model or self._model,
+                        contents=prompt,
+                        config=genai_types.GenerateContentConfig(**config_kwargs),
+                    )
+                    reason = _finish_reason(response)
+                logger.info(
+                    "Gemini call model=%s finish_reason=%s usage=%s thinking=%s (key_index=%d)",
+                    model or self._model,
+                    reason,
+                    _usage_metadata(response),
+                    self._thinking_level,
+                    self._current_key_idx,
+                )
+                return response
+            except Exception as exc:
+                last_error = exc
+                err_str = str(exc)
+                is_quota = (
+                    "429" in err_str
+                    or "RESOURCE_EXHAUSTED" in err_str
+                    or "quota" in err_str.lower()
+                    or "rate limit" in err_str.lower()
+                    or "403" in err_str
+                    or "API_KEY_INVALID" in err_str
+                )
+                if is_quota and len(self._api_keys) > 1 and attempt_key < len(self._api_keys) - 1:
+                    self._current_key_idx = (self._current_key_idx + 1) % len(self._api_keys)
+                    next_key = self._api_keys[self._current_key_idx]
+                    logger.warning(
+                        "Gemini API key failed with quota/auth error (%s). Automatically switching to backup key (%d of %d)...",
+                        err_str[:120],
+                        self._current_key_idx + 1,
+                        len(self._api_keys),
+                    )
+                    self._client = genai.Client(api_key=next_key)
+                    continue
+                raise last_error
 
 
 def _finish_reason(response: Any) -> Optional[str]:
@@ -452,12 +486,12 @@ def _configure_genai(
     pass the lower evaluation level and cap to keep latency (and blast radius)
     down.
     """
-    api_key = settings.gemini_api_key
-    if not api_key:
+    api_keys = settings.gemini_api_keys
+    if not api_keys:
         raise LLMNotConfiguredError()
     import google.genai as genai  # local import to avoid top-level side-effects during tests
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_keys[0])
     if thinking_level is None:
         thinking_level = settings.gen_thinking_level_for(bloom_level)
     return GeminiAdapter(
@@ -472,6 +506,7 @@ def _configure_genai(
             if max_output_tokens is not None
             else settings.llm_gen_max_output_tokens
         ),
+        api_keys=api_keys,
     )
 
 
@@ -547,7 +582,12 @@ def _build_prompt(
         else "require deep analysis, synthesis, or critique"
     )
 
-    prompt = f"""You are an expert academic question designer. Your task is to generate a {difficulty.upper()} difficulty exam question on the topic of "{topic}" (subject: {subject}).
+    prompt = f"""You are an expert academic Computer Science and Engineering examination designer. Your task is to generate a {difficulty.upper()} difficulty technical exam question on the topic of "{topic}" (subject: {subject}).
+
+CRITICAL CSE TECHNICAL FOCUS (STRICT RULE):
+- This question is strictly for Computer Science & Engineering students and technical examinations.
+- Questions MUST test technical concepts: algorithms, data structures, asymptotic time/space complexities, edge relaxation, pointer mechanics, race conditions, memory layouts, invariants, protocol headers, state transitions, or execution traces.
+- FORBIDDEN TRIVIA: NEVER ask biographical, historical, chronological, or non-technical trivia. NEVER ask in what year an algorithm or concept was invented, what university a scientist attended, where someone was born, what prize they won, or historical dates. Even for REMEMBER level, test technical facts (e.g. time complexity, edge weights, relaxation formulas), NEVER historical trivia.
 
 COGNITIVE LEVEL: Bloom's Taxonomy — {bloom_level.upper()}
 Cognitive operation: {spec.get("definition", "")}
@@ -562,11 +602,12 @@ SOURCE MATERIAL (base your question on this content):
 {context_section}
 
 INSTRUCTIONS:
-1. The question MUST be directly answerable from the source material above.
+1. The question MUST test technical engineering concepts and be directly answerable from the source material above (or canonical computer science theory if general knowledge).
 2. Start the question with one of the required stems/verbs above — a deterministic stem check rejects any question that opens with a forbidden lower-level verb.
 3. The difficulty level is {difficulty}: {difficulty_hint}.
-4. The explanation must cite the source material reasoning.
-5. source_chunks / source_chunk_ids must list the [Source N: filename] doc names you used.
+4. Absolutely no biographical or historical trivia.
+5. The explanation must cite the technical reasoning.
+6. source_chunks / source_chunk_ids must list the [Source N: filename] doc names you used.
 
 {JSON_SCHEMA_DESCRIPTION}
 
@@ -654,6 +695,10 @@ def generate_question(
     chroma_collection: Optional[Collection] = None,
     context_chunks: Optional[list[dict]] = None,
     extra_instruction: str = "",
+    timeout: Optional[float] = None,
+    max_models: Optional[int] = None,
+    deadline: Optional[float] = None,
+    uploaded_only: bool = False,
 ) -> GeneratedQuestion:
     """Generate a Bloom-taxonomy-aligned question grounded in retrieved context.
 
@@ -704,10 +749,7 @@ def generate_question(
             collection=chroma_collection,
         )
 
-    # ── No source material -> nothing to ground a question on ─────────────────
-    # If neither the college nor the public tier has any material for this
-    # subject + topic, fail fast with a clear 404 rather than asking the LLM to
-    # invent a question from thin air.
+    # ── Source material grounding ─────────────────────────────────────────────
     if not context_chunks:
         raise NoContextError(
             f"No study material exists for {subject} / {topic} yet. "
@@ -758,6 +800,8 @@ def generate_question(
         )
         # LLM_FALLBACK_MODELS: on a quota/503 error, retry against the next model.
         model_chain = llm_utils.resolve_model_chain(settings.llm_model)
+        if max_models is not None and max_models > 0:
+            model_chain = model_chain[:max_models]
 
     # ── Step 4: LLM round-trip ────────────────────────────────────────────────
     # llm_utils handles the transient-error backoff, the cross-model fallback and
@@ -765,13 +809,15 @@ def generate_question(
     # `time.sleep` is threaded through so tests can patch it at the module level.
     def _request(prompt_text: str) -> str:
         return llm_utils.request_text(
-            client, prompt_text, sleep=time.sleep, models=model_chain
+            client, prompt_text, sleep=time.sleep, models=model_chain, timeout=timeout,
+            deadline=deadline,
         )
 
     def _parse(raw: dict) -> GeneratedQuestion:
         generated = _validate_and_parse(raw, question_type, topic=topic)
         if context_warning and not generated.context_warning:
             generated.context_warning = context_warning
+        generated.source = "live"
         return generated
 
     try:

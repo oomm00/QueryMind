@@ -221,3 +221,26 @@ class NoContextError(QueryMindError):
         detail: str = "No study material exists for this subject/topic yet",
     ) -> None:
         super().__init__(detail)
+
+
+class TopicQuestionsUnavailableError(QueryMindError):
+    """Raised when no questions can be generated or served for a requested topic."""
+
+    status_code = 422
+    code = "TOPIC_QUESTIONS_UNAVAILABLE"
+
+    def __init__(
+        self,
+        topic: str,
+        reason: str = "",
+        offline: bool = False,
+    ) -> None:
+        mode_note = "in offline mode" if offline else "live generation unavailable"
+        detail = (
+            f"No practice questions are available for topic '{topic}' ({mode_note}). "
+            f"{reason.strip()} Please try again or select one of the supported demo topics."
+        ).strip()
+        super().__init__(detail)
+        self.topic = topic
+        self.offline = offline
+

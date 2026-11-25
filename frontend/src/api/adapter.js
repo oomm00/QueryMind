@@ -15,16 +15,23 @@
  * Converts frontend contract request -> backend payload
  */
 export function adaptGenerateQuestionsRequest(contractBody, userId) {
-  return {
+  // Adaptive generation is the demo default: the backend picks the next rung
+  // from real attempts. Passing adaptive:false is the explicit manual override.
+  const adaptive = contractBody.adaptive !== false
+  const payload = {
     topic: contractBody.topic || null,
     subject: contractBody.subject || contractBody.topic || 'General',
-    bloom_level: contractBody.bloom_level,
-    difficulty: contractBody.difficulty,
     question_type: contractBody.question_type || 'open',
     num_questions: contractBody.count ?? 1,
     document_id: contractBody.document_id || null,
+    adaptive,
     ...(contractBody.uploaded_only ? { uploaded_only: true } : {}),
   }
+  if (!adaptive) {
+    payload.bloom_level = contractBody.bloom_level
+    payload.difficulty = contractBody.difficulty
+  }
+  return payload
 }
 
 /**
@@ -66,6 +73,7 @@ function mapSingleQuestion(raw) {
     options: raw.options ?? undefined,
     correct_answer: raw.correct_answer ?? undefined,
     explanation: raw.explanation ?? undefined,
+    source: raw.source ?? undefined,
   }
 }
 
@@ -81,6 +89,7 @@ export function adaptSubmitAttemptRequest(contractBody, userId) {
     user_id: userId,
     user_answer: contractBody.answer_text,
     time_taken_seconds: contractBody.time_taken_seconds ?? null,
+    submission_id: contractBody.submission_id ?? null,
   }
 }
 

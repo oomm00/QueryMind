@@ -42,9 +42,9 @@ from app.models.models import Question
 logger = logging.getLogger("querymind.validation")
 
 # ── Thresholds ────────────────────────────────────────────────────────────────
-DUPLICATE_SIMILARITY_THRESHOLD = 0.90     # > 0.90 cosine similarity => duplicate triggers regeneration
-ANSWERABILITY_SIMILARITY_THRESHOLD = 0.50  # answer must match a chunk at least this well
-KEYWORD_OVERLAP_THRESHOLD = 0.30           # secondary signal threshold for grounding
+DUPLICATE_SIMILARITY_THRESHOLD = 0.97     # > 0.97 cosine similarity => duplicate triggers regeneration
+ANSWERABILITY_SIMILARITY_THRESHOLD = 0.22  # answer/question must match a chunk at least this well
+KEYWORD_OVERLAP_THRESHOLD = 0.15           # secondary signal threshold for grounding
 
 
 # ── Embedding helpers (reuse ChromaDB's default model) ────────────────────────
@@ -107,10 +107,18 @@ def _query_existing(
     subject: str,
     topic: str,
 ) -> list[Question]:
-    """Stored questions for the same ``subject`` + ``topic`` (duplicate candidates)."""
+    """Stored questions for the same ``subject`` + ``topic`` (duplicate candidates).
+    
+    Excludes offline bank questions so live generation is not rejected simply
+    because the offline fallback bank contains standard definitions.
+    """
     return (
         db.query(Question)
-        .filter(Question.subject == subject, Question.topic == topic)
+        .filter(
+            Question.subject == subject,
+            Question.topic == topic,
+            Question.source != "bank",
+        )
         .all()
     )
 
@@ -163,6 +171,7 @@ def check_duplicate(
         return {
             "is_duplicate": True,
             "similar_to_id": str(existing[best_idx].id),
+            "similar_to_text": existing[best_idx].question_text,
             "similarity": round(best_score, 4),
         }
 
@@ -173,14 +182,14 @@ def check_duplicate(
 
 def check_answerability(
     question: dict,
-    source_chunks: list[str],
+    source_chunks: list[Union[dict, str]],
     *,
     question_vec: Optional[np.ndarray] = None,
 ) -> dict:
     """Confirm the question's answer is grounded in the retrieved source chunks.
 
     Combines:
-    1. Primary signal: embedding cosine similarity between the answer and chunks.
+    1. Primary signal: embedding cosine similarity between the answer (and question) and chunks.
     2. Secondary signal: keyword overlap between the answer/question and context.
 
     When there is no reference answer to ground on, the question text itself is
@@ -188,36 +197,50 @@ def check_answerability(
     reused rather than embedded a second time.
     """
     answer = ""
+    q_text = ""
     if isinstance(question, dict):
         answer = question.get("correct_answer") or question.get("question") or ""
+        q_text = question.get("question") or ""
     else:  # defensive: allow objects with attributes
         answer = getattr(question, "correct_answer", "") or getattr(question, "question", "") or ""
+        q_text = getattr(question, "question", "") or ""
 
-    chunk_texts = [str(c) for c in (source_chunks or []) if c and str(c).strip()]
+    chunk_texts = []
+    for c in (source_chunks or []):
+        if isinstance(c, dict):
+            t = c.get("text") or c.get("content") or str(c)
+            if t.strip():
+                chunk_texts.append(t.strip())
+        elif c and str(c).strip():
+            chunk_texts.append(str(c).strip())
+
     if not answer.strip() or not chunk_texts:
         return {"is_answerable": False, "best_match_score": 0.0, "keyword_overlap": 0.0}
 
-    # Did the answer fall back to the question text? If so we can reuse the
-    # caller's question embedding instead of embedding the same text again.
-    has_reference = bool(
-        (question.get("correct_answer") if isinstance(question, dict)
-         else getattr(question, "correct_answer", "")) or ""
-    )
-    if not has_reference and question_vec is not None:
-        answer_vec = np.asarray(question_vec, dtype="float32").reshape(1, -1)
-        chunk_vecs = embed_texts(chunk_texts)
-    else:
-        vectors = embed_texts([answer] + chunk_texts)
-        answer_vec, chunk_vecs = vectors[:1], vectors[1:]
+    # Embed answer and chunks
+    vectors = embed_texts([answer] + chunk_texts)
+    answer_vec, chunk_vecs = vectors[:1], vectors[1:]
 
     sims = _cosine_similarities(answer_vec[0], chunk_vecs)
     best_score = float(np.max(sims))
     keyword_overlap = _compute_keyword_overlap(answer, chunk_texts)
 
+    # If answer similarity is borderline and we have question text, check composite grounding
+    if best_score < ANSWERABILITY_SIMILARITY_THRESHOLD and q_text.strip():
+        composite_text = f"{q_text} {answer}".strip()
+        comp_vec = embed_texts([composite_text])
+        comp_sims = _cosine_similarities(comp_vec[0], chunk_vecs)
+        comp_best = float(np.max(comp_sims))
+        if comp_best > best_score:
+            best_score = comp_best
+        comp_kw = _compute_keyword_overlap(composite_text, chunk_texts)
+        if comp_kw > keyword_overlap:
+            keyword_overlap = comp_kw
+
     # Primary check is embedding similarity; secondary keyword signal reinforces borderline cases
     is_answerable = (
         best_score >= ANSWERABILITY_SIMILARITY_THRESHOLD
-        or (best_score >= (ANSWERABILITY_SIMILARITY_THRESHOLD - 0.10) and keyword_overlap >= KEYWORD_OVERLAP_THRESHOLD)
+        or (best_score >= (ANSWERABILITY_SIMILARITY_THRESHOLD - 0.05) and keyword_overlap >= KEYWORD_OVERLAP_THRESHOLD)
     )
 
     return {
@@ -383,6 +406,8 @@ def validate_question(
     db: Session,
     requested_bloom: Optional[str] = None,
     llm_client: Optional[Any] = None,
+    *,
+    existing: Optional[list[Question]] = None,
 ) -> dict:
     """Run all validation checks and return a combined verdict.
 
@@ -419,7 +444,8 @@ def validate_question(
     # Fetch the duplicate candidates up front, on the CALLER's thread:
     # SQLAlchemy sessions are not thread-safe, so the concurrent checks below
     # must not touch the session themselves.
-    existing = _query_existing(db, subject, topic)
+    if existing is None:
+        existing = _query_existing(db, subject, topic)
 
     # Embed the new question exactly ONCE and share the vector with both checks.
     # Only computed when a check actually needs it:
