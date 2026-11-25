@@ -5,7 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    // Demo port is pinned: the backend CORS list and start-demo.ps1 key off it.
+    port: 5174,
+    strictPort: true,
     // Proxy API calls to backend in dev — avoids CORS issues
     proxy: {
       '/api': {
@@ -15,12 +17,11 @@ export default defineConfig({
       },
     },
   },
-  // The tests run in jsdom. Content-tool tests are kept separate because they
-  // import Node-only modules and are run by their own script.
+  // The tests run in jsdom; the content pipeline's own tests are plain Node.
   test: {
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.js'],
-    include: ['src/**/*.test.{js,jsx}'],
+    include: ['src/**/*.test.{js,jsx}', 'scripts/**/*.test.js'],
     restoreMocks: true,
   },
 })

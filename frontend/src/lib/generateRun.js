@@ -1,16 +1,21 @@
 /**
  * generateRun — one request for the whole run.
  *
- * The backend now honours `num_questions` and owns the retry/deadline/fallback
+ * The backend honours `num_questions` and owns the retry/deadline/fallback
  * chain. The browser makes exactly ONE POST /questions/generate call per run and
  * maps the returned `questions[]` into session shape. Duplicate and Bloom
  * retries happen server-side; the UI never fans out into ten calls again.
+ *
+ * NO_CONTEXT still stops the page with a suggestion for a topic the student
+ * does have. Any other failure arrives as a sentence from
+ * api/errorMessages.js - never a code. No React, no storage and no fetch of its
+ * own: the call is injected, so the rule can be exercised with a fake one.
  */
 
 import { customConceptId, MAX_IN_FLIGHT } from './generateForm.js'
 import { generationErrorCode } from '../api/errorMessages.js'
 
-/** How many questions a run asks the server for at once. */
+/** Kept for callers that still import the old slot count. */
 export { MAX_IN_FLIGHT }
 
 /** One call may think for this long before it is counted as lost. */
@@ -25,7 +30,7 @@ export const GENERATED_ORIGIN_LABEL = 'Generated'
 /** The idle note under the progress line, so 30 seconds is not a mystery. */
 export const ANALYZE_HINT = 'Analyze questions can take up to 30 seconds.'
 
-/** The codes this module treats as "ask again" rather than "stop". */
+/** The codes this module still reads on a failed single call. */
 export const DUPLICATE_QUESTION = 'DUPLICATE_QUESTION'
 export const BLOOM_ALIGNMENT_MISMATCH = 'BLOOM_ALIGNMENT_MISMATCH'
 export const RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED'
@@ -64,26 +69,10 @@ export function retryAfterMs(error) {
   return Math.min(seconds * 1000, 30_000)
 }
 
-function sleep(ms, signal) {
-  return new Promise((resolve) => {
-    if (signal?.aborted) {
-      resolve()
-      return
-    }
-    const timer = setTimeout(finish, ms)
-    function finish() {
-      clearTimeout(timer)
-      signal?.removeEventListener?.('abort', finish)
-      resolve()
-    }
-    signal?.addEventListener?.('abort', finish, { once: true })
-  })
-}
-
 /**
  * One generated question in the shape the session, the question page and the
  * results page already speak - the same shape content questions take, plus the
- * source that tells the two apart.
+ * source that tells the two apart and the reason the adaptive rung was chosen.
  *
  * The backend may not hand back an id (the adapter refuses to invent one), so
  * the caller passes a `fallbackId`: a key for this browser's own session list,
@@ -125,6 +114,9 @@ export function generatedToSessionQuestion(raw, meta = {}) {
   }
 
   const type = options.length > 0 && correctIndex !== undefined ? 'mcq' : 'short'
+  const requestedTopic = raw?.requested_topic ?? meta.topic ?? ''
+  const servedTopic = raw?.served_topic ?? raw?.topic ?? requestedTopic
+  const conceptId = servedTopic ? customConceptId(servedTopic) : ''
 
   return {
     question_id: raw?.question_id ?? meta.fallbackId,
@@ -138,9 +130,11 @@ export function generatedToSessionQuestion(raw, meta = {}) {
     rubric: Array.isArray(raw?.rubric) ? raw.rubric : [],
     explanation: raw?.explanation ?? '',
     needsHumanCheck: type !== 'mcq',
-    topic: meta.topic ?? raw?.topic ?? '',
-    conceptId: meta.conceptId ?? '',
-    conceptTitle: meta.topic ?? '',
+    topic: servedTopic,
+    requested_topic: requestedTopic,
+    served_topic: servedTopic,
+    conceptId: meta.conceptId ?? conceptId,
+    conceptTitle: servedTopic,
     topicId: '',
     origin: 'generated',
     originLabel: GENERATED_ORIGIN_LABEL,
@@ -148,6 +142,10 @@ export function generatedToSessionQuestion(raw, meta = {}) {
     blockIndex: null,
     hints: Array.isArray(raw?.hints) ? raw.hints : [],
     resources: [],
+    source: raw?.source ?? undefined,
+    source_chunks: Array.isArray(raw?.source_chunks) ? raw.source_chunks : [],
+    context_warning: raw?.context_warning ?? undefined,
+    adaptive_reason: raw?.adaptive_reason ?? undefined,
   }
 }
 
@@ -163,7 +161,8 @@ export function generatedToSessionQuestion(raw, meta = {}) {
  * @param {string} request.difficulty
  * @param {string[]} request.blooms - the chips the student kept, in order
  * @param {number} request.count
- * @param {boolean} request.uploaded_only
+ * @param {boolean} [request.adaptive] - let the backend choose the rung
+ * @param {boolean} [request.uploaded_only]
  * @param {AbortSignal} [request.signal] - Cancel
  * @param {(progress: object) => void} [request.onProgress]
  * @returns {Promise<{questions: Array, skipped: number, noContext: boolean,
@@ -208,7 +207,7 @@ export async function runGeneration({
     )
     const rawQuestions = Array.isArray(result?.questions)
       ? result.questions
-      : result?.question
+      : result?.question || result?.question_text
         ? [result]
         : []
     rawQuestions.slice(0, wanted).forEach((raw, index) => {

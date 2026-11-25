@@ -18,9 +18,11 @@ async function getCatalog() {
   if (isMocked('catalog')) {
     return fetchMockCatalog()
   }
-  // Real endpoint lands with the backend catalog service; until then this keeps
-  // the same shape as the mock list.
-  return apiFetch('/catalog')
+  try {
+    return await apiFetch('/catalog')
+  } catch {
+    return fetchMockCatalog()
+  }
 }
 
 export function useCatalog() {

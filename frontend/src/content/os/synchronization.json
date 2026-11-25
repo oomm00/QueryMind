@@ -2,5 +2,10 @@
   "id": "synchronization",
   "title": "Synchronization",
   "subject": "operating-systems",
-  "concepts": []
+  "concepts": [
+    "concept-locks",
+    "concept-semaphores",
+    "concept-race-conditions"
+  ],
+  "comment": "AI-drafted, needs review"
 }

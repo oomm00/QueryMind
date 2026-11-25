@@ -18,9 +18,15 @@ export function adaptGenerateQuestionsRequest(contractBody, userId) {
   // Adaptive generation is the demo default: the backend picks the next rung
   // from real attempts. Passing adaptive:false is the explicit manual override.
   const adaptive = contractBody.adaptive !== false
+  // uploaded_only with no matched subject means "search my uploads by meaning".
+  // A literal 'General' here would filter Chroma to chunks labelled General and
+  // hide a PDF stored under OS or DBMS, so keep the null all the way to the API.
+  const hasSubject = contractBody.subject !== null && contractBody.subject !== undefined
   const payload = {
     topic: contractBody.topic || null,
-    subject: contractBody.subject || contractBody.topic || 'General',
+    subject: hasSubject
+      ? contractBody.subject
+      : (contractBody.uploaded_only ? null : (contractBody.topic || 'General')),
     question_type: contractBody.question_type || 'open',
     num_questions: contractBody.count ?? 1,
     document_id: contractBody.document_id || null,
@@ -67,6 +73,10 @@ function mapSingleQuestion(raw) {
     bloom_level: raw.bloom_level,
     difficulty: raw.difficulty,
     topic: raw.topic,
+    requested_topic: raw.requested_topic ?? undefined,
+    served_topic: raw.served_topic ?? undefined,
+    source_chunks: raw.source_chunks ?? [],
+    context_warning: raw.context_warning ?? undefined,
     starter_code: raw.starter_code ?? undefined,
     test_cases: raw.test_cases ?? undefined,
     hints: raw.hints ?? undefined,
@@ -74,6 +84,7 @@ function mapSingleQuestion(raw) {
     correct_answer: raw.correct_answer ?? undefined,
     explanation: raw.explanation ?? undefined,
     source: raw.source ?? undefined,
+    adaptive_reason: raw.adaptive_reason ?? undefined,
   }
 }
 
@@ -102,10 +113,13 @@ export function adaptSubmitAttemptResponse(backendData) {
 
   return {
     score: backendData.score ?? 0,
+    overall_score: backendData.overall_score ?? undefined,
     criteria_scores: backendData.criteria_scores ?? undefined, // NEVER FABRICATE
     feedback_text: backendData.feedback_text ?? backendData.feedback ?? '',
     correct_answer: backendData.correct_answer ?? undefined,
     attempt_id: backendData.attempt_id ?? undefined,
+    evaluation_mode: backendData.evaluation_mode ?? undefined,
+    duplicate_submission: backendData.duplicate_submission ?? false,
   }
 }
 

@@ -18,8 +18,10 @@ import { CommandPalette } from './components/CommandPalette'
 import { FlashHost } from './components/routing/FlashHost.jsx'
 import { useTheme } from './hooks/useTheme'
 import { useRailStats } from './hooks/useRailStats'
+import { isAnyMockEnabled } from './api/mocks/config.js'
 import { NAV_ITEMS, MOBILE_TABS, MOBILE_MORE_ITEMS, WORKSPACE_LABEL, breadcrumbFor } from './navigation'
 import { BreadcrumbProvider, BreadcrumbContext } from './hooks/useBreadcrumbs'
+import { NotificationPopover } from './components/notifications/NotificationPopover'
 import { Tooltip } from './components/ui/Tooltip'
 import { ProgressLine } from './components/ui/ProgressLine'
 import { ProgressRing } from './components/ui/ProgressRing'
@@ -125,11 +127,11 @@ function RailItem({ item, collapsed, badge }) {
       title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cx(
-          'group flex h-10 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors',
+          'group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all duration-150',
           collapsed && 'justify-center px-0',
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
           isActive
-            ? 'bg-primary-tint text-primary'
+            ? 'bg-primary/10 text-primary font-semibold border-l-2 border-primary shadow-[inset_0_0_12px_rgba(255,92,0,0.06)]'
             : 'text-muted hover:bg-surface-raised hover:text-ink'
         )
       }
@@ -217,6 +219,8 @@ function AppShell({ children }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const notificationsRef = useRef(null)
 
   // Adopt the remembered rail choice for the group we land in: /learn and /map
   // collapse to icons unless the user has expanded the rail there before.
@@ -251,6 +255,18 @@ function AppShell({ children }) {
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [menuOpen])
 
+  // Dismiss notifications on outside click.
+  useEffect(() => {
+    if (!notificationsOpen) return undefined
+    const onPointerDown = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [notificationsOpen])
+
   // Close the mobile "More" sheet whenever the route changes.
   useEffect(() => {
     setMoreOpen(false)
@@ -261,10 +277,10 @@ function AppShell({ children }) {
     return <div className="min-h-screen bg-page text-ink">{children}</div>
   }
 
-  const goalMinutes = weekly.minutes
-  const goalTarget = weekly.targetMinutes
-  const goalPct = Math.min(100, (goalMinutes / goalTarget) * 100)
-  const goalLabel = `Weekly goal ${formatHours(goalMinutes)} of ${formatHours(goalTarget)}`
+  const questionsCount = weekly?.questionsAnswered ?? 0
+  const targetQuestions = weekly?.targetQuestions ?? 20
+  const goalPct = Math.min(100, Math.round((questionsCount / targetQuestions) * 100))
+  const goalLabel = `Weekly practice: ${questionsCount} of ${targetQuestions} questions answered`
 
   return (
     <div className="min-h-screen bg-page text-ink" style={{ '--rail-w': collapsed ? '72px' : '232px' }}>
@@ -283,11 +299,11 @@ function AppShell({ children }) {
             collapsed && 'justify-center px-0'
           )}
         >
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-primary text-[15px] font-semibold text-primary-fg">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[#FF5C00] to-[#FF8033] text-[15px] font-bold text-white shadow-[0_0_15px_rgba(255,92,0,0.35)] ring-1 ring-white/20">
             q
           </span>
           {!collapsed && (
-            <span className="text-[15px] font-semibold tracking-tight text-ink">QueryMind</span>
+            <span className="text-[15px] font-bold tracking-tight text-ink">QueryMind</span>
           )}
         </div>
 
@@ -328,16 +344,16 @@ function AppShell({ children }) {
               </Tooltip>
             </div>
           ) : (
-            <div className="rounded-panel border border-line bg-surface-raised p-3">
+            <div className="rounded-2xl border border-line bg-surface/90 p-3.5 backdrop-blur-sm shadow-sm">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
-                <IconTarget size={13} />
-                Weekly goal
+                <IconTarget size={13} className="text-primary" />
+                Weekly practice
               </div>
               <p className="mt-1.5 text-sm font-semibold text-ink">
-                {formatHours(goalMinutes)} <span className="font-normal text-muted">/ {formatHours(goalTarget)}</span>
+                {questionsCount} <span className="font-normal text-muted">/ {targetQuestions} questions</span>
               </p>
               <ProgressLine className="mt-2" percentage={goalPct} />
-              <p className="mt-2 text-[11px] leading-tight text-muted">A little every day adds up.</p>
+              <p className="mt-2 text-[11px] leading-tight text-muted">Real answered questions this week.</p>
             </div>
           )}
 
@@ -400,10 +416,23 @@ function AppShell({ children }) {
               {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </button>
 
-            <button type="button" aria-label="Notifications" className={cx(ICON_BTN, 'relative')}>
-              <IconBell size={18} />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-danger" />
-            </button>
+            <div className="relative" ref={notificationsRef}>
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-expanded={notificationsOpen}
+                className={cx(ICON_BTN, 'relative')}
+              >
+                <IconBell size={18} />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary" />
+              </button>
+              <NotificationPopover
+                isOpen={notificationsOpen}
+                onClose={() => setNotificationsOpen(false)}
+              />
+            </div>
 
             <div className="relative" ref={menuRef}>
               <button
@@ -469,6 +498,15 @@ function AppShell({ children }) {
             </div>
           </div>
         </header>
+
+        {isAnyMockEnabled() && (
+          <div
+            data-testid="mock-data-banner"
+            className="flex items-center justify-center gap-2 border-b border-warning/40 bg-warning-tint px-4 py-1 text-xs font-semibold text-warning"
+          >
+            <span>⚠️ MOCK DATA ACTIVE — Local mock fixtures in use</span>
+          </div>
+        )}
 
         <main
           id="main-content"

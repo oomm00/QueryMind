@@ -10,13 +10,13 @@
  * empty concept is empty — so nothing downstream has to guess.
  */
 
-import { COURSE as OS_COURSE, getCourse as getOSCourse, getTopic as getOSTopic } from './os/index.js'
-import { COURSE_LOADERS } from './catalog/index.js'
+import { COURSE, getCourse, getTopic } from './os/index.js'
 import { conceptBank } from './questionBank.js'
+import { getAuthoredCourse, allAuthoredCourseIds } from './authoredCourses.js'
 
 /** The courses that actually have content behind them. */
 export function contentCourseIds() {
-  return [OS_COURSE.id, ...Object.values(COURSE_LOADERS).map((loader) => loader.COURSE.id)]
+  return [COURSE.id, ...allAuthoredCourseIds()]
 }
 
 function conceptQuestions(concept, course, topic) {
@@ -34,16 +34,14 @@ function conceptQuestions(concept, course, topic) {
  * session keeps pointing at the same course the student opened.
  */
 export function practiceCourse(courseId) {
-  const osId = courseId === 'operating-systems' ? 'os' : courseId
-  const loader =
-    osId === OS_COURSE.id
-      ? { COURSE: OS_COURSE, getCourse: getOSCourse, getTopic: getOSTopic }
-      : Object.values(COURSE_LOADERS).find((entry) => entry.COURSE.id === osId)
-  const course = loader?.getCourse(courseId)
+  const authored = getAuthoredCourse(courseId)
+  if (authored) return authored
+
+  const course = getCourse(courseId)
   if (!course) return null
 
   const topics = course.topics
-    .map((summary) => loader.getTopic(summary.id))
+    .map((summary) => getTopic(summary.id))
     .filter(Boolean)
     .map((topic) => ({
       id: topic.id,
@@ -86,8 +84,8 @@ export function questionIndex() {
   for (const courseId of contentCourseIds()) {
     const course = practiceCourse(courseId)
     for (const topic of course?.topics ?? []) {
-      for (const concept of topic.concepts) {
-        for (const question of concept.questions) index.set(question.question_id, question)
+      for (const concept of topic.concepts ?? []) {
+        for (const question of concept.questions ?? []) index.set(question.question_id, question)
       }
     }
   }

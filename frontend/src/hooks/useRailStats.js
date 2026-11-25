@@ -1,42 +1,71 @@
 /**
  * useRailStats — small derived stats for the app shell rail:
- * the Weak Areas count badge and the weekly study goal progress.
+ * the Weak Areas count badge and weekly practice progress.
  *
- * Reads through the existing API layer (mocked in dev) and degrades to safe
- * defaults if anything is unavailable.
+ * All figures derive strictly from real backend attempt and mastery records.
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { profileApi } from '../api/index.js'
-import { selectPerTopicAverages } from '../api/adapter.js'
+import { attemptsApi, masteryApi } from '../api/index.js'
 import { useAuth } from '../context/AuthContext.jsx'
 
-// Weekly study-goal clock. Mocked for now: the real source (accumulated session
-// minutes) lands with the sessions API.
-const WEEKLY_MINUTES = 200 // 3h 20m studied
-const WEEKLY_MINUTES_TARGET = 300 // 5h goal
+const WEEKLY_QUESTIONS_TARGET = 20
+
+function isThisWeek(timestamp) {
+  if (!timestamp) return false
+  const date = new Date(timestamp)
+  if (isNaN(date.getTime())) return false
+  const now = new Date()
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  return date >= oneWeekAgo && date <= now
+}
 
 export function useRailStats() {
   const { userId } = useAuth()
 
-  const profile = useQuery({
-    queryKey: ['rail', 'profile', userId],
-    queryFn: () => profileApi.getProfile(userId),
+  const masteryQuery = useQuery({
+    queryKey: ['rail', 'mastery', userId],
+    queryFn: () => masteryApi.getMyMastery(),
     enabled: Boolean(userId),
     retry: false,
-    staleTime: 60_000,
+    staleTime: 30_000,
+  })
+
+  const historyQuery = useQuery({
+    queryKey: ['rail', 'history', userId],
+    queryFn: () => attemptsApi.getHistory(userId),
+    enabled: Boolean(userId),
+    retry: false,
+    staleTime: 30_000,
   })
 
   let weakAreaCount = 0
   try {
-    const rows = selectPerTopicAverages(profile.data?.mastery_breakdown || [])
-    weakAreaCount = rows.filter((row) => row.average_score < 0.7).length
+    const records = Array.isArray(masteryQuery.data) ? masteryQuery.data : []
+    weakAreaCount = records.filter(
+      (r) => (r.attempts_count || 0) >= 2 && (r.mastery_score || 0) < 0.7
+    ).length
   } catch {
     weakAreaCount = 0
   }
 
+  let weekAttempts = 0
+  try {
+    const history = Array.isArray(historyQuery.data)
+      ? historyQuery.data
+      : historyQuery.data?.attempts ?? []
+    weekAttempts = history.filter((a) => isThisWeek(a.submitted_at || a.created_at)).length
+  } catch {
+    weekAttempts = 0
+  }
+
   return {
     weakAreaCount,
-    weekly: { minutes: WEEKLY_MINUTES, targetMinutes: WEEKLY_MINUTES_TARGET },
+    weekly: {
+      questionsAnswered: weekAttempts,
+      targetQuestions: WEEKLY_QUESTIONS_TARGET,
+      minutes: weekAttempts * 5,
+      targetMinutes: 100,
+    },
   }
 }

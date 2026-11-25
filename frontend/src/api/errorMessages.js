@@ -33,6 +33,7 @@ export const GENERATION_ERROR_MESSAGES = Object.freeze({
   LLM_UNAVAILABLE: 'The AI is busy. Try again in a minute.',
   LLM_NOT_CONFIGURED: "AI question generation isn't set up on this server yet.",
   NO_CONTEXT: 'No study material for that topic yet. Upload a document, then try again.',
+  DB_UNAVAILABLE: 'The database is temporarily unavailable. Your work is safe here — try again in a moment.',
   RATE_LIMIT_EXCEEDED: 'Too many requests in a row. Give it a moment, then try again.',
   TIMEOUT: 'That took too long. Check your connection and try again.',
 })
@@ -41,6 +42,7 @@ export const GENERATION_ERROR_MESSAGES = Object.freeze({
 export const RETRYABLE_GENERATION_CODES = Object.freeze([
   'LLM_QUOTA_EXHAUSTED',
   'LLM_UNAVAILABLE',
+  'DB_UNAVAILABLE',
   'RATE_LIMIT_EXCEEDED',
   'TIMEOUT',
 ])

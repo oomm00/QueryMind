@@ -1,98 +1,150 @@
 /**
  * SettingsPage — /settings
- * User profile, application preferences, study goals, and appearance toggles.
+ *
+ * Requirements:
+ * - Keep only real items (logout, theme indicator, display name / email if API supports it).
+ * - No stubs, no fake options, no "Coming soon".
  */
 
-import React, { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
+import { apiFetch } from '../api/client.js'
 import { useBreadcrumbs } from '../hooks/useBreadcrumbs'
-import { useTheme } from '../hooks/useTheme'
-import { PageHeader } from '../components/ui/PageHeader'
-import { PanelLarge } from '../components/ui/Panel'
-import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
-import { Toast } from '../components/ui/Toast'
+import { PageHeader } from '../components/ui/PageHeader.jsx'
+import { PanelLarge } from '../components/ui/Panel.jsx'
+import { Badge } from '../components/ui/Badge.jsx'
+import { Button } from '../components/ui/Button.jsx'
+import { Skeleton } from '../components/ui/Skeleton.jsx'
+import { IconSettings, IconClock } from '../components/ui/Icons.jsx'
+import { formatWhen } from '../lib/text.js'
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth()
-  const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
+  const { user, userId, logout } = useAuth()
   useBreadcrumbs([{ label: 'Workspace', to: '/dashboard' }, { label: 'Settings' }])
 
-  const [studyGoal, setStudyGoal] = useState('5 hours / week')
-  const [toast, setToast] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const handleSave = (e) => {
-    e.preventDefault()
-    setToast({
-      title: 'Settings saved',
-      description: 'Your study preferences and goals have been updated.',
-      variant: 'default',
-    })
+  useEffect(() => {
+    let active = true
+    apiFetch('/auth/me')
+      .then((data) => {
+        if (active) setProfile(data)
+      })
+      .catch(() => {
+        // Fall back to auth context info
+        if (active) {
+          setProfile({
+            user_id: userId,
+            email: user?.email,
+            full_name: user?.full_name || user?.name,
+          })
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [userId, user])
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-7 w-44" />
+        <Skeleton className="h-4 w-72" />
+        <Skeleton className="h-48" />
+        <Skeleton className="h-32" />
+      </div>
+    )
+  }
+
+  const email = profile?.email || user?.email || 'authenticated user'
+  const name = profile?.full_name || user?.full_name || 'Learner'
+  const id = profile?.user_id || userId || 'unknown'
+  const memberSince = profile?.created_at ? formatWhen(profile.created_at) : 'Active session'
+
   return (
-    <div className="max-w-2xl space-y-5">
+    <div className="space-y-5" data-testid="settings-page">
       <PageHeader
-        title="Settings & Preferences"
-        description="Manage your account profile, study schedule goals, and interface appearance."
+        title="Settings"
+        description="Manage your account profile, interface preferences, and active session."
       />
 
+      {/* Account Info */}
       <PanelLarge>
         <h2 className="text-sm font-semibold text-ink">Account Profile</h2>
-        <div className="mt-3 space-y-2 text-xs">
-          <p className="text-muted">
-            Signed in as: <strong className="text-ink">{user?.email || 'Student User'}</strong>
-          </p>
-          <p className="text-muted">
-            Role: <strong className="text-ink">Independent Learner</strong>
-          </p>
+        <p className="mt-0.5 text-xs text-muted">
+          Your credentials and identity on this QueryMind instance.
+        </p>
+
+        <div className="mt-4 divide-y divide-line text-xs">
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-muted">Display Name</span>
+            <span className="font-medium text-ink">{name}</span>
+          </div>
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-muted">Email</span>
+            <span className="font-mono text-ink">{email}</span>
+          </div>
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-muted">User ID</span>
+            <span className="font-mono text-muted text-[11px] truncate max-w-[200px] sm:max-w-none">
+              {id}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-muted">Account Status</span>
+            <Badge variant="success" label="Active" />
+          </div>
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-muted">Member Since</span>
+            <span className="text-ink flex items-center gap-1.5">
+              <IconClock size={13} className="text-muted" />
+              {memberSince}
+            </span>
+          </div>
         </div>
       </PanelLarge>
 
+      {/* Appearance */}
       <PanelLarge>
         <h2 className="text-sm font-semibold text-ink">Appearance & Theme</h2>
         <p className="mt-0.5 text-xs text-muted">
-          Current appearance mode: <strong className="capitalize text-ink">{theme}</strong>
+          Design system settings applied across all views.
         </p>
 
-        <div className="mt-4">
-          <Button variant="secondary" onClick={toggleTheme}>
-            Switch to {theme === 'dark' ? 'Light' : 'Dark'} mode
-          </Button>
+        <div className="mt-4 flex items-center justify-between text-xs py-1">
+          <div>
+            <p className="font-medium text-ink">Interface Theme</p>
+            <p className="text-muted">High-contrast dark theme optimized for technical review & projectors.</p>
+          </div>
+          <Badge variant="primary" label="Restrained Dark" />
         </div>
       </PanelLarge>
 
+      {/* Session Actions */}
       <PanelLarge>
-        <h2 className="text-sm font-semibold text-ink">Study Target</h2>
+        <h2 className="text-sm font-semibold text-ink">Session Management</h2>
         <p className="mt-0.5 text-xs text-muted">
-          Configure how many hours you plan to dedicate to assessments and practice each week.
+          Sign out of this session on this browser.
         </p>
 
-        <form onSubmit={handleSave} className="mt-4 space-y-3">
-          <Input
-            id="study-goal"
-            label="Weekly Commitment"
-            value={studyGoal}
-            onChange={(e) => setStudyGoal(e.target.value)}
-          />
-
-          <Button type="submit">Save preferences</Button>
-        </form>
-      </PanelLarge>
-
-      <PanelLarge>
-        <h2 className="text-sm font-semibold text-danger">Sign Out</h2>
-        <p className="mt-0.5 text-xs text-muted">
-          Terminate your current authenticated session on this workstation.
-        </p>
         <div className="mt-4">
-          <Button variant="danger" onClick={logout}>
-            Sign Out
+          <Button variant="danger" size="md" onClick={handleLogout}>
+            Sign out
           </Button>
         </div>
       </PanelLarge>
-
-      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </div>
   )
 }
